@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node / Vite
+node_modules/
+dist/
+.vite/
+
+# Umgebungsvariablen und Zugangsdaten
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Datenbanken und Laufzeitdaten
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# DGD-Masterdaten und Exporte
+*Master_Database*.xlsx
+master-data/
+exports/
+backups/
+uploads/
+
+# Archive
+*.zip
+*.tar
+*.tar.gz
+
+# Betriebssystem / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
