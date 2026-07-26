@@ -45,6 +45,8 @@ Wir arbeiten am Repository `Shamerock13/dgd`.
 - Vite
 - Relative API-Aufrufe über `/api`
 - Vite-Proxy zeigt auf `DGD-Dev-Backend:8080`
+- Duftdetails werden als eigene Ansicht innerhalb der App dargestellt.
+- Strukturierte Duftnoten werden über `GET /api/fragrances/{fragrance_id}/notes` geladen.
 
 ## Datenbestand
 
@@ -92,6 +94,16 @@ Eine frische Datenbank zeigte einen Fehler in Migration `0005`. Dieser wurde beh
 - Sortierung
 - Mobile Navigation
 - Aktive Filter-Chips
+- Eigene Duftdetailansicht statt Modal
+- Zurück-Navigation zur vorherigen Übersicht
+- Strukturierte Kopf-, Herz- und Basisnoten
+- Freitext-Fallback für noch nicht strukturierte Duftnoten
+- Duftcharakter mit Haltbarkeit, Projektion, Süße und Frische
+- Zugehörige Duftzwillinge direkt am Duft
+- Ähnlichkeit, Gemeinsamkeiten, Unterschiede und Quellenhinweise
+- Preisabstand und Kennzeichnung des günstigeren Duftes
+- Responsive Detailansicht
+- Bild-Fallback bei fehlenden oder fehlerhaften Bildquellen
 
 ## Zielbild DGD 2.0
 
@@ -99,18 +111,14 @@ DGD soll sich von einer einfachen Datenbankoberfläche zu einem hochwertigen Par
 
 Langfristig geplant:
 
-- Moderne Duftdetailseiten
-- Echte Notenpyramide
-- Verwandte Duftzwillinge direkt am Duft
-- Preisvergleich und Ersparnis
-- Ähnlichkeitsbewertung
-- Bessere Bildverwaltung und Fallbacks
+- Bessere Bildverwaltung und einheitliche Bildquellen
 - Markenprofile
 - Parfümeurprofile
 - Sichtbare Quellen und Verifizierungsstatus
 - Bessere Admin-Suche und Pagination
 - Saubere Datenvalidierung
 - Master-Import als zentrale Datenquelle
+- Erweiterter Vergleich und nachvollziehbare Ähnlichkeitsbewertung
 - Später eventuell Benutzerbewertungen, Favoriten und Sammlungen
 
 ## Arbeitsweise
@@ -121,6 +129,8 @@ Langfristig geplant:
 - Änderungen möglichst als sauberen Commit auf `main` einspielen.
 - Keine Produktionscontainer verändern.
 - Keine produktive Datenbank anfassen.
+- Nach jedem größeren Paket Projektstand, Entscheidungen, neue Ideen und nächste Schritte in den Dateien unter `docs/` dokumentieren.
+- Der Chat ist kein dauerhafter Projektspeicher; maßgeblich ist die Dokumentation im Repository.
 
 Danach werden Änderungen auf Unraid geholt mit:
 
@@ -130,15 +140,42 @@ GIT_SSH_COMMAND='ssh -i /root/.ssh/dgd_github -o IdentitiesOnly=yes' git pull or
 docker restart DGD-Dev-Frontend DGD-Dev-Backend
 ```
 
-## Nächstes größeres Paket
+## Zuletzt abgeschlossenes Paket
 
 **Detailansicht & Duftzwillinge 2.0**
+
+Umgesetzt in:
+
+- `frontend/src/main.jsx`
+- `frontend/src/detail.css`
+
+Validiert mit:
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+## Nächstes größeres Paket
+
+**Bildverwaltung & Bildquellen**
+
+Geplante Schwerpunkte:
+
+- Einheitliche Strategie für externe und spätere lokale Bilder
+- Robuste Fehlerbehandlung bei ungültigen Bild-URLs
+- Wiederverwendbare Bildkomponente für Karten und Detailseiten
+- Bessere Platzhalter und Fallbacks
+- Prüfung, wie Bildquellen und Bildstatus im Master-Import gepflegt werden sollen
 
 Vor Beginn insbesondere lesen:
 
 - `frontend/src/main.jsx`
 - `frontend/src/styles.css`
+- `frontend/src/detail.css`
 - `backend/app/main.py`
 - `backend/app/models.py`
 - `backend/app/schemas.py`
 - `backend/app/migrations.py`
+- `backend/app/master_import_service.py`
