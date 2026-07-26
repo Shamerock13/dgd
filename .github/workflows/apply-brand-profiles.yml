@@ -1,0 +1,37 @@
+name: Apply brand profiles package
+
+on:
+  push:
+    branches:
+      - feature/brand-profiles-1
+    paths:
+      - tools/brand-profiles-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  apply-validate-clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/brand-profiles-1
+          fetch-depth: 0
+      - name: Apply brand profile package
+        run: python tools/apply_brand_profiles.py
+      - name: Validate backend
+        run: python -m compileall -q backend/app
+      - name: Validate frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+      - name: Commit generated package
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/apply-brand-profiles.yml tools/apply_brand_profiles.py tools/brand-profiles-trigger.txt
+          git add backend/app/models.py backend/app/schemas.py backend/app/migrations.py backend/app/master_import_service.py frontend/src/main.jsx frontend/src/brand.css docs/PROJECT_CONTEXT.md docs/ROADMAP.md docs/DEV_WORKFLOW.md
+          git commit -m "feat: add brand profiles and verification metadata"
+          git push origin feature/brand-profiles-1
