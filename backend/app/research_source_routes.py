@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from .database import get_db
 from .research_routes import ScanRequest, scan_page, _public_url
 
-router = APIRouter(prefix="/api/research", tags=["research-sources"])
+router = APIRouter(tags=["research-sources"])
 
 
 class SourcePayload(BaseModel):
