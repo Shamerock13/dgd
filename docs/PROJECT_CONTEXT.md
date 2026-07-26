@@ -202,3 +202,7 @@ Umgesetzt sind eigenständige Markenseiten mit Herkunft, Gründungsjahr, offizie
 ## Aktueller Stand: Quellen & Verifizierung 1.0
 
 Das bestehende `master_sources`-Register ist jetzt über die App nutzbar. Quellen können Marken, Düften, Duftzwillingen oder allgemeinen Themen zugeordnet werden. Vertrauensstatus (`OPEN`, `REVIEW`, `TRUSTED`, `REJECTED`) und Nutzungsstatus (`OPEN`, `ALLOWED`, `RESTRICTED`, `INTERNAL`) bilden den redaktionellen Prüfprozess ab. Schema-Version ist nun `0009`.
+
+## Aktueller Stand: Parfümeurprofile 1.0
+
+Die vorhandene Tabelle `master_perfumers` ist jetzt vollständig über die App nutzbar. Profile enthalten Biografie, Nationalität, Geburtsjahr, Stil, bekannte Werke, Primärquelle, redaktionelle Notiz und Artikelstatus. Duftdetailseiten verlinken direkt auf passende Profile. Schema-Version ist `0010`.

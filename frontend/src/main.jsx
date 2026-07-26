@@ -11,6 +11,7 @@ import './detail.css';
 import './image.css';
 import './brand.css';
 import VerificationAdmin from './verification.jsx';
+import {PerfumerAdmin, PerfumerProfile} from './perfumer.jsx';
 
 const euro = new Intl.NumberFormat('de-DE', {style:'currency', currency:'EUR'});
 const emptyFragrance = {
@@ -59,6 +60,7 @@ function App() {
   const [brands,setBrands]=useState([]);
   const [twins,setTwins]=useState([]);
   const [notes,setNotes]=useState([]);
+  const [perfumers,setPerfumers]=useState([]);
   const [query,setQuery]=useState('');
   const [brandFilter,setBrandFilter]=useState('');
   const [genderFilter,setGenderFilter]=useState('');
@@ -69,6 +71,7 @@ function App() {
   const [sortBy,setSortBy]=useState('brand-name');
   const [selected,setSelected]=useState(null);
   const [selectedBrand,setSelectedBrand]=useState(null);
+  const [selectedPerfumer,setSelectedPerfumer]=useState(null);
   const [detailLoading,setDetailLoading]=useState(false);
   const [filters,setFilters]=useState(false);
   const [mobileNav,setMobileNav]=useState(false);
@@ -80,10 +83,10 @@ function App() {
   const load = async () => {
     setLoading(true);
     try {
-      const [s,f,b,t,n]=await Promise.all([
-        api('/api/dashboard'), api('/api/fragrances'), api('/api/brands'), api('/api/twins'), api('/api/notes')
+      const [s,f,b,t,n,p]=await Promise.all([
+        api('/api/dashboard'), api('/api/fragrances'), api('/api/brands'), api('/api/twins'), api('/api/notes'), api('/api/perfumers')
       ]);
-      setStats(s);setItems(f);setBrands(b);setTwins(t);setNotes(n);
+      setStats(s);setItems(f);setBrands(b);setTwins(t);setNotes(n);setPerfumers(p);
     } catch(e){setNotice(e.message)}
     setLoading(false);
   };
@@ -132,8 +135,9 @@ function App() {
     setMinPrice('');setMaxPrice('');setMinLongevity('');setSortBy('brand-name');
   };
 
-  const navigate=next=>{setSelected(null);setSelectedBrand(null);setTab(next);setMobileNav(false)};
-  const openBrand=brand=>{setSelected(null);setSelectedBrand(brand);setMobileNav(false);window.scrollTo({top:0,behavior:'smooth'})};
+  const navigate=next=>{setSelected(null);setSelectedBrand(null);setSelectedPerfumer(null);setTab(next);setMobileNav(false)};
+  const openBrand=brand=>{setSelected(null);setSelectedPerfumer(null);setSelectedBrand(brand);setMobileNav(false);window.scrollTo({top:0,behavior:'smooth'})};
+  const openPerfumer=name=>{const profile=perfumers.find(p=>p.name.trim().toLowerCase()===String(name||'').trim().toLowerCase());if(profile){setSelected(null);setSelectedBrand(null);setSelectedPerfumer(profile);window.scrollTo({top:0,behavior:'smooth'})}else flash(`Für ${name} ist noch kein Profil angelegt.`)};
   const openDetail=async item=>{
     setSelected({...item,structured_notes:[]});
     setDetailLoading(true);
@@ -169,7 +173,7 @@ function App() {
 
     {notice && <div className="toast">{notice}</div>}
 
-    {selected ? <DetailPage item={selected} twins={twins} loading={detailLoading} onBack={()=>setSelected(null)} onOpen={openDetail} onOpenBrand={openBrand}/> : selectedBrand ? <BrandProfile brand={selectedBrand} items={items} onBack={()=>setSelectedBrand(null)} onOpen={openDetail}/> : tab==='admin' ? <AdminCenter brands={brands} items={items} twins={twins} notes={notes} reload={load} flash={flash}/> :
+    {selected ? <DetailPage item={selected} twins={twins} loading={detailLoading} onBack={()=>setSelected(null)} onOpen={openDetail} onOpenBrand={openBrand} onOpenPerfumer={openPerfumer}/> : selectedBrand ? <BrandProfile brand={selectedBrand} items={items} onBack={()=>setSelectedBrand(null)} onOpen={openDetail}/> : selectedPerfumer ? <PerfumerProfile perfumer={selectedPerfumer} items={items} onBack={()=>setSelectedPerfumer(null)} onOpen={openDetail}/> : tab==='admin' ? <AdminCenter brands={brands} items={items} twins={twins} notes={notes} perfumers={perfumers} reload={load} flash={flash}/> :
     <main>
       <section className="hero">
         <div className="eyebrow"><Sparkles size={16}/> Wissen, vergleichen, entdecken</div>
@@ -225,7 +229,7 @@ function App() {
   </div>
 }
 
-function AdminCenter({brands,items,twins,notes,reload,flash}) {
+function AdminCenter({brands,items,twins,notes,perfumers,reload,flash}) {
   const [section,setSection]=useState('fragrances');
   const [editing,setEditing]=useState(null);
   return <main className="admin-main">
@@ -237,6 +241,7 @@ function AdminCenter({brands,items,twins,notes,reload,flash}) {
       <button className={section==='import'?'active':''} onClick={()=>{setSection('import');setEditing(null)}}>Import</button>
       <button className={section==='twins'?'active':''} onClick={()=>{setSection('twins');setEditing(null)}}>Duftzwillinge <b>{twins.length}</b></button>
       <button className={section==='sources'?'active':''} onClick={()=>{setSection('sources');setEditing(null)}}>Quellen & Prüfung</button>
+      <button className={section==='perfumers'?'active':''} onClick={()=>{setSection('perfumers');setEditing(null)}}>Parfümeure <b>{perfumers.length}</b></button>
       <button className={section==='updates'?'active':''} onClick={()=>{setSection('updates');setEditing(null)}}>System & Updates</button>
     </div>
     {section==='fragrances'&&<FragranceAdmin brands={brands} items={items} notes={notes} reload={reload} flash={flash} editing={editing} setEditing={setEditing}/>}
@@ -245,6 +250,7 @@ function AdminCenter({brands,items,twins,notes,reload,flash}) {
     {section==='import'&&<ImportAdmin reload={reload} flash={flash}/>}
     {section==='twins'&&<TwinAdmin items={items} twins={twins} reload={reload} flash={flash}/>}
     {section==='sources'&&<VerificationAdmin api={api} flash={flash} brands={brands} items={items} twins={twins}/>}
+    {section==='perfumers'&&<PerfumerAdmin api={api} flash={flash} perfumers={perfumers} reload={reload}/>}
     {section==='updates'&&<UpdateCenter flash={flash}/>}
   </main>
 }
@@ -729,7 +735,7 @@ function BrandProfile({brand,items,onBack,onOpen}) {
   </main>;
 }
 
-function DetailPage({item,twins,loading,onBack,onOpen,onOpenBrand}) {
+function DetailPage({item,twins,loading,onBack,onOpen,onOpenBrand,onOpenPerfumer}) {
   const relatedTwins=twins.filter(twin=>twin.original.id===item.id||twin.alternative.id===item.id);
   const accords=(item.accords||'').split(',').map(value=>value.trim()).filter(Boolean);
   const structuredNotes=item.structured_notes||[];
@@ -744,7 +750,7 @@ function DetailPage({item,twins,loading,onBack,onOpen,onOpenBrand}) {
         <div className="detail-meta-row">
           <span><Clock3 size={15}/>{item.year||'Jahr offen'}</span>
           <span><Layers3 size={15}/>{item.concentration||'Konzentration offen'}</span>
-          <span><UserRound size={15}/>{item.perfumer||'Parfümeur offen'}</span>
+          {item.perfumer?<button className="detail-perfumer-link" onClick={()=>onOpenPerfumer(item.perfumer)}><UserRound size={15}/>{item.perfumer}</button>:<span><UserRound size={15}/>Parfümeur offen</span>}
         </div>
         <p className="detail-description">{item.description||'Für diesen Duft ist noch keine ausführliche Beschreibung hinterlegt.'}</p>
         {accords.length>0&&<div className="detail-accords">{accords.map(accord=><span key={accord}>{accord}</span>)}</div>}
