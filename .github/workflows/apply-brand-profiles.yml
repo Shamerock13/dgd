@@ -6,6 +6,12 @@ on:
       - feature/brand-profiles-1
     paths:
       - tools/brand-profiles-trigger.txt
+  pull_request:
+    branches:
+      - main
+    paths:
+      - tools/brand-profiles-trigger.txt
+      - tools/apply_brand_profiles.py
 
 permissions:
   contents: write
