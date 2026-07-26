@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from urllib.parse import quote_plus, urlparse
 from uuid import uuid4
 
@@ -13,19 +14,79 @@ from .research_routes import _public_url
 from .search_result_parser import parse_search_results
 
 
-async def _search(client: httpx.AsyncClient, query: str, limit: int = 8) -> tuple[list[dict], str]:
+def _looks_blocked(html: str) -> bool:
+    sample = html[:80_000].casefold()
+    markers = (
+        "unusual traffic", "verify you are human", "captcha", "robot check",
+        "consent", "automated requests", "blocked", "access denied",
+    )
+    return any(marker in sample for marker in markers)
+
+
+def _query_variants(brand: str, name: str, purpose: str, website_url: str | None = None) -> list[tuple[str, str]]:
+    base = f"{brand} {name}".strip()
+    if purpose == "twins":
+        variants = [
+            ("exact", f'"{brand}" "{name}" dupe clone alternative inspired by'),
+            ("loose", f'{base} dupe clone alternative inspired by smells like'),
+            ("parfumo", f'site:parfumo.de {base} dupe alternative ähnlich'),
+            ("basenotes", f'site:basenotes.com {base} clone alternative'),
+        ]
+    else:
+        variants = [
+            ("exact", f'"{brand}" "{name}" perfume notes perfumer year concentration'),
+            ("loose", f'{base} perfume notes perfumer release year concentration'),
+            ("parfumo", f'site:parfumo.de {base} duftnoten parfümeur jahr'),
+            ("basenotes", f'site:basenotes.com {base} notes perfumer year'),
+            ("wikiparfum", f'site:wikiparfum.com {base} notes'),
+        ]
+    if website_url:
+        host = (urlparse(website_url).hostname or "").removeprefix("www.")
+        if host:
+            variants.append(("official", f'site:{host} {base}'))
+    return variants
+
+
+async def _search_once(client: httpx.AsyncClient, query: str, limit: int = 8) -> tuple[list[dict], str, bool]:
     encoded = quote_plus(query)
     endpoints = (
         ("html", f"https://html.duckduckgo.com/html/?q={encoded}"),
         ("lite", f"https://lite.duckduckgo.com/lite/?q={encoded}"),
     )
+    blocked = False
     for provider, url in endpoints:
         response = await client.get(_public_url(url))
         response.raise_for_status()
-        rows = parse_search_results(response.text[:1_500_000], limit)
+        body = response.text[:1_500_000]
+        blocked = blocked or _looks_blocked(body)
+        rows = parse_search_results(body, limit)
         if rows:
-            return rows, provider
-    return [], "none"
+            return rows, provider, blocked
+    return [], "none", blocked
+
+
+async def _search_variants(
+    client: httpx.AsyncClient,
+    variants: list[tuple[str, str]],
+    limit: int,
+) -> tuple[list[dict], dict]:
+    diagnostics = {"queries_executed": 0, "blocked_responses": 0, "html_fallbacks": 0, "variants_used": []}
+    collected: list[dict] = []
+    seen: set[str] = set()
+    for label, query in variants:
+        rows, provider, blocked = await _search_once(client, query, limit)
+        diagnostics["queries_executed"] += 1
+        diagnostics["blocked_responses"] += int(blocked)
+        diagnostics["html_fallbacks"] += int(provider == "lite")
+        diagnostics["variants_used"].append(label)
+        for row in rows:
+            key = row.get("url", "")
+            if key and key not in seen:
+                seen.add(key)
+                collected.append(row)
+        if len(collected) >= limit:
+            break
+    return collected[:limit], diagnostics
 
 
 async def discover_findings_robust(db: Session, limit: int = 10) -> dict:
@@ -38,31 +99,34 @@ async def discover_findings_robust(db: Session, limit: int = 10) -> dict:
         ORDER BY t.updated_at,b.name,f.name
         LIMIT :limit
     """), {"limit": max(1, min(limit, 30))}).mappings())
-    profiles = [dict(row) for row in db.execute(text(
-        "SELECT * FROM research_source_profiles ORDER BY priority DESC"
-    )).mappings()]
+    profiles = [dict(row) for row in db.execute(text("SELECT * FROM research_source_profiles ORDER BY priority DESC")).mappings()]
     stats = {
-        "fragrances_searched": 0, "search_results": 0, "empty_searches": 0,
-        "pages_fetched": 0, "findings_created": 0, "unusable_results": 0,
-        "blocked_results": 0, "html_fallbacks": 0, "errors": 0,
+        "fragrances_searched": 0, "queries_executed": 0, "search_results": 0,
+        "empty_searches": 0, "blocked_responses": 0, "pages_fetched": 0,
+        "findings_created": 0, "unusable_results": 0, "blocked_results": 0,
+        "html_fallbacks": 0, "errors": 0, "variants_used": [],
     }
-    headers = {"User-Agent": "DGD-EnrichmentResearch/1.2 (+private editorial database)"}
-    async with httpx.AsyncClient(timeout=18, follow_redirects=False, headers=headers) as client:
+    headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; DGD-EnrichmentResearch/2.0; +private editorial database)",
+        "Accept-Language": "de-DE,de;q=0.9,en;q=0.7",
+    }
+    async with httpx.AsyncClient(timeout=12, follow_redirects=False, headers=headers) as client:
         for task in tasks:
             missing = set(task["missing_fields"] or [])
-            terms = sorted({term for field in missing for term in FIELD_ALIASES.get(field, ())})
-            query = f'"{task["brand_name"]}" "{task["name"]}" ' + " OR ".join(f'"{term}"' for term in terms[:8])
             try:
-                results, provider = await _search(client, query, 8)
+                variants = _query_variants(task["brand_name"], task["name"], "findings", task["website_url"])
+                results, diag = await _search_variants(client, variants, 10)
                 stats["fragrances_searched"] += 1
+                stats["queries_executed"] += diag["queries_executed"]
+                stats["blocked_responses"] += diag["blocked_responses"]
+                stats["html_fallbacks"] += diag["html_fallbacks"]
+                stats["variants_used"].extend(diag["variants_used"])
                 stats["search_results"] += len(results)
-                if provider == "lite":
-                    stats["html_fallbacks"] += 1
                 if not results:
                     stats["empty_searches"] += 1
                     continue
                 official_host = (urlparse(task["website_url"]).hostname or "").casefold().removeprefix("www.") if task["website_url"] else ""
-                for result in results[:5]:
+                for result in results[:6]:
                     host = (urlparse(result["url"]).hostname or "").casefold().removeprefix("www.")
                     profile = _profile(host, profiles)
                     if profile and profile.get("blocked"):
@@ -97,6 +161,7 @@ async def discover_findings_robust(db: Session, limit: int = 10) -> dict:
             except Exception:
                 db.rollback()
                 stats["errors"] += 1
+    stats["variants_used"] = sorted(set(stats["variants_used"]))
     return stats
 
 
@@ -108,16 +173,27 @@ async def search_twins_robust(db: Session, limit: int = 10) -> dict:
         ORDER BY f.created_at NULLS FIRST,b.name,f.name LIMIT :limit
     """), {"limit": max(1, min(limit, 30))}).mappings())
     profiles = [dict(row) for row in db.execute(text("SELECT * FROM research_source_profiles ORDER BY priority DESC")).mappings()]
-    stats = {"fragrances_searched": 0, "search_results": 0, "empty_searches": 0, "created": 0, "unusable_results": 0, "blocked_results": 0, "html_fallbacks": 0, "errors": 0}
-    async with httpx.AsyncClient(timeout=18, follow_redirects=False, headers={"User-Agent": "DGD-TwinResearch/1.2"}) as client:
+    stats = {
+        "fragrances_searched": 0, "queries_executed": 0, "search_results": 0,
+        "empty_searches": 0, "blocked_responses": 0, "created": 0,
+        "unusable_results": 0, "blocked_results": 0, "html_fallbacks": 0,
+        "errors": 0, "variants_used": [],
+    }
+    headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; DGD-TwinResearch/2.0)",
+        "Accept-Language": "de-DE,de;q=0.9,en;q=0.7",
+    }
+    async with httpx.AsyncClient(timeout=12, follow_redirects=False, headers=headers) as client:
         for fragrance in fragrances:
-            query = f'"{fragrance["brand_name"]}" "{fragrance["name"]}" (dupe OR clone OR "inspired by" OR alternative OR "smells like")'
             try:
-                results, provider = await _search(client, query, 10)
+                variants = _query_variants(fragrance["brand_name"], fragrance["name"], "twins", fragrance["website_url"])
+                results, diag = await _search_variants(client, variants, 12)
                 stats["fragrances_searched"] += 1
+                stats["queries_executed"] += diag["queries_executed"]
+                stats["blocked_responses"] += diag["blocked_responses"]
+                stats["html_fallbacks"] += diag["html_fallbacks"]
+                stats["variants_used"].extend(diag["variants_used"])
                 stats["search_results"] += len(results)
-                if provider == "lite":
-                    stats["html_fallbacks"] += 1
                 if not results:
                     stats["empty_searches"] += 1
                     continue
@@ -152,10 +228,17 @@ async def search_twins_robust(db: Session, limit: int = 10) -> dict:
                          source_excerpt,evidence_phrase,confidence,status,fingerprint,source_category,source_priority)
                         VALUES(:id,:original,:alternative,:proposal,:source,:url,:excerpt,:phrase,:confidence,'PENDING',
                                :fingerprint,:category,:priority)
-                    """), {"id": uuid4(), "original": fragrance["id"], "alternative": alternative_id, "proposal": proposal, "source": source_name, "url": result["url"], "excerpt": result["snippet"][:1000], "phrase": ", ".join(phrases), "confidence": confidence, "fingerprint": fingerprint, "category": category, "priority": priority})
+                    """), {
+                        "id": uuid4(), "original": fragrance["id"], "alternative": alternative_id,
+                        "proposal": proposal, "source": source_name, "url": result["url"],
+                        "excerpt": result["snippet"][:1000], "phrase": ", ".join(phrases),
+                        "confidence": confidence, "fingerprint": fingerprint,
+                        "category": category, "priority": priority,
+                    })
                     stats["created"] += 1
                 db.commit()
             except Exception:
                 db.rollback()
                 stats["errors"] += 1
+    stats["variants_used"] = sorted(set(stats["variants_used"]))
     return stats
