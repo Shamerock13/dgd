@@ -6,6 +6,11 @@ on:
       - feature/detail-view-2
     paths:
       - tools/apply_detail_view.py
+  pull_request:
+    branches:
+      - main
+    paths:
+      - tools/apply_detail_view.py
 
 permissions:
   contents: write
