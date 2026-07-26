@@ -28,7 +28,7 @@ jobs:
       - name: Validate frontend build
         working-directory: frontend
         run: |
-          npm ci
+          npm install
           npm run build
       - name: Commit generated feature package
         run: |
