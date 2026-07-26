@@ -11,23 +11,117 @@ Dieser Ablauf gilt für Änderungen an `Shamerock13/dgd`.
 - Produktion niemals direkt verändern.
 - Produktive Container und die produktive Datenbank nicht für Tests verwenden.
 - Tests ausschließlich in der separaten Dev-Umgebung durchführen.
+- Projektentscheidungen, Ideen, abgeschlossene Pakete und nächste Schritte dauerhaft in `docs/` festhalten.
+- Der Repository-Stand ist maßgeblich; wichtige Informationen dürfen nicht nur im Chat verbleiben.
 
-## 1. Änderung in GitHub
+## 1. Änderung vorbereiten
 
-Relevante Dateien im Repository lesen und anschließend die Änderung umsetzen.
+Vor Beginn eines Pakets:
+
+1. `docs/PROJECT_CONTEXT.md` lesen.
+2. `docs/ROADMAP.md` lesen.
+3. Relevante Quell- und Konfigurationsdateien lesen.
+4. Bestehende Architektur und Datenstrukturen weiterverwenden, statt parallele Lösungen einzubauen.
+5. Umfang, Ziel und bewusst nicht enthaltene Punkte des Pakets festlegen.
 
 Besonders wichtige Kern-Dateien:
 
 - `frontend/src/main.jsx`
 - `frontend/src/styles.css`
+- `frontend/src/detail.css`, sofern vorhanden oder relevant
 - `backend/app/main.py`
 - `backend/app/models.py`
 - `backend/app/schemas.py`
 - `backend/app/migrations.py`
+- Import-Services bei Änderungen am Master-Import
 
-Die Änderung anschließend als nachvollziehbaren Commit auf `main` bringen.
+## 2. Änderung in GitHub umsetzen
 
-## 2. Änderungen auf Unraid holen
+- Für größere Pakete bevorzugt einen Feature-Branch verwenden.
+- Zusammenhängende Änderungen gemeinsam umsetzen.
+- Vorhandene Admin-, Import- und Produktionslogik nur verändern, wenn sie zum Paket gehört.
+- Keine temporären Hilfs-, Trigger- oder Workflow-Dateien im finalen Diff belassen.
+- Den finalen Diff vor dem Merge kontrollieren.
+- Nach erfolgreicher Prüfung per sauberem Squash-Commit oder nachvollziehbarem Commit auf `main` bringen.
+
+## 3. Technisch prüfen
+
+Je nach Änderung mindestens prüfen:
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+Hinweis: Solange keine `package-lock.json` vorhanden ist, funktioniert `npm ci` nicht. In diesem Projekt daher derzeit `npm install` für die Build-Prüfung verwenden.
+
+Zusätzlich prüfen:
+
+- Keine neuen Build-Fehler
+- Keine offensichtlichen React- oder Importfehler
+- Desktop-, Tablet- und Mobilansicht bei UI-Änderungen
+- Bild-Fallbacks bei fehlenden und fehlerhaften Bild-URLs
+- Navigation zwischen Übersichten und Detailansichten
+
+### Backend
+
+- Python-Syntax und Imports
+- Betroffene API-Endpunkte
+- Fehlerfälle und Statuscodes
+- Bestehende Clients und Schemas
+- Keine unbeabsichtigten Datenbankänderungen
+
+### Datenbank
+
+- Nur `DGD-Dev-PostgreSQL` verwenden.
+- Niemals die produktive Datenbank anfassen.
+- Migrationen müssen idempotent sein.
+- Neue oder ältere Datenbanken müssen sicher gestartet werden können.
+- Vor `UPDATE`- oder `ALTER COLUMN`-Anweisungen benötigte Legacy-Spalten mit `ADD COLUMN IF NOT EXISTS` absichern.
+- Aktuelle Schema-Version über `/api/system/migrations` kontrollieren.
+
+## 4. Projektdokumentation aktualisieren
+
+Nach jedem größeren Paket und vor dem finalen Merge:
+
+### `docs/PROJECT_CONTEXT.md`
+
+Aktualisieren, wenn sich verändert haben:
+
+- Architektur
+- Technik oder Datenfluss
+- wichtige Endpunkte
+- umgesetzte Funktionen
+- bekannte Besonderheiten oder Fehlerbehebungen
+- aktuelles nächstes Paket
+
+### `docs/ROADMAP.md`
+
+Aktualisieren:
+
+- abgeschlossenes Paket als umgesetzt markieren
+- tatsächlich umgesetzten Umfang festhalten
+- neue Ideen dem passenden Paket zuordnen
+- nächste Priorität festlegen
+- bewusst verschobene Punkte sichtbar lassen
+
+### `docs/DEV_WORKFLOW.md`
+
+Aktualisieren, wenn sich verändert haben:
+
+- GitHub-Ablauf
+- Build- oder Testbefehle
+- Unraid-Deployment
+- Dev-Container
+- Datenbank- oder Migrationstests
+- Sicherheits- und Produktionsregeln
+
+Dokumentationsänderungen sollen möglichst im selben Paket oder direkt anschließend als eigener sauberer Dokumentations-Commit erfolgen.
+
+## 5. Änderungen auf Unraid holen
 
 Das lokale Repository befindet sich unter:
 
@@ -42,7 +136,7 @@ cd /mnt/user/appdata/dgd-github
 GIT_SSH_COMMAND='ssh -i /root/.ssh/dgd_github -o IdentitiesOnly=yes' git pull origin main
 ```
 
-## 3. Dev-Container neu starten
+## 6. Dev-Container neu starten
 
 Nach dem Pull Frontend und Backend neu starten:
 
@@ -57,7 +151,7 @@ Die Dev-Umgebung verwendet:
 - PostgreSQL: Port `55432`
 - Docker-Netzwerk: `dgd-dev`
 
-## 4. Testen
+## 7. In der Dev-Umgebung testen
 
 Nach dem Neustart prüfen:
 
@@ -67,19 +161,12 @@ Nach dem Neustart prüfen:
 4. Browser-Konsole enthält keine neuen Fehler.
 5. API-Aufrufe über den Vite-Proxy `/api` funktionieren.
 6. Die betroffene Funktion arbeitet wie erwartet.
-7. Mobile Darstellung und Navigation prüfen, wenn Frontend-Code geändert wurde.
-8. Bei Datenbankänderungen Migrationen und Start mit einer frischen Dev-Datenbank prüfen.
+7. Navigation zurück zur vorherigen Ansicht funktioniert.
+8. Mobile Darstellung und Navigation funktionieren, wenn Frontend-Code geändert wurde.
+9. Fehlende oder ungültige Bild-URLs führen nicht zu einer kaputten Ansicht.
+10. Bei Datenbankänderungen Migrationen und Start mit einer frischen Dev-Datenbank prüfen.
 
-## 5. Datenbank- und Migrationstests
-
-- Nur `DGD-Dev-PostgreSQL` verwenden.
-- Niemals die produktive Datenbank anfassen.
-- Migrationen müssen idempotent sein.
-- Neue oder ältere Datenbanken müssen sicher gestartet werden können.
-- Vor `UPDATE`- oder `ALTER COLUMN`-Anweisungen benötigte Legacy-Spalten mit `ADD COLUMN IF NOT EXISTS` absichern.
-- Aktuelle Schema-Version über `/api/system/migrations` kontrollieren.
-
-## 6. Master-Import testen
+## 8. Master-Import testen
 
 Master-Import ausschließlich in der Dev-Umgebung prüfen:
 
@@ -96,8 +183,17 @@ Dabei kontrollieren:
 - Dubletten und fehlerhafte Zuordnungen
 - Importhistorie
 - Verhalten bei einer frischen Datenbank
+- Neue Datenfelder und Verknüpfungen, sofern das Paket sie betrifft
 
-## 7. Produktionsschutz
+## 9. Abnahme und Fehlerbehandlung
+
+- Erst nach erfolgreichem Test in der Dev-Umgebung gilt ein Paket als abgeschlossen.
+- Gefundene Fehler werden wieder zuerst im GitHub-Repository behoben.
+- Keine spontane Korrektur direkt im laufenden Dev- oder Produktionscontainer.
+- Nach einer Korrektur erneut Pull, Neustart und Test durchführen.
+- Erkenntnisse aus Fehlern oder Sonderfällen in den Projektdokumenten ergänzen.
+
+## 10. Produktionsschutz
 
 Die folgenden Container dürfen durch diesen Workflow nicht verändert oder für Tests verwendet werden:
 
