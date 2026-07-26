@@ -29,6 +29,7 @@ from .migrations import run_migrations, current_schema_version, migration_histor
 from .update_service import updater_request
 from .source_routes import router as source_router
 from .perfumer_routes import router as perfumer_router
+from .quality_routes import router as quality_router
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -56,6 +57,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="DGD API", version="1.2.0", lifespan=lifespan)
 app.include_router(source_router)
 app.include_router(perfumer_router)
+app.include_router(quality_router)
 
 def fragrance_query():
     return select(Fragrance).options(joinedload(Fragrance.brand))

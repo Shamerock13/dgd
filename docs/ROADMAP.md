@@ -196,3 +196,18 @@ Enthalten sind externe Bildpfade, Bildquelle, Quellenlink, Nutzungsnotiz, Prüfs
 - direkte Navigation aus Duftprofilen
 
 **Nächstes größeres Paket:** Datenqualität & redaktionelle Arbeitsliste 1.0.
+
+
+## Fortschritt: Datenqualität & redaktionelle Arbeitsliste 1.0
+
+**Status: umgesetzt**
+
+- dynamische Qualitätsprüfung ohne zusätzliche Datenduplikate
+- priorisierte Aufgabenliste für Marken, Düfte, Bilder und Quellen
+- Prüfung fehlender Duftpyramiden und Parfümeurprofile
+- Prüfung unvollständiger oder unbelegter Duftzwillinge
+- Suche sowie Filter nach Priorität und Kategorie
+- direkter Sprung in den passenden Admin-Bereich
+- redaktioneller Qualitätswert und Aufgabenkennzahlen
+
+**Nächstes größeres Paket:** Lokaler Bildupload & Medienablage 1.0.
