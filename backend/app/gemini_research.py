@@ -17,6 +17,37 @@ from .research_enrichment import _upsert_finding
 MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
+RESEARCH_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "year": {"type": ["integer", "null"]},
+        "concentration": {"type": ["string", "null"]},
+        "perfumer": {"type": ["string", "null"]},
+        "description": {"type": ["string", "null"]},
+        "image": {"type": ["string", "null"]},
+        "accords": {"type": "array", "items": {"type": "string"}},
+        "top_notes": {"type": "array", "items": {"type": "string"}},
+        "heart_notes": {"type": "array", "items": {"type": "string"}},
+        "base_notes": {"type": "array", "items": {"type": "string"}},
+        "twins": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "alternative": {"type": "string"},
+                    "evidence": {"type": "string"},
+                    "confidence": {"type": "integer", "minimum": 0, "maximum": 100},
+                },
+                "required": ["alternative", "evidence", "confidence"],
+            },
+        },
+    },
+    "required": [
+        "year", "concentration", "perfumer", "description", "image", "accords",
+        "top_notes", "heart_notes", "base_notes", "twins",
+    ],
+}
+
 
 def gemini_configured() -> bool:
     return bool(os.getenv("GEMINI_API_KEY", "").strip())
@@ -44,25 +75,9 @@ def _sources(payload: dict) -> list[dict]:
 
 def _prompt(brand: str, name: str, missing_fields: list[str]) -> str:
     return f"""Research the fragrance {brand} {name} using Google Search.
-Return ONLY valid JSON, without markdown. Never invent facts. Use null or empty arrays when evidence is insufficient.
+Never invent facts. Use null or empty arrays when evidence is insufficient.
 Focus on these missing fields: {', '.join(missing_fields)}.
 Also look for explicitly documented fragrance alternatives, dupes, clones, inspired-by products, or 'smells like' comparisons.
-
-JSON schema:
-{{
-  "year": integer|null,
-  "concentration": string|null,
-  "perfumer": string|null,
-  "description": string|null,
-  "image": string|null,
-  "accords": [string],
-  "top_notes": [string],
-  "heart_notes": [string],
-  "base_notes": [string],
-  "twins": [
-    {{"alternative": string, "evidence": string, "confidence": integer}}
-  ]
-}}
 
 Rules:
 - confidence must be 0-100.
@@ -80,7 +95,12 @@ async def _ask_gemini(client: httpx.AsyncClient, brand: str, name: str, missing_
         json={
             "contents": [{"role": "user", "parts": [{"text": _prompt(brand, name, missing_fields)}]}],
             "tools": [{"google_search": {}}],
-            "generationConfig": {"temperature": 0.1, "maxOutputTokens": 2200},
+            "generationConfig": {
+                "temperature": 0.1,
+                "maxOutputTokens": 8192,
+                "responseMimeType": "application/json",
+                "responseJsonSchema": RESEARCH_SCHEMA,
+            },
         },
     )
     response.raise_for_status()
