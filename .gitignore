@@ -40,3 +40,9 @@ uploads/
 Thumbs.db
 .vscode/
 .idea/
+
+# Lokale Entwicklungsumgebung
+.env.dev
+
+# Lokale Entwicklungsumgebung
+.env.dev

@@ -167,6 +167,16 @@ Migration(
         version="0005",
         description="Legacy-Pflichtfelder für Master-Import vollständig absichern",
         statements=(
+            # Felder bei komplett neuen Datenbanken zuerst anlegen.
+            "ALTER TABLE brands ADD COLUMN IF NOT EXISTS verification_status VARCHAR(40)",
+            "ALTER TABLE brands ADD COLUMN IF NOT EXISTS created_at TIMESTAMP",
+            "ALTER TABLE brands ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS status VARCHAR(40)",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS heritage BOOLEAN",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS verification_status VARCHAR(40)",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS created_at TIMESTAMP",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
+
             # Marken aus dem ursprünglichen DGD-Core-Schema.
             "UPDATE brands SET verification_status = 'OPEN' WHERE verification_status IS NULL",
             "ALTER TABLE brands ALTER COLUMN verification_status SET DEFAULT 'OPEN'",
