@@ -4,11 +4,12 @@ import {
   Search, Sparkles, LibraryBig, Tags, GitCompareArrows, Star,
   Moon, Sun, SlidersHorizontal, X, ChevronRight, FlaskConical,
   Settings, Plus, Pencil, Trash2, Save, ArrowLeft, RefreshCw, PackageOpen, ShieldCheck, CircleAlert, Menu,
-  BadgeEuro, Clock3, UserRound, Layers3, Info, ImageIcon, ExternalLink
+  BadgeEuro, Clock3, UserRound, Layers3, Info, ImageIcon, ExternalLink, MapPin, CalendarDays
 } from 'lucide-react';
 import './styles.css';
 import './detail.css';
 import './image.css';
+import './brand.css';
 
 const euro = new Intl.NumberFormat('de-DE', {style:'currency', currency:'EUR'});
 const emptyFragrance = {
@@ -17,7 +18,7 @@ const emptyFragrance = {
   image_usage_note:'', image_status:'OPEN', description:'', top_notes:'', heart_notes:'',
   base_notes:'', accords:'', longevity:'', projection:'', sweetness:'', freshness:''
 };
-const emptyBrand = {name:'', country:'', description:''};
+const emptyBrand = {name:'', country:'', founded_year:'', website_url:'', verification_status:'OPEN', description:''};
 const emptyTwin = {original_id:'', alternative_id:'', similarity:80, commonalities:'', differences:'', source_note:''};
 
 async function api(url, options={}) {
@@ -66,6 +67,7 @@ function App() {
   const [minLongevity,setMinLongevity]=useState('');
   const [sortBy,setSortBy]=useState('brand-name');
   const [selected,setSelected]=useState(null);
+  const [selectedBrand,setSelectedBrand]=useState(null);
   const [detailLoading,setDetailLoading]=useState(false);
   const [filters,setFilters]=useState(false);
   const [mobileNav,setMobileNav]=useState(false);
@@ -129,7 +131,8 @@ function App() {
     setMinPrice('');setMaxPrice('');setMinLongevity('');setSortBy('brand-name');
   };
 
-  const navigate=next=>{setSelected(null);setTab(next);setMobileNav(false)};
+  const navigate=next=>{setSelected(null);setSelectedBrand(null);setTab(next);setMobileNav(false)};
+  const openBrand=brand=>{setSelected(null);setSelectedBrand(brand);setMobileNav(false);window.scrollTo({top:0,behavior:'smooth'})};
   const openDetail=async item=>{
     setSelected({...item,structured_notes:[]});
     setDetailLoading(true);
@@ -165,7 +168,7 @@ function App() {
 
     {notice && <div className="toast">{notice}</div>}
 
-    {selected ? <DetailPage item={selected} twins={twins} loading={detailLoading} onBack={()=>setSelected(null)} onOpen={openDetail}/> : tab==='admin' ? <AdminCenter brands={brands} items={items} twins={twins} notes={notes} reload={load} flash={flash}/> :
+    {selected ? <DetailPage item={selected} twins={twins} loading={detailLoading} onBack={()=>setSelected(null)} onOpen={openDetail} onOpenBrand={openBrand}/> : selectedBrand ? <BrandProfile brand={selectedBrand} items={items} onBack={()=>setSelectedBrand(null)} onOpen={openDetail}/> : tab==='admin' ? <AdminCenter brands={brands} items={items} twins={twins} notes={notes} reload={load} flash={flash}/> :
     <main>
       <section className="hero">
         <div className="eyebrow"><Sparkles size={16}/> Wissen, vergleichen, entdecken</div>
@@ -213,7 +216,7 @@ function App() {
 
       {tab==='entdecken'&&<section className="content-section brand-section">
         <div className="section-head"><div><span className="kicker">Markenwelt</span><h2>Marken entdecken</h2></div><span className="result-count">{brands.length} Marken</span></div>
-        <div className="brand-grid">{brands.slice(0,12).map(brand=><button className="brand-card" key={brand.id} onClick={()=>{setBrandFilter(brand.id);navigate('duefte')}}><span>{brand.name.slice(0,2).toUpperCase()}</span><div><b>{brand.name}</b><small>{brand.country||'Herkunft offen'}</small></div><ChevronRight/></button>)}</div>
+        <div className="brand-grid">{brands.slice(0,12).map(brand=><button className="brand-card" key={brand.id} onClick={()=>openBrand(brand)}><span>{brand.name.slice(0,2).toUpperCase()}</span><div><b>{brand.name}</b><small>{brand.country||'Herkunft offen'}</small></div><ChevronRight/></button>)}</div>
       </section>}
     </main>}
 
@@ -577,14 +580,18 @@ function BrandAdmin({brands,reload,flash,editing,setEditing}) {
   useEffect(()=>setForm(editing?{...emptyBrand,...editing}:emptyBrand),[editing]);
   const save=async e=>{
     e.preventDefault();
-    try{await api(editing?`/api/brands/${editing.id}`:'/api/brands',{method:editing?'PUT':'POST',body:JSON.stringify(form)});flash(editing?'Marke aktualisiert.':'Marke angelegt.');setEditing(null);setForm(emptyBrand);await reload()}catch(e){flash(e.message)}
+    const payload={...form,founded_year:form.founded_year===''?null:Number(form.founded_year),country:form.country||null,website_url:form.website_url||null,description:form.description||null};
+    try{await api(editing?`/api/brands/${editing.id}`:'/api/brands',{method:editing?'PUT':'POST',body:JSON.stringify(payload)});flash(editing?'Marke aktualisiert.':'Marke angelegt.');setEditing(null);setForm(emptyBrand);await reload()}catch(e){flash(e.message)}
   };
   const remove=async b=>{if(!confirm(`Marke „${b.name}“ wirklich löschen?`))return;try{await api(`/api/brands/${b.id}`,{method:'DELETE'});flash('Marke gelöscht.');await reload()}catch(e){flash(e.message)}};
   return <div className="admin-grid">
     <form className="editor compact" onSubmit={save}><div className="editor-title"><div>{editing?<><Pencil/> Marke bearbeiten</>:<><Plus/> Neue Marke</>}</div>{editing&&<button type="button" onClick={()=>setEditing(null)}>Abbrechen</button>}</div>
       <Field label="Markenname *"><input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></Field>
       <Field label="Herkunftsland"><input value={form.country||''} onChange={e=>setForm({...form,country:e.target.value})}/></Field>
-      <Field label="Beschreibung"><textarea rows="5" value={form.description||''} onChange={e=>setForm({...form,description:e.target.value})}/></Field>
+      <Field label="Gründungsjahr"><input type="number" min="1500" max="2200" value={form.founded_year||''} onChange={e=>setForm({...form,founded_year:e.target.value})}/></Field>
+      <Field label="Offizielle Website"><input value={form.website_url||''} onChange={e=>setForm({...form,website_url:e.target.value})} placeholder="https://…"/></Field>
+      <Field label="Verifizierungsstatus"><select value={form.verification_status||'OPEN'} onChange={e=>setForm({...form,verification_status:e.target.value})}><option value="OPEN">Offen</option><option value="REVIEW">In Prüfung</option><option value="VERIFIED">Verifiziert</option></select></Field>
+      <Field label="Beschreibung"><textarea rows="7" value={form.description||''} onChange={e=>setForm({...form,description:e.target.value})}/></Field>
       <button className="primary"><Save/> Speichern</button>
     </form>
     <div className="admin-list"><h3>Vorhandene Marken</h3>{brands.map(b=><div className="admin-row" key={b.id}><div><b>{b.name}</b><span>{b.country||'Land nicht erfasst'}</span></div><div><button onClick={()=>setEditing(b)}><Pencil/></button><button className="danger" onClick={()=>remove(b)}><Trash2/></button></div></div>)}</div>
@@ -695,7 +702,31 @@ function DetailTwinCard({twin,item,onOpen}) {
   </article>;
 }
 
-function DetailPage({item,twins,loading,onBack,onOpen}) {
+function BrandProfile({brand,items,onBack,onOpen}) {
+  const [query,setQuery]=useState('');
+  const [sort,setSort]=useState('name');
+  const brandItems=useMemo(()=>items.filter(item=>item.brand.id===brand.id).filter(item=>`${item.name} ${item.accords||''} ${item.perfumer||''}`.toLowerCase().includes(query.toLowerCase())).sort((a,b)=>sort==='year'?Number(b.year||0)-Number(a.year||0):sort==='price'?Number(a.price_eur??Infinity)-Number(b.price_eur??Infinity):a.name.localeCompare(b.name,'de')),[items,brand.id,query,sort]);
+  const years=items.filter(item=>item.brand.id===brand.id&&item.year).map(item=>Number(item.year));
+  const verified=brand.verification_status==='VERIFIED';
+  return <main className="brand-profile">
+    <div className="brand-profile-toolbar"><button onClick={onBack}><ArrowLeft size={18}/> Zurück zur Übersicht</button><span>DGD Markenprofil</span></div>
+    <section className="brand-profile-hero">
+      <div className="brand-monogram">{brand.name.slice(0,2).toUpperCase()}</div>
+      <div><span className="kicker">Markenwelt</span><h1>{brand.name}</h1><div className="brand-profile-meta">
+        <span><MapPin size={16}/>{brand.country||'Herkunft offen'}</span>
+        <span><CalendarDays size={16}/>{brand.founded_year?`Gegründet ${brand.founded_year}`:'Gründungsjahr offen'}</span>
+        <span className={verified?'verified':''}><ShieldCheck size={16}/>{verified?'Verifiziert':brand.verification_status==='REVIEW'?'In Prüfung':'Noch offen'}</span>
+      </div><p>{brand.description||'Für diese Marke ist noch kein ausführliches Porträt hinterlegt.'}</p>{brand.website_url&&<a href={brand.website_url} target="_blank" rel="noreferrer">Offizielle Website <ExternalLink size={15}/></a>}</div>
+    </section>
+    <section className="brand-profile-stats"><article><strong>{items.filter(item=>item.brand.id===brand.id).length}</strong><span>Düfte in DGD</span></article><article><strong>{years.length?Math.min(...years):'–'}</strong><span>Ältester erfasster Duft</span></article><article><strong>{years.length?Math.max(...years):'–'}</strong><span>Neuester erfasster Duft</span></article></section>
+    <section className="brand-profile-catalog">
+      <div className="section-head"><div><span className="kicker">Kollektion</span><h2>Düfte von {brand.name}</h2></div><div className="brand-catalog-tools"><div><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="In dieser Marke suchen …"/></div><select value={sort} onChange={e=>setSort(e.target.value)}><option value="name">Name A–Z</option><option value="year">Neueste zuerst</option><option value="price">Preis aufsteigend</option></select></div></div>
+      {brandItems.length?<div className="card-grid">{brandItems.map(item=><FragranceCard key={item.id} item={item} onOpen={onOpen}/>)}</div>:<div className="empty">Keine passenden Düfte gefunden.</div>}
+    </section>
+  </main>;
+}
+
+function DetailPage({item,twins,loading,onBack,onOpen,onOpenBrand}) {
   const relatedTwins=twins.filter(twin=>twin.original.id===item.id||twin.alternative.id===item.id);
   const accords=(item.accords||'').split(',').map(value=>value.trim()).filter(Boolean);
   const structuredNotes=item.structured_notes||[];
@@ -705,7 +736,7 @@ function DetailPage({item,twins,loading,onBack,onOpen}) {
     <section className="detail-hero">
       <div className="detail-visual"><ManagedImage item={item} variant="detail" showStatus/><div className="detail-image-glow"/></div>
       <div className="detail-intro">
-        <span className="kicker">{item.brand.name}</span>
+        <button className="kicker detail-brand-link" onClick={()=>onOpenBrand(item.brand)}>{item.brand.name} <ChevronRight size={14}/></button>
         <h1>{item.name}</h1>
         <div className="detail-meta-row">
           <span><Clock3 size={15}/>{item.year||'Jahr offen'}</span>

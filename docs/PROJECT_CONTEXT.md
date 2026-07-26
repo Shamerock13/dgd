@@ -194,3 +194,7 @@ Umgesetzt in diesem Paket:
 - Import-Unterstützung für die neuen Bildfelder
 - Vorbereitung auf spätere lokale Pfade wie `/media/...`
 
+## Aktueller Stand: Markenprofile 1.0
+
+Umgesetzt sind eigenständige Markenseiten mit Herkunft, Gründungsjahr, offizieller Website, Beschreibung und Verifizierungsstatus. Jede Markenseite zeigt Kennzahlen sowie alle zugeordneten Düfte mit eigener Suche und Sortierung. Von Duftdetailseiten kann direkt zum Markenprofil gewechselt werden. Schema-Version ist nun `0008`.
+

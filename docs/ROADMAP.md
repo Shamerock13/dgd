@@ -158,3 +158,16 @@ Enthalten sind externe Bildpfade, Bildquelle, Quellenlink, Nutzungsnotiz, Prüfs
 
 **Nächstes größeres Paket:** Markenprofile 1.0.
 
+## Fortschritt: Markenprofile 1.0
+
+**Status: umgesetzt**
+
+- eigenständige Markenseiten
+- Herkunft, Gründungsjahr und Website
+- Beschreibung und Verifizierungsstatus
+- Markenkennzahlen
+- Duftliste mit Suche und Sortierung
+- direkte Navigation zwischen Duft- und Markenprofil
+
+**Nächstes größeres Paket:** Quellen & Verifizierung 1.0.
+
