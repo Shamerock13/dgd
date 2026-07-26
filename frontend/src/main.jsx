@@ -120,7 +120,7 @@ function App() {
       </section>}
       {(tab==='entdecken'||tab==='zwillinge')&&<section className="content-section twin-section"><div className="section-head"><div><span className="kicker">Das Herzstück</span><h2>Starke Duftzwillinge</h2></div></div><div className="twin-grid">{twins.map(t=><TwinCard key={t.id} twin={t} onOpen={setSelected}/>)}</div></section>}
     </main>}
-    <footer><b>DGD</b><span>Das große Parfum- & Duftzwillinge-Lexikon · Version 1.0.0</span></footer>
+    <footer><b>DGD</b><span>Das große Parfum- & Duftzwillinge-Lexikon · Version 2.0 · Entwicklung</span></footer>
     {selected&&<Detail item={selected} onClose={()=>setSelected(null)}/>}
   </div>
 }
@@ -511,7 +511,36 @@ function TwinAdmin({items,twins,reload,flash}) {
 
 function Field({label,children}){return <label className="field"><span>{label}</span>{children}</label>}
 function Stat({icon,value,label}){return <article className="stat"><span>{icon}</span><div><strong>{value??'–'}</strong><small>{label}</small></div></article>}
-function FragranceCard({item,onOpen}){return <article className="fragrance-card" onClick={()=>onOpen(item)}><div className="bottle">{item.image_url?<img src={item.image_url}/>:<span>{item.brand.name.slice(0,2).toUpperCase()}</span>}</div><div className="card-body"><div className="brand-name">{item.brand.name}</div><h3>{item.name}</h3><div className="chips">{(item.accords||'').split(',').filter(Boolean).slice(0,3).map(a=><span key={a}>{a.trim()}</span>)}</div><div className="card-bottom"><b>{item.price_eur!=null?euro.format(item.price_eur):'Preis offen'}</b><button>Details <ChevronRight size={15}/></button></div></div></article>}
+function FragranceCard({item,onOpen}){
+  const accords=(item.accords||"").split(",").map(a=>a.trim()).filter(Boolean).slice(0,3);
+  const longevity=item.longevity!=null?Math.max(0,Math.min(10,Number(item.longevity))):null;
+  return <article className="fragrance-card" onClick={()=>onOpen(item)}>
+    <div className="bottle">
+      {item.image_url?<img src={item.image_url} alt={`${item.brand.name} ${item.name}`}/>:<span>{item.brand.name.slice(0,2).toUpperCase()}</span>}
+      <div className="card-badges">
+        {item.gender&&<span>{item.gender}</span>}
+        {item.concentration&&<span>{item.concentration}</span>}
+      </div>
+    </div>
+    <div className="card-body">
+      <div className="brand-name">{item.brand.name}</div>
+      <h3>{item.name}</h3>
+      <div className="fragrance-meta">
+        <span>{item.year||"Jahr offen"}</span>
+        <span>{item.perfumer||"Parfümeur offen"}</span>
+      </div>
+      {accords.length>0?<div className="chips">{accords.map(a=><span key={a}>{a}</span>)}</div>:<div className="chips muted-chip"><span>Akkorde noch offen</span></div>}
+      {longevity!=null&&<div className="card-rating">
+        <div><span>Haltbarkeit</span><strong>{longevity.toFixed(1)}/10</strong></div>
+        <div className="card-rating-track"><span style={{width:`${longevity*10}%`}}/></div>
+      </div>}
+      <div className="card-bottom">
+        <b>{item.price_eur!=null?euro.format(item.price_eur):"Preis offen"}</b>
+        <button type="button">Details <ChevronRight size={15}/></button>
+      </div>
+    </div>
+  </article>
+}
 function TwinCard({twin,onOpen}){return <article className="twin-card"><div className="similarity"><strong>{Math.round(twin.similarity)}%</strong><span>Ähnlichkeit</span></div><div className="twin-pair"><button onClick={()=>onOpen(twin.original)}><small>Original</small><b>{twin.original.name}</b><span>{twin.original.brand.name}</span></button><GitCompareArrows/><button onClick={()=>onOpen(twin.alternative)}><small>Alternative</small><b>{twin.alternative.name}</b><span>{twin.alternative.brand.name}</span></button></div><p>{twin.commonalities}</p><div className="saving"><span>Preisunterschied</span><strong>{twin.original.price_eur&&twin.alternative.price_eur?euro.format(twin.original.price_eur-twin.alternative.price_eur):'–'}</strong></div></article>}
 function Detail({item,onClose}){return <div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&onClose()}><article className="modal"><button className="modal-close" onClick={onClose}><X/></button><div className="modal-hero"><div className="big-bottle">{item.image_url?<img src={item.image_url}/>:<span>{item.brand.name.slice(0,2).toUpperCase()}</span>}</div><div><span className="kicker">{item.brand.name}</span><h2>{item.name}</h2><p>{item.description}</p><div className="meta">{item.gender} · {item.concentration||'Konzentration offen'} {item.year?`· ${item.year}`:''}</div><strong className="price">{item.price_eur!=null?euro.format(item.price_eur):'Preis offen'}</strong></div></div><div className="notes"><div><small>Kopfnote</small><p>{item.top_notes||'Noch nicht erfasst'}</p></div><div><small>Herznote</small><p>{item.heart_notes||'Noch nicht erfasst'}</p></div><div><small>Basisnote</small><p>{item.base_notes||'Noch nicht erfasst'}</p></div></div><div className="meters"><Meter label="Haltbarkeit" value={item.longevity}/><Meter label="Projektion" value={item.projection}/><Meter label="Süße" value={item.sweetness}/><Meter label="Frische" value={item.freshness}/></div></article></div>}
 

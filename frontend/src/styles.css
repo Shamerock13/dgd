@@ -55,3 +55,381 @@
 .diagnostic-item small,.diagnostic-item span{display:block}.diagnostic-item small{font-weight:800}.diagnostic-item span{color:var(--muted);font-size:11px;margin-top:3px;word-break:break-word}
 .resolved-info{color:var(--muted);font-size:12px;margin:14px 0 0}.resolved-info code{color:var(--gold)}
 @media(max-width:850px){.diagnostic-grid{grid-template-columns:1fr}}
+
+/* =========================================================
+   DGD 2.0 – Modernisierung
+   ========================================================= */
+
+body{
+  background:
+    radial-gradient(circle at 12% 4%,color-mix(in srgb,var(--gold) 10%,transparent),transparent 30rem),
+    radial-gradient(circle at 88% 18%,color-mix(in srgb,var(--accent) 7%,transparent),transparent 32rem),
+    var(--bg);
+}
+
+.shell{
+  position:relative;
+}
+
+.topbar{
+  width:min(1380px,calc(100% - 36px));
+  height:72px;
+  margin:18px auto 0;
+  padding:0 18px;
+  border:1px solid color-mix(in srgb,var(--line) 82%,transparent);
+  border-radius:20px;
+  background:color-mix(in srgb,var(--surface) 82%,transparent);
+  box-shadow:0 14px 45px rgba(0,0,0,.08);
+  top:14px;
+}
+
+.brand-mark{
+  border-radius:14px;
+  background:
+    linear-gradient(145deg,color-mix(in srgb,var(--gold) 18%,var(--surface)),var(--surface));
+}
+
+.topbar nav{
+  padding:5px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:color-mix(in srgb,var(--bg) 65%,transparent);
+}
+
+.topbar nav button{
+  min-height:38px;
+  padding:8px 14px;
+  border-radius:10px;
+  font-weight:600;
+}
+
+.topbar nav button.active{
+  background:var(--surface);
+  color:var(--text);
+  box-shadow:0 5px 16px rgba(0,0,0,.08);
+}
+
+main{
+  max-width:1380px;
+}
+
+.hero{
+  min-height:520px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:92px 0 62px;
+}
+
+.hero h1{
+  max-width:950px;
+  margin:22px auto;
+  letter-spacing:-.035em;
+  text-wrap:balance;
+}
+
+.hero>p{
+  line-height:1.65;
+}
+
+.searchbox{
+  min-height:66px;
+  border-radius:22px;
+  padding-left:22px;
+  box-shadow:
+    0 24px 70px rgba(0,0,0,.12),
+    inset 0 1px rgba(255,255,255,.08);
+}
+
+.filter-button{
+  min-height:44px;
+  padding:11px 18px;
+  border-radius:13px;
+  font-weight:700;
+}
+
+.stats-grid{
+  gap:18px;
+  margin-bottom:92px;
+}
+
+.stat{
+  position:relative;
+  min-height:118px;
+  padding:25px;
+  border-radius:22px;
+  overflow:hidden;
+  box-shadow:0 10px 35px rgba(0,0,0,.045);
+  transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;
+}
+
+.stat::after{
+  content:'';
+  position:absolute;
+  width:90px;
+  height:90px;
+  right:-32px;
+  bottom:-42px;
+  border-radius:50%;
+  background:color-mix(in srgb,var(--gold) 11%,transparent);
+}
+
+.stat:hover{
+  transform:translateY(-3px);
+  border-color:color-mix(in srgb,var(--gold) 48%,var(--line));
+  box-shadow:0 18px 45px rgba(0,0,0,.08);
+}
+
+.stat>span{
+  width:46px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  flex:0 0 auto;
+  border-radius:14px;
+  background:color-mix(in srgb,var(--gold) 12%,var(--surface2));
+}
+
+.stat strong{
+  font-size:34px;
+  line-height:1;
+  margin-bottom:6px;
+}
+
+.section-head h2{
+  letter-spacing:-.025em;
+}
+
+.result-count{
+  padding:8px 12px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--surface);
+  font-size:12px;
+}
+
+.card-grid{
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:22px;
+}
+
+.fragrance-card{
+  border-radius:24px;
+  box-shadow:0 8px 30px rgba(0,0,0,.04);
+}
+
+.fragrance-card:hover{
+  transform:translateY(-7px);
+  border-color:color-mix(in srgb,var(--gold) 42%,var(--line));
+}
+
+.bottle{
+  height:245px;
+}
+
+.card-body{
+  padding:24px;
+}
+
+.card-body h3{
+  font-size:27px;
+}
+
+.twin-section{
+  padding:64px 38px;
+  border:1px solid var(--line);
+  border-radius:34px;
+  background:
+    linear-gradient(145deg,color-mix(in srgb,var(--surface2) 94%,var(--gold)),var(--surface2));
+}
+
+.twin-card{
+  border-radius:23px;
+  padding:25px;
+  box-shadow:0 8px 28px rgba(0,0,0,.04);
+}
+
+footer{
+  width:min(1380px,calc(100% - 36px));
+  margin:auto;
+}
+
+@media(max-width:850px){
+  .topbar{
+    width:calc(100% - 24px);
+    margin-top:12px;
+    top:8px;
+  }
+
+  .hero{
+    min-height:auto;
+    padding:78px 0 48px;
+  }
+
+  .stats-grid{
+    margin-bottom:65px;
+  }
+
+  .stat{
+    min-height:105px;
+  }
+
+  .twin-section{
+    padding:44px 22px;
+  }
+}
+
+@media(max-width:560px){
+  .topbar{
+    height:66px;
+    padding:0 12px;
+    border-radius:17px;
+  }
+
+  .brand small{
+    display:none;
+  }
+
+  .hero{
+    padding-top:68px;
+  }
+
+  .hero h1{
+    font-size:42px;
+  }
+
+  .stats-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .stat{
+    display:block;
+    min-height:140px;
+  }
+
+  .stat>span{
+    margin-bottom:16px;
+  }
+
+  .stat strong{
+    font-size:29px;
+  }
+
+  .card-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+/* DGD 2.0 – informative Duftkarten */
+
+.bottle{
+  position:relative;
+}
+
+.card-badges{
+  position:absolute;
+  left:14px;
+  right:14px;
+  top:14px;
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  pointer-events:none;
+}
+
+.card-badges span{
+  padding:6px 9px;
+  border:1px solid color-mix(in srgb,var(--line) 75%,transparent);
+  border-radius:999px;
+  background:color-mix(in srgb,var(--surface) 82%,transparent);
+  color:var(--text);
+  backdrop-filter:blur(10px);
+  font-size:10px;
+  font-weight:700;
+  box-shadow:0 5px 15px rgba(0,0,0,.07);
+}
+
+.fragrance-meta{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin:-5px 0 15px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.fragrance-meta span{
+  display:flex;
+  align-items:center;
+}
+
+.fragrance-meta span+span::before{
+  content:'•';
+  margin-right:8px;
+  color:var(--gold);
+}
+
+.muted-chip span{
+  opacity:.65;
+  border:1px dashed var(--line);
+  background:transparent;
+}
+
+.card-rating{
+  margin-top:18px;
+}
+
+.card-rating>div:first-child{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:11px;
+  color:var(--muted);
+}
+
+.card-rating strong{
+  color:var(--text);
+  font-size:11px;
+}
+
+.card-rating-track{
+  height:6px;
+  margin-top:7px;
+  overflow:hidden;
+  border-radius:999px;
+  background:var(--surface2);
+}
+
+.card-rating-track span{
+  display:block;
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg,var(--gold),var(--accent));
+}
+
+.fragrance-card .card-bottom{
+  margin-top:20px;
+}
+
+.fragrance-card .card-bottom b{
+  font-size:16px;
+}
+
+.fragrance-card .card-bottom button{
+  padding:7px 0 7px 10px;
+  font-weight:700;
+}
+
+@media(max-width:560px){
+  .bottle{
+    height:220px;
+  }
+
+  .fragrance-meta span:nth-child(2){
+    max-width:210px;
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+  }
+}
