@@ -236,3 +236,12 @@ Bei Änderungen an Marken zusätzlich prüfen:
 - externe Quellenlinks nur mit `target="_blank"` und `rel="noreferrer"` öffnen
 - Statuswerte außerhalb der definierten Enum-Werte müssen vom Backend abgelehnt werden
 - Prüfübersicht muss nach Änderungen neu geladen werden
+
+## Parfümeurprofile testen
+
+- Profil anlegen, bearbeiten und löschen
+- Löschschutz bei zugeordneten Düften prüfen
+- Namenszuordnung zwischen Duft und Profil prüfen
+- Navigation Duftdetail → Parfümeurprofil → Duft prüfen
+- Primärquellen nur sicher extern öffnen
+- Frontend-Build und Backend-Compile ausführen

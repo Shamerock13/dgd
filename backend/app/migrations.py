@@ -263,6 +263,15 @@ Migration(
         ),
     ),
 
+    Migration(
+        version="0010",
+        description="Parfümeurprofile und Artikelstatus absichern",
+        statements=(
+            "UPDATE master_perfumers SET article_status = 'OPEN' WHERE article_status IS NULL OR btrim(article_status) = ''",
+            "CREATE INDEX IF NOT EXISTS ix_master_perfumers_article_status ON master_perfumers (article_status)",
+        ),
+    ),
+
 )
 
 

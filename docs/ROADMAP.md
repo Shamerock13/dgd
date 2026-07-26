@@ -183,3 +183,16 @@ Enthalten sind externe Bildpfade, Bildquelle, Quellenlink, Nutzungsnotiz, Prüfs
 - Verifizierungsübersicht mit offenen Datensätzen
 
 **Nächstes größeres Paket:** Parfümeurprofile 1.0.
+
+## Fortschritt: Parfümeurprofile 1.0
+
+**Status: umgesetzt**
+
+- eigene Parfümeurprofile
+- Biografie, Herkunft und Geburtsjahr
+- Stil und bekannte Werke
+- Primärquelle und Artikelstatus
+- Werkverzeichnis aus zugeordneten Düften
+- direkte Navigation aus Duftprofilen
+
+**Nächstes größeres Paket:** Datenqualität & redaktionelle Arbeitsliste 1.0.
