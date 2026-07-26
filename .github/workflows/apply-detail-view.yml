@@ -1,0 +1,35 @@
+name: Apply detail view package
+
+on:
+  push:
+    branches:
+      - feature/detail-view-2
+    paths:
+      - tools/apply_detail_view.py
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/detail-view-2
+          fetch-depth: 0
+      - name: Apply focused source changes
+        run: python tools/apply_detail_view.py
+      - name: Validate frontend build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+      - name: Commit generated feature package
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/apply-detail-view.yml tools/apply_detail_view.py
+          git add frontend/src/main.jsx frontend/src/detail.css
+          git commit -m "feat: add fragrance detail view and twin comparison"
+          git push origin feature/detail-view-2
