@@ -1,7 +1,7 @@
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlalchemy import func, select
+from sqlalchemy import String, func, select
 from sqlalchemy.orm import Session
 
 from .database import get_db
@@ -66,14 +66,14 @@ def verification_summary(db: Session = Depends(get_db)):
     brands_open = db.scalar(select(func.count(Brand.id)).where(Brand.verification_status != "VERIFIED")) or 0
     fragrances_without_source = db.scalar(
         select(func.count(Fragrance.id)).where(
-            ~Fragrance.id.cast(str).in_(
+            ~Fragrance.id.cast(String).in_(
                 select(MasterSource.object_id).where(MasterSource.object_type == "FRAGRANCE")
             )
         )
     ) or 0
     twins_without_source = db.scalar(
         select(func.count(TwinMatch.id)).where(
-            ~TwinMatch.id.cast(str).in_(
+            ~TwinMatch.id.cast(String).in_(
                 select(MasterSource.object_id).where(MasterSource.object_type == "TWIN")
             )
         )
