@@ -7,6 +7,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 from uuid import UUID
 from xml.etree import ElementTree as ET
 
@@ -34,6 +35,13 @@ FRAGRANCE_ALIASES = {
     "preis euro": "price_eur",
     "bild url": "image_url",
     "bild-url": "image_url",
+    "bildquelle": "image_source_name",
+    "bildquelle name": "image_source_name",
+    "bildquelle url": "image_source_url",
+    "bild-quellen-url": "image_source_url",
+    "bild nutzungshinweis": "image_usage_note",
+    "bildrechte": "image_usage_note",
+    "bildstatus": "image_status",
     "beschreibung": "description",
     "kopfnoten": "top_notes",
     "kopfnote": "top_notes",
@@ -95,6 +103,24 @@ def parse_float(value: Any) -> float | None:
 def parse_int(value: Any) -> int | None:
     number = parse_float(value)
     return int(number) if number is not None else None
+
+
+def normalize_image_status(value: Any) -> str:
+    folded = str(value or "OPEN").strip().casefold()
+    aliases = {
+        "open": "OPEN", "offen": "OPEN",
+        "verified": "VERIFIED", "geprüft": "VERIFIED", "geprueft": "VERIFIED",
+        "broken": "BROKEN", "fehlerhaft": "BROKEN", "defekt": "BROKEN",
+    }
+    return aliases.get(folded, "OPEN")
+
+
+def valid_image_location(value: str | None) -> bool:
+    if not value:
+        return True
+    if value.startswith("/"):
+        return True
+    return urlparse(value).scheme in {"http", "https"}
 
 
 def split_notes(value: Any) -> list[str]:
@@ -262,6 +288,10 @@ def validate_fragrance_row(row: dict[str, Any]) -> tuple[dict[str, Any], list[st
         "perfumer": clean_text(row.get("perfumer")),
         "price_eur": None,
         "image_url": clean_text(row.get("image_url")),
+        "image_source_name": clean_text(row.get("image_source_name")),
+        "image_source_url": clean_text(row.get("image_source_url")),
+        "image_usage_note": clean_text(row.get("image_usage_note")),
+        "image_status": normalize_image_status(row.get("image_status")),
         "description": clean_text(row.get("description")),
         "top_notes": split_notes(row.get("top_notes")),
         "heart_notes": split_notes(row.get("heart_notes")),
@@ -302,6 +332,10 @@ def validate_fragrance_row(row: dict[str, Any]) -> tuple[dict[str, Any], list[st
 
     if parsed["year"] is not None and not 1700 <= parsed["year"] <= 2200:
         errors.append("Jahr liegt außerhalb des gültigen Bereichs")
+    if not valid_image_location(parsed["image_url"]):
+        errors.append("Bild-URL muss mit http://, https:// oder / beginnen")
+    if not valid_image_location(parsed["image_source_url"]):
+        errors.append("Bildquellen-URL muss mit http://, https:// oder / beginnen")
 
     return parsed, errors
 
@@ -549,8 +583,9 @@ def commit_import(
 
                 scalar_fields = [
                     "year", "gender", "concentration", "perfumer", "price_eur",
-                    "image_url", "description", "accords", "longevity",
-                    "projection", "sweetness", "freshness",
+                    "image_url", "image_source_name", "image_source_url",
+                    "image_usage_note", "image_status", "description", "accords",
+                    "longevity", "projection", "sweetness", "freshness",
                 ]
                 for field in scalar_fields:
                     value = parsed[field]

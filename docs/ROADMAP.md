@@ -140,3 +140,21 @@ Neue Ideen werden sofort dem passenden Roadmap-Paket zugeordnet, auch wenn ihre 
 ## Aktuelle Priorität
 
 Als nächstes wird das Paket **Bildverwaltung & Bildquellen** vorbereitet. Danach folgen voraussichtlich Markenprofile sowie Quellen und Verifizierung.
+
+## Fortschritt: Bildverwaltung & Bildquellen 1.0
+
+**Status: umgesetzt**
+
+Enthalten sind externe Bildpfade, Bildquelle, Quellenlink, Nutzungsnotiz, Prüfstatus, Admin-Vorschau und ein gemeinsamer Fallback-Baustein.
+
+### Nachgelagertes Paket: Lokaler Bildupload
+
+- dauerhaft gemountetes Unraid-Verzeichnis
+- erlaubte Dateitypen und Größenbegrenzung
+- sichere Dateinamen und Dublettenstrategie
+- Thumbnail-/Optimierungsstrategie
+- Backup- und Löschregeln
+- Migration bestehender externer Bilder nur nach bewusster Freigabe
+
+**Nächstes größeres Paket:** Markenprofile 1.0.
+

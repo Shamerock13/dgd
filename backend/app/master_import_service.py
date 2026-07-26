@@ -446,6 +446,11 @@ def _build_plan(db: Session, workbook, sheets, filename: str, *, apply: bool) ->
             "gender": _gender(data.get("Zielgruppe")),
             "concentration": concentration,
             "perfumer": perfumer_name,
+            "image_url": data.get("Bild-URL") or data.get("Bild URL"),
+            "image_source_name": data.get("Bildquelle") or data.get("Bildquelle Name"),
+            "image_source_url": data.get("Bildquelle URL"),
+            "image_usage_note": data.get("Bildrechte") or data.get("Bild Nutzungshinweis"),
+            "image_status": str(data.get("Bildstatus") or "OPEN").strip().upper(),
             "master_data": master_data,
         }
         if existing is None:

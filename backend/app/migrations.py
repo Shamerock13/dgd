@@ -222,6 +222,20 @@ Migration(
             "CREATE INDEX IF NOT EXISTS ix_master_import_runs_created_at ON master_import_runs (created_at DESC)",
         ),
     ),
+    Migration(
+        version="0007",
+        description="Bildquellen, Nutzungsstatus und robuste Bildverwaltung ergänzen",
+        statements=(
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS image_source_name VARCHAR(200)",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS image_source_url TEXT",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS image_usage_note TEXT",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS image_status VARCHAR(30)",
+            "UPDATE fragrances SET image_status = 'OPEN' WHERE image_status IS NULL OR btrim(image_status) = ''",
+            "ALTER TABLE fragrances ALTER COLUMN image_status SET DEFAULT 'OPEN'",
+            "ALTER TABLE fragrances ALTER COLUMN image_status SET NOT NULL",
+            "CREATE INDEX IF NOT EXISTS ix_fragrances_image_status ON fragrances (image_status)",
+        ),
+    ),
 
 )
 
