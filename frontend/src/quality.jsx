@@ -1,23 +1,8 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {AlertTriangle, CheckCircle2, RefreshCw, Search, SlidersHorizontal, Wrench} from 'lucide-react';
-import MediaUpload from './media-upload.jsx';
 import './quality.css';
 
 const labels={HIGH:'Hoch',MEDIUM:'Mittel',LOW:'Niedrig'};
-
-function MediaManager({api,flash}) {
-  const [items,setItems]=useState([]);
-  const [selectedId,setSelectedId]=useState('');
-  const load=async()=>{try{setItems(await api('/api/fragrances'))}catch(e){flash(e.message)}};
-  useEffect(()=>{load()},[]);
-  const selected=items.find(item=>item.id===selectedId)||null;
-  const changed=patch=>setItems(rows=>rows.map(row=>row.id===selectedId?{...row,...patch}:row));
-  return <section className="editor compact">
-    <div className="editor-title"><div>Lokaler Bildupload</div></div>
-    <label className="field"><span>Duft auswählen</span><select value={selectedId} onChange={e=>setSelectedId(e.target.value)}><option value="">Bitte wählen</option>{items.map(item=><option key={item.id} value={item.id}>{item.brand.name} – {item.name}</option>)}</select></label>
-    {selected&&<><div className="image-admin-preview"><div className="managed-image managed-image-admin">{selected.image_url?<img src={selected.image_url} alt={`${selected.brand.name} ${selected.name}`}/>:<div className="managed-image-fallback"><span>{selected.brand.name.slice(0,2).toUpperCase()}</span><small>Bild folgt</small></div>}</div><div><small>Aktuelles Bild</small><b>{selected.image_source_name||'Keine Bildquelle'}</b><span>{selected.image_url||'Noch kein Bild hinterlegt.'}</span></div></div><MediaUpload item={selected} flash={flash} onChanged={changed}/></>}
-  </section>;
-}
 
 export default function QualityWorklist({api,flash,onOpenSection}) {
   const [data,setData]=useState({summary:{},categories:{},issues:[]});
@@ -45,8 +30,6 @@ export default function QualityWorklist({api,flash,onOpenSection}) {
       <div><span className="kicker">Redaktion</span><h2>Datenqualität & Arbeitsliste</h2><p>Alle offenen Baustellen aus Marken, Düften, Quellen, Duftzwillingen und Parfümeuren an einem Ort.</p></div>
       <button className="quality-refresh" onClick={load} disabled={loading}><RefreshCw size={17}/>{loading?'Prüfe …':'Neu prüfen'}</button>
     </div>
-
-    <MediaManager api={api} flash={flash}/>
 
     <div className="quality-summary">
       <article className="quality-score"><strong>{data.summary.quality_score??0}%</strong><span>Qualitätswert</span></article>
