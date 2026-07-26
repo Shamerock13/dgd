@@ -3,14 +3,15 @@ import re
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from fastapi import Depends, File, HTTPException, Response, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from .database import get_db
 from .models import Fragrance
+from .quality_routes import router
 
 
-router = APIRouter(prefix="/api", tags=["media"])
 MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", "/app/media")).resolve()
 FRAGRANCE_DIR = MEDIA_ROOT / "fragrances"
 MAX_IMAGE_BYTES = int(os.getenv("MAX_IMAGE_BYTES", str(8 * 1024 * 1024)))
@@ -38,7 +39,7 @@ def _looks_like_image(data: bytes, content_type: str) -> bool:
 
 
 def _local_path(image_url: str | None) -> Path | None:
-    prefix = "/media/fragrances/"
+    prefix = "/api/quality/media/fragrances/"
     if not image_url or not image_url.startswith(prefix):
         return None
     candidate = (FRAGRANCE_DIR / image_url.removeprefix(prefix)).resolve()
@@ -49,12 +50,21 @@ def _local_path(image_url: str | None) -> Path | None:
     return candidate
 
 
+@router.get("/media/fragrances/{filename}")
+def get_fragrance_image(filename: str):
+    ensure_media_dirs()
+    candidate = (FRAGRANCE_DIR / filename).resolve()
+    try:
+        candidate.relative_to(FRAGRANCE_DIR.resolve())
+    except ValueError:
+        raise HTTPException(404, "Bild nicht gefunden")
+    if not candidate.is_file():
+        raise HTTPException(404, "Bild nicht gefunden")
+    return FileResponse(candidate)
+
+
 @router.post("/fragrances/{fragrance_id}/image")
-async def upload_fragrance_image(
-    fragrance_id: UUID,
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-):
+async def upload_fragrance_image(fragrance_id: UUID, file: UploadFile = File(...), db: Session = Depends(get_db)):
     item = db.get(Fragrance, fragrance_id)
     if not item:
         raise HTTPException(404, "Duft nicht gefunden")
@@ -66,32 +76,21 @@ async def upload_fragrance_image(
         raise HTTPException(413, f"Das Bild darf höchstens {MAX_IMAGE_BYTES // 1024 // 1024} MB groß sein.")
     if not data or not _looks_like_image(data, content_type):
         raise HTTPException(400, "Die Datei ist kein gültiges Bild des angegebenen Typs.")
-
     ensure_media_dirs()
     filename = f"{_safe_slug(item.brand.name)}-{_safe_slug(item.name)}-{uuid4().hex[:10]}{EXTENSIONS[content_type]}"
     target = FRAGRANCE_DIR / filename
     target.write_bytes(data)
-
     previous = _local_path(item.image_url)
-    item.image_url = f"/media/fragrances/{filename}"
+    item.image_url = f"/api/quality/media/fragrances/{filename}"
     item.image_source_name = "Lokaler DGD-Upload"
     item.image_source_url = None
     item.image_usage_note = "Lokal auf dem DGD-Unraid-Server gespeichert. Rechte und Herkunft redaktionell prüfen."
     item.image_status = "OPEN"
     db.commit()
     db.refresh(item)
-
     if previous and previous != target and previous.exists():
         previous.unlink(missing_ok=True)
-
-    return {
-        "image_url": item.image_url,
-        "image_source_name": item.image_source_name,
-        "image_usage_note": item.image_usage_note,
-        "image_status": item.image_status,
-        "filename": filename,
-        "size_bytes": len(data),
-    }
+    return {"image_url": item.image_url, "image_source_name": item.image_source_name, "image_source_url": None, "image_usage_note": item.image_usage_note, "image_status": item.image_status, "filename": filename, "size_bytes": len(data)}
 
 
 @router.delete("/fragrances/{fragrance_id}/image", status_code=204)
