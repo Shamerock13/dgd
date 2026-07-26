@@ -1,0 +1,23 @@
+name: Validate sources verification
+
+on:
+  push:
+    branches:
+      - feature/sources-verification-1
+    paths:
+      - tools/validate-sources-trigger.txt
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/sources-verification-1
+      - name: Validate backend
+        run: python -m compileall -q backend/app
+      - name: Validate frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
