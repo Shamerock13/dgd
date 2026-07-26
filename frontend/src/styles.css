@@ -433,3 +433,90 @@ footer{
     text-overflow:ellipsis;
   }
 }
+
+/* DGD 2.0 – Markenbereich */
+
+.brand-section{
+  margin-top:-20px;
+}
+
+.brand-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+}
+
+.brand-card{
+  min-width:0;
+  display:grid;
+  grid-template-columns:46px minmax(0,1fr) auto;
+  gap:13px;
+  align-items:center;
+  padding:15px;
+  border:1px solid var(--line);
+  border-radius:17px;
+  background:var(--surface);
+  color:var(--text);
+  text-align:left;
+  cursor:pointer;
+  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
+}
+
+.brand-card:hover{
+  transform:translateY(-3px);
+  border-color:color-mix(in srgb,var(--gold) 50%,var(--line));
+  box-shadow:0 14px 35px rgba(0,0,0,.07);
+}
+
+.brand-card>span{
+  width:46px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  border-radius:13px;
+  background:color-mix(in srgb,var(--gold) 13%,var(--surface2));
+  color:var(--gold);
+  font-family:'Playfair Display';
+  font-size:17px;
+}
+
+.brand-card div{
+  min-width:0;
+}
+
+.brand-card b,
+.brand-card small{
+  display:block;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+
+.brand-card small{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:11px;
+}
+
+.brand-card>svg{
+  width:17px;
+  color:var(--gold);
+}
+
+@media(max-width:1000px){
+  .brand-grid{
+    grid-template-columns:repeat(3,1fr);
+  }
+}
+
+@media(max-width:720px){
+  .brand-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+}
+
+@media(max-width:480px){
+  .brand-grid{
+    grid-template-columns:1fr;
+  }
+}
