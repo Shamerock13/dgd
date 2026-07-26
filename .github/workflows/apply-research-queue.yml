@@ -1,0 +1,27 @@
+name: Apply research queue package
+on:
+  push:
+    branches: [feature/research-import-queue-1]
+    paths:
+      - tools/research-queue-trigger.txt
+permissions:
+  contents: write
+jobs:
+  apply-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/research-import-queue-1
+          fetch-depth: 0
+      - run: python tools/apply_research_queue.py
+      - run: python -m compileall -q backend/app
+      - working-directory: frontend
+        run: npm install && npm run build
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f .github/workflows/apply-research-queue.yml tools/apply_research_queue.py tools/research-queue-trigger.txt
+          git add backend/app/main.py backend/app/migrations.py backend/app/research_routes.py frontend/src/main.jsx frontend/src/research.jsx frontend/src/research.css docs/PROJECT_CONTEXT.md docs/ROADMAP.md docs/DEV_WORKFLOW.md
+          git commit -m "feat: add automatic research import queue"
+          git push origin feature/research-import-queue-1
