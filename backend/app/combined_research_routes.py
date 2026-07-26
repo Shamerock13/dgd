@@ -7,26 +7,37 @@ from sqlalchemy.orm import Session
 
 from .database import get_db
 from .enrichment_routes import _scan_gaps
-from .robust_search_service import (
-    _query_variants,
-    _search_once,
-    discover_findings_robust,
-    search_twins_robust,
-)
+from .gemini_research import gemini_configured, run_gemini_research
+from .robust_search_service import _query_variants, _search_once
 
 router = APIRouter(prefix="/api/enrichment", tags=["combined-research"])
 
 
 @router.post("/run")
 async def run_combined_research(
-    twin_limit: int = Query(default=10, ge=1, le=30),
-    finding_limit: int = Query(default=10, ge=1, le=30),
+    twin_limit: int = Query(default=5, ge=1, le=10),
+    finding_limit: int = Query(default=5, ge=1, le=10),
     db: Session = Depends(get_db),
 ):
     gaps = _scan_gaps(db)
-    findings = await discover_findings_robust(db, finding_limit)
-    twins = await search_twins_robust(db, twin_limit)
-    return {"gaps": gaps, "findings": findings, "twins": twins}
+    limit = min(twin_limit, finding_limit, 5)
+    research = await run_gemini_research(db, limit)
+    twins = {
+        "provider": "gemini",
+        "configured": research.get("configured", False),
+        "created": research.get("twins_created", 0),
+        "errors": research.get("errors", 0),
+    }
+    return {"gaps": gaps, "findings": research, "twins": twins}
+
+
+@router.get("/provider-status")
+def provider_status():
+    return {
+        "provider": "gemini",
+        "configured": gemini_configured(),
+        "message": "Gemini mit Google Search" if gemini_configured() else "GEMINI_API_KEY fehlt",
+    }
 
 
 async def _diagnose(fragrance, db: Session):
