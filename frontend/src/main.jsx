@@ -1,9 +1,9 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {
   Search, Sparkles, LibraryBig, Tags, GitCompareArrows, Star,
   Moon, Sun, SlidersHorizontal, X, ChevronRight, FlaskConical,
-  Settings, Plus, Pencil, Trash2, Save, ArrowLeft, RefreshCw, PackageOpen, ShieldCheck, CircleAlert
+  Settings, Plus, Pencil, Trash2, Save, ArrowLeft, RefreshCw, PackageOpen, ShieldCheck, CircleAlert, Menu
 } from 'lucide-react';
 import './styles.css';
 
@@ -54,10 +54,16 @@ function App() {
   const [twins,setTwins]=useState([]);
   const [notes,setNotes]=useState([]);
   const [query,setQuery]=useState('');
+  const [brandFilter,setBrandFilter]=useState('');
+  const [genderFilter,setGenderFilter]=useState('');
+  const [concentrationFilter,setConcentrationFilter]=useState('');
+  const [minPrice,setMinPrice]=useState('');
   const [maxPrice,setMaxPrice]=useState('');
   const [minLongevity,setMinLongevity]=useState('');
+  const [sortBy,setSortBy]=useState('brand-name');
   const [selected,setSelected]=useState(null);
   const [filters,setFilters]=useState(false);
+  const [mobileNav,setMobileNav]=useState(false);
   const [loading,setLoading]=useState(true);
   const [notice,setNotice]=useState('');
 
@@ -65,32 +71,77 @@ function App() {
 
   const load = async () => {
     setLoading(true);
-    const params=new URLSearchParams();
-    if(query) params.set('q',query);
-    if(maxPrice) params.set('max_price',maxPrice);
-    if(minLongevity) params.set('min_longevity',minLongevity);
     try {
       const [s,f,b,t,n]=await Promise.all([
-        api('/api/dashboard'), api('/api/fragrances?'+params), api('/api/brands'), api('/api/twins'), api('/api/notes')
+        api('/api/dashboard'), api('/api/fragrances'), api('/api/brands'), api('/api/twins'), api('/api/notes')
       ]);
       setStats(s);setItems(f);setBrands(b);setTwins(t);setNotes(n);
     } catch(e){setNotice(e.message)}
     setLoading(false);
   };
-  useEffect(()=>{const x=setTimeout(load,150);return()=>clearTimeout(x)},[query,maxPrice,minLongevity]);
+  useEffect(()=>{load()},[]);
 
+  const concentrations=useMemo(()=>[...new Set(items.map(i=>i.concentration).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de')),[items]);
+
+  const filteredItems=useMemo(()=>{
+    const needle=query.trim().toLowerCase();
+    const filtered=items.filter(item=>{
+      const searchable=[
+        item.name,item.brand?.name,item.accords,item.top_notes,item.heart_notes,
+        item.base_notes,item.perfumer,item.description
+      ].filter(Boolean).join(' ').toLowerCase();
+      if(needle&&!searchable.includes(needle))return false;
+      if(brandFilter&&item.brand?.id!==brandFilter)return false;
+      if(genderFilter&&item.gender!==genderFilter)return false;
+      if(concentrationFilter&&item.concentration!==concentrationFilter)return false;
+      if(minPrice!==''&&(item.price_eur==null||Number(item.price_eur)<Number(minPrice)))return false;
+      if(maxPrice!==''&&(item.price_eur==null||Number(item.price_eur)>Number(maxPrice)))return false;
+      if(minLongevity!==''&&(item.longevity==null||Number(item.longevity)<Number(minLongevity)))return false;
+      return true;
+    });
+    return [...filtered].sort((a,b)=>{
+      if(sortBy==='name')return a.name.localeCompare(b.name,'de');
+      if(sortBy==='price-asc')return (a.price_eur??Number.POSITIVE_INFINITY)-(b.price_eur??Number.POSITIVE_INFINITY);
+      if(sortBy==='price-desc')return (b.price_eur??Number.NEGATIVE_INFINITY)-(a.price_eur??Number.NEGATIVE_INFINITY);
+      if(sortBy==='year-desc')return (b.year??0)-(a.year??0);
+      if(sortBy==='longevity-desc')return (b.longevity??-1)-(a.longevity??-1);
+      return `${a.brand?.name||''} ${a.name}`.localeCompare(`${b.brand?.name||''} ${b.name}`,'de');
+    });
+  },[items,query,brandFilter,genderFilter,concentrationFilter,minPrice,maxPrice,minLongevity,sortBy]);
+
+  const activeFilters=[
+    query&&{key:'query',label:`Suche: ${query}`,clear:()=>setQuery('')},
+    brandFilter&&{key:'brand',label:`Marke: ${brands.find(b=>b.id===brandFilter)?.name||'Auswahl'}`,clear:()=>setBrandFilter('')},
+    genderFilter&&{key:'gender',label:`Geschlecht: ${genderFilter}`,clear:()=>setGenderFilter('')},
+    concentrationFilter&&{key:'concentration',label:`Konzentration: ${concentrationFilter}`,clear:()=>setConcentrationFilter('')},
+    minPrice!==''&&{key:'min-price',label:`ab ${euro.format(Number(minPrice))}`,clear:()=>setMinPrice('')},
+    maxPrice!==''&&{key:'max-price',label:`bis ${euro.format(Number(maxPrice))}`,clear:()=>setMaxPrice('')},
+    minLongevity!==''&&{key:'longevity',label:`Haltbarkeit ab ${minLongevity}/10`,clear:()=>setMinLongevity('')}
+  ].filter(Boolean);
+
+  const resetFilters=()=>{
+    setQuery('');setBrandFilter('');setGenderFilter('');setConcentrationFilter('');
+    setMinPrice('');setMaxPrice('');setMinLongevity('');setSortBy('brand-name');
+  };
+
+  const navigate=next=>{setTab(next);setMobileNav(false)};
   const flash=(msg)=>{setNotice(msg);setTimeout(()=>setNotice(''),3500)};
+  const discoveryItems=filteredItems.slice(0,6);
+  const visibleItems=tab==='entdecken'?discoveryItems:filteredItems;
 
   return <div className="shell">
     <header className="topbar">
-      <button className="brand" onClick={()=>setTab('entdecken')}><span className="brand-mark"><FlaskConical size={23}/></span><span><b>DGD</b><small>Das große Duftlexikon</small></span></button>
-      <nav>
-        <button className={tab==='entdecken'?'active':''} onClick={()=>setTab('entdecken')}>Entdecken</button>
-        <button className={tab==='duefte'?'active':''} onClick={()=>setTab('duefte')}>Düfte</button>
-        <button className={tab==='zwillinge'?'active':''} onClick={()=>setTab('zwillinge')}>Duftzwillinge</button>
-        <button className={tab==='admin'?'active':''} onClick={()=>setTab('admin')}><Settings size={15}/> Admin</button>
+      <button className="brand" onClick={()=>navigate('entdecken')}><span className="brand-mark"><FlaskConical size={23}/></span><span><b>DGD</b><small>Das große Duftlexikon</small></span></button>
+      <nav className={mobileNav?'open':''}>
+        <button className={tab==='entdecken'?'active':''} onClick={()=>navigate('entdecken')}>Entdecken</button>
+        <button className={tab==='duefte'?'active':''} onClick={()=>navigate('duefte')}>Alle Düfte</button>
+        <button className={tab==='zwillinge'?'active':''} onClick={()=>navigate('zwillinge')}>Duftzwillinge</button>
+        <button className={tab==='admin'?'active':''} onClick={()=>navigate('admin')}><Settings size={15}/> Admin</button>
       </nav>
-      <button className="icon-btn" onClick={()=>setDark(v=>!v)}>{dark?<Sun size={19}/>:<Moon size={19}/>}</button>
+      <div className="topbar-actions">
+        <button className="icon-btn mobile-menu" aria-label="Menü öffnen" onClick={()=>setMobileNav(v=>!v)}>{mobileNav?<X size={19}/>:<Menu size={19}/>}</button>
+        <button className="icon-btn" aria-label="Farbschema wechseln" onClick={()=>setDark(v=>!v)}>{dark?<Sun size={19}/>:<Moon size={19}/>}</button>
+      </div>
     </header>
 
     {notice && <div className="toast">{notice}</div>}
@@ -102,25 +153,51 @@ function App() {
         <h1>Finde den Duft, der<br/><em>wirklich</em> zu dir passt.</h1>
         <p>Durchsuche Duftnoten, Akkorde, Marken und Duftzwillinge – ohne Marketingnebel.</p>
         <div className="searchbox"><Search size={21}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="z. B. erdiges Patchouli, Leder oder Lattafa …"/>
-          {query&&<button onClick={()=>setQuery('')}><X size={18}/></button>}
-          <button className="filter-button" onClick={()=>setFilters(v=>!v)}><SlidersHorizontal size={18}/> Filter</button>
+          {query&&<button aria-label="Suche löschen" onClick={()=>setQuery('')}><X size={18}/></button>}
+          <button className={`filter-button ${activeFilters.length?'has-filters':''}`} onClick={()=>setFilters(v=>!v)}><SlidersHorizontal size={18}/> Filter {activeFilters.length>0&&<b>{activeFilters.length}</b>}</button>
         </div>
-        {filters&&<div className="filters">
-          <label>Maximalpreis<div><input type="number" value={maxPrice} onChange={e=>setMaxPrice(e.target.value)} placeholder="z. B. 50"/><span>€</span></div></label>
-          <label>Mindesthaltbarkeit<div><input type="number" min="0" max="10" step=".5" value={minLongevity} onChange={e=>setMinLongevity(e.target.value)} placeholder="0–10"/><span>/ 10</span></div></label>
-          <button className="clear" onClick={()=>{setMaxPrice('');setMinLongevity('')}}>Zurücksetzen</button>
+        {filters&&<div className="filter-panel">
+          <div className="filter-grid">
+            <label>Marke<select value={brandFilter} onChange={e=>setBrandFilter(e.target.value)}><option value="">Alle Marken</option>{brands.map(b=><option value={b.id} key={b.id}>{b.name}</option>)}</select></label>
+            <label>Geschlecht<select value={genderFilter} onChange={e=>setGenderFilter(e.target.value)}><option value="">Alle</option><option value="Unisex">Unisex</option><option value="Herren">Herren</option><option value="Damen">Damen</option></select></label>
+            <label>Konzentration<select value={concentrationFilter} onChange={e=>setConcentrationFilter(e.target.value)}><option value="">Alle</option>{concentrations.map(c=><option value={c} key={c}>{c}</option>)}</select></label>
+            <label>Sortierung<select value={sortBy} onChange={e=>setSortBy(e.target.value)}><option value="brand-name">Marke & Name</option><option value="name">Name A–Z</option><option value="price-asc">Preis aufsteigend</option><option value="price-desc">Preis absteigend</option><option value="year-desc">Neueste zuerst</option><option value="longevity-desc">Beste Haltbarkeit</option></select></label>
+            <label>Preis von<div className="number-field"><input type="number" min="0" value={minPrice} onChange={e=>setMinPrice(e.target.value)} placeholder="0"/><span>€</span></div></label>
+            <label>Preis bis<div className="number-field"><input type="number" min="0" value={maxPrice} onChange={e=>setMaxPrice(e.target.value)} placeholder="100"/><span>€</span></div></label>
+            <label>Haltbarkeit ab<div className="number-field"><input type="number" min="0" max="10" step=".5" value={minLongevity} onChange={e=>setMinLongevity(e.target.value)} placeholder="0"/><span>/ 10</span></div></label>
+            <button className="clear filter-reset" onClick={resetFilters} disabled={!activeFilters.length&&sortBy==='brand-name'}>Alles zurücksetzen</button>
+          </div>
+        </div>}
+        {activeFilters.length>0&&<div className="active-filters">
+          {activeFilters.map(filter=><button key={filter.key} onClick={filter.clear}>{filter.label}<X size={13}/></button>)}
+          <button className="reset-chip" onClick={resetFilters}>Alle löschen</button>
         </div>}
       </section>
+
       <section className="stats-grid">
         <Stat icon={<LibraryBig/>} value={stats.fragrances} label="Düfte"/><Stat icon={<Tags/>} value={stats.brands} label="Marken"/>
         <Stat icon={<GitCompareArrows/>} value={stats.twins} label="Duftzwillinge"/><Stat icon={<Star/>} value={`${stats.average_similarity||0}%`} label="Ø Ähnlichkeit"/>
       </section>
-      {(tab==='entdecken'||tab==='duefte')&&<section className="content-section"><div className="section-head"><div><span className="kicker">Duftdatenbank</span><h2>{query?`Ergebnisse für „${query}“`:tab==='entdecken'?'Ausgewählte Düfte':'Alle Düfte'}</h2></div><span className="result-count">{items.length} Treffer</span></div>
-        {loading?<div className="empty">Düfte werden geladen …</div>:items.length?<div className="card-grid">{(tab==='entdecken'?items.slice(0,6):items).map(i=><FragranceCard key={i.id} item={i} onOpen={setSelected}/>)}</div>:<div className="empty">Kein Duft passt zu diesen Filtern.</div>}
+
+      {(tab==='entdecken'||tab==='duefte')&&<section className="content-section">
+        <div className="section-head">
+          <div><span className="kicker">Duftdatenbank</span><h2>{query?`Ergebnisse für „${query}“`:tab==='entdecken'?'Ausgewählte Düfte':'Alle Düfte'}</h2></div>
+          <div className="result-tools"><span className="result-count">{filteredItems.length} Treffer</span>{tab==='entdecken'&&filteredItems.length>6&&<button className="text-action" onClick={()=>navigate('duefte')}>Alle anzeigen <ChevronRight size={15}/></button>}</div>
+        </div>
+        {loading?<div className="empty">Düfte werden geladen …</div>:visibleItems.length?<div className="card-grid">{visibleItems.map(i=><FragranceCard key={i.id} item={i} onOpen={setSelected}/>)}</div>:<div className="empty empty-search"><Search/><h3>Keine passenden Düfte</h3><p>Ändere die Suche oder entferne einzelne Filter.</p><button className="clear" onClick={resetFilters}>Filter zurücksetzen</button></div>}
       </section>}
-      {(tab==='entdecken'||tab==='zwillinge')&&<section className="content-section twin-section"><div className="section-head"><div><span className="kicker">Das Herzstück</span><h2>Starke Duftzwillinge</h2></div></div><div className="twin-grid">{(tab==='entdecken'?twins.slice(0,4):twins).map(t=><TwinCard key={t.id} twin={t} onOpen={setSelected}/>)}</div></section>}
-{tab==='entdecken'&&<section className="content-section brand-section">        <div className="section-head"><div><span className="kicker">Markenwelt</span><h2>Marken entdecken</h2></div><span className="result-count">{brands.length} Marken</span></div>        <div className="brand-grid">{brands.slice(0,12).map(brand=><button className="brand-card" key={brand.id} onClick={()=>{setQuery(brand.name);setTab('duefte')}}><span>{brand.name.slice(0,2).toUpperCase()}</span><div><b>{brand.name}</b><small>{brand.country||'Herkunft offen'}</small></div><ChevronRight/></button>)}</div>      </section>}
+
+      {(tab==='entdecken'||tab==='zwillinge')&&<section className="content-section twin-section">
+        <div className="section-head"><div><span className="kicker">Das Herzstück</span><h2>{tab==='entdecken'?'Starke Duftzwillinge':'Alle Duftzwillinge'}</h2></div>{tab==='entdecken'&&twins.length>4&&<button className="text-action" onClick={()=>navigate('zwillinge')}>Alle anzeigen <ChevronRight size={15}/></button>}</div>
+        <div className="twin-grid">{(tab==='entdecken'?twins.slice(0,4):twins).map(t=><TwinCard key={t.id} twin={t} onOpen={setSelected}/>)}</div>
+      </section>}
+
+      {tab==='entdecken'&&<section className="content-section brand-section">
+        <div className="section-head"><div><span className="kicker">Markenwelt</span><h2>Marken entdecken</h2></div><span className="result-count">{brands.length} Marken</span></div>
+        <div className="brand-grid">{brands.slice(0,12).map(brand=><button className="brand-card" key={brand.id} onClick={()=>{setBrandFilter(brand.id);navigate('duefte')}}><span>{brand.name.slice(0,2).toUpperCase()}</span><div><b>{brand.name}</b><small>{brand.country||'Herkunft offen'}</small></div><ChevronRight/></button>)}</div>
+      </section>}
     </main>}
+
     <footer><b>DGD</b><span>Das große Parfum- & Duftzwillinge-Lexikon · Version 2.0 · Entwicklung</span></footer>
     {selected&&<Detail item={selected} onClose={()=>setSelected(null)}/>}
   </div>

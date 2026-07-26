@@ -520,3 +520,226 @@ footer{
     grid-template-columns:1fr;
   }
 }
+
+
+/* =========================================================
+   DGD 2.0 – Suche, Filter & Navigation
+   ========================================================= */
+
+.topbar-actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.mobile-menu{
+  display:none;
+}
+
+.filter-button.has-filters{
+  background:var(--gold);
+  color:#17120d;
+}
+
+.filter-button b{
+  min-width:20px;
+  height:20px;
+  padding:0 6px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  background:rgba(0,0,0,.14);
+  font-size:11px;
+}
+
+.filter-panel{
+  max-width:1040px;
+  margin:14px auto 0;
+  padding:18px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:color-mix(in srgb,var(--surface) 94%,transparent);
+  box-shadow:0 16px 45px rgba(0,0,0,.08);
+  text-align:left;
+}
+
+.filter-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:13px;
+  align-items:end;
+}
+
+.filter-grid label{
+  min-width:0;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.filter-grid select,
+.number-field{
+  width:100%;
+  min-height:43px;
+  margin-top:7px;
+  border:1px solid var(--line);
+  border-radius:11px;
+  background:var(--bg);
+  color:var(--text);
+}
+
+.filter-grid select{
+  padding:0 11px;
+  outline:none;
+}
+
+.number-field{
+  display:flex;
+  align-items:center;
+  padding:0 11px;
+}
+
+.number-field input{
+  width:100%;
+  min-width:0;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:var(--text);
+}
+
+.number-field span{
+  white-space:nowrap;
+  color:var(--muted);
+  font-size:11px;
+}
+
+.filter-reset{
+  min-height:43px;
+}
+
+.filter-reset:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+.active-filters{
+  max-width:1040px;
+  margin:12px auto 0;
+  display:flex;
+  justify-content:center;
+  gap:7px;
+  flex-wrap:wrap;
+}
+
+.active-filters button{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  border:1px solid color-mix(in srgb,var(--gold) 45%,var(--line));
+  border-radius:999px;
+  background:color-mix(in srgb,var(--gold) 10%,var(--surface));
+  color:var(--text);
+  padding:7px 10px;
+  font-size:11px;
+  cursor:pointer;
+}
+
+.active-filters .reset-chip{
+  border-style:dashed;
+  background:transparent;
+  color:var(--muted);
+}
+
+.result-tools{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.text-action{
+  border:0;
+  background:transparent;
+  color:var(--gold);
+  display:flex;
+  align-items:center;
+  gap:4px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.empty-search h3{
+  margin:12px 0 4px;
+  font-family:'Playfair Display';
+  font-size:25px;
+  color:var(--text);
+}
+
+.empty-search p{
+  margin:0 0 18px;
+}
+
+.empty-search>svg{
+  width:34px;
+  height:34px;
+  color:var(--gold);
+}
+
+@media(max-width:1000px){
+  .filter-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media(max-width:850px){
+  .mobile-menu{
+    display:grid;
+  }
+
+  .topbar nav{
+    display:none;
+    position:absolute;
+    top:calc(100% + 10px);
+    left:0;
+    right:0;
+    padding:10px;
+    flex-direction:column;
+    border:1px solid var(--line);
+    background:var(--surface);
+    box-shadow:var(--shadow);
+  }
+
+  .topbar nav.open{
+    display:flex;
+  }
+
+  .topbar nav button{
+    width:100%;
+    justify-content:flex-start;
+  }
+}
+
+@media(max-width:620px){
+  .filter-grid{
+    grid-template-columns:1fr;
+  }
+
+  .filter-panel{
+    padding:14px;
+  }
+
+  .result-tools{
+    align-items:flex-end;
+    flex-direction:column;
+  }
+
+  .section-head{
+    align-items:flex-start;
+  }
+
+  .active-filters{
+    justify-content:flex-start;
+  }
+}
