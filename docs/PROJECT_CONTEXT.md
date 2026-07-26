@@ -216,3 +216,8 @@ Der Admin-Bereich besitzt nun eine dynamische Arbeitsliste unter `/api/quality/w
 ## Aktueller Stand: Lokaler Bildupload & Medienablage 1.0
 
 Duftbilder können nun als JPEG, PNG oder WebP bis 8 MB direkt im Admin hochgeladen werden. Die Dateien liegen persistent unter `/mnt/user/appdata/dgd-dev-media` und werden im Container über `/app/media` sowie öffentlich über `/media` bereitgestellt. Uploads erhalten kollisionsfreie Dateinamen, werden anhand von Dateisignatur und MIME-Typ geprüft und können ersetzt oder gelöscht werden. Externe Bild-URLs bleiben weiterhin möglich.
+
+
+## Aktueller Stand: Automatische Recherche & Import-Warteschlange 1.0
+
+Der Admin-Bereich besitzt nun eine kontrollierte Recherche-Warteschlange. Öffentliche HTTP-/HTTPS-Seiten können manuell gescannt werden; JSON-LD-Produktdaten und Seitentitel werden als Vorschläge erfasst. Jeder Treffer enthält Quelle, Konfidenz und Dublettenhinweis. Erst eine ausdrückliche Freigabe legt Marke und Duft an. Private und interne Netzwerkziele sind aus Sicherheitsgründen gesperrt. Schema-Version ist `0011`.

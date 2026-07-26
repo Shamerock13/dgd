@@ -226,3 +226,18 @@ Enthalten sind externe Bildpfade, Bildquelle, Quellenlink, Nutzungsnotiz, Prüfs
 - dokumentierte Backup- und Speicherregeln
 
 **Nächstes größeres Paket:** Automatische Recherche & Import-Warteschlange 1.0.
+
+
+## Fortschritt: Automatische Recherche & Import-Warteschlange 1.0
+
+**Status: umgesetzt**
+
+- manuelles Scannen öffentlicher Quellseiten
+- Erkennung strukturierter JSON-LD-Produktdaten
+- Import-Warteschlange mit Bearbeitung und Statusfiltern
+- Dublettenprüfung gegen Marke und Duftname
+- Freigabe oder Ablehnung vor Datenbankübernahme
+- Quellenlink, Trefferqualität und Rohdaten bleiben nachvollziehbar
+- SSRF-Schutz gegen interne Netzwerkziele
+
+**Nächstes größeres Paket:** Recherchequellen & zeitgesteuerter Scanner 1.0.

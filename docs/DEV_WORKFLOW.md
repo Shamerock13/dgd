@@ -267,3 +267,15 @@ Bei Änderungen an Marken zusätzlich prüfen:
 - Löschen ist nur für lokale `/media/fragrances/...`-Dateien erlaubt
 - `/mnt/user/appdata/dgd-dev-media` muss in das Unraid-Backup aufgenommen werden
 - Datenbank und Medienordner immer gemeinsam sichern und wiederherstellen
+
+
+## Recherche-Warteschlange testen
+
+- öffentliche HTML-Seite mit JSON-LD-Produktdaten scannen
+- Seite ohne JSON-LD über Titel-Fallback prüfen
+- private, lokale und Link-Local-Adressen müssen abgelehnt werden
+- identische Quelle und identischer Treffer dürfen nicht doppelt angelegt werden
+- bekannte Marke/Duft-Kombination muss als Dublette markiert werden
+- Bearbeiten, Freigeben und Ablehnen prüfen
+- nach Freigabe muss der neue Duft in der normalen Duftliste erscheinen
+- Frontend-Build und Backend-Compile ausführen

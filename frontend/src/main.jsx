@@ -14,6 +14,7 @@ import VerificationAdmin from './verification.jsx';
 import {PerfumerAdmin, PerfumerProfile} from './perfumer.jsx';
 import QualityWorklist from './quality.jsx';
 import MediaUpload from './media-upload.jsx';
+import ResearchQueue from './research.jsx';
 
 const euro = new Intl.NumberFormat('de-DE', {style:'currency', currency:'EUR'});
 const emptyFragrance = {
@@ -245,6 +246,7 @@ function AdminCenter({brands,items,twins,notes,perfumers,reload,flash}) {
       <button className={section==='sources'?'active':''} onClick={()=>{setSection('sources');setEditing(null)}}>Quellen & Prüfung</button>
       <button className={section==='perfumers'?'active':''} onClick={()=>{setSection('perfumers');setEditing(null)}}>Parfümeure <b>{perfumers.length}</b></button>
       <button className={section==='quality'?'active':''} onClick={()=>{setSection('quality');setEditing(null)}}>Arbeitsliste</button>
+      <button className={section==='research'?'active':''} onClick={()=>{setSection('research');setEditing(null)}}>Recherche</button>
       <button className={section==='updates'?'active':''} onClick={()=>{setSection('updates');setEditing(null)}}>System & Updates</button>
     </div>
     {section==='fragrances'&&<FragranceAdmin brands={brands} items={items} notes={notes} reload={reload} flash={flash} editing={editing} setEditing={setEditing}/>}
@@ -255,6 +257,7 @@ function AdminCenter({brands,items,twins,notes,perfumers,reload,flash}) {
     {section==='sources'&&<VerificationAdmin api={api} flash={flash} brands={brands} items={items} twins={twins}/>}
     {section==='perfumers'&&<PerfumerAdmin api={api} flash={flash} perfumers={perfumers} reload={reload}/>}
     {section==='quality'&&<QualityWorklist api={api} flash={flash} onOpenSection={value=>{setSection(value);setEditing(null)}}/>}
+    {section==='research'&&<ResearchQueue api={api} flash={flash} reload={reload}/>}
     {section==='updates'&&<UpdateCenter flash={flash}/>}
   </main>
 }

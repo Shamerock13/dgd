@@ -272,6 +272,26 @@ Migration(
         ),
     ),
 
+    Migration(
+        version="0011",
+        description="Recherche- und Import-Warteschlange anlegen",
+        statements=(
+            """CREATE TABLE IF NOT EXISTS research_candidates (
+                id UUID PRIMARY KEY, fingerprint VARCHAR(1000) NOT NULL UNIQUE,
+                source_name VARCHAR(300), source_url TEXT NOT NULL,
+                brand_name VARCHAR(160) NOT NULL, fragrance_name VARCHAR(200) NOT NULL,
+                year INTEGER, concentration VARCHAR(80), description TEXT, image_url TEXT,
+                status VARCHAR(30) NOT NULL DEFAULT 'PENDING', confidence FLOAT NOT NULL DEFAULT 0,
+                duplicate_fragrance_id UUID REFERENCES fragrances(id) ON DELETE SET NULL,
+                approved_fragrance_id UUID REFERENCES fragrances(id) ON DELETE SET NULL,
+                raw_data JSONB, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_research_candidates_status ON research_candidates(status)",
+            "CREATE INDEX IF NOT EXISTS ix_research_candidates_created_at ON research_candidates(created_at DESC)",
+        ),
+    ),
+
 )
 
 
