@@ -3,15 +3,14 @@ import re
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from fastapi import Depends, File, HTTPException, Response, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from .database import get_db
 from .models import Fragrance
-from .quality_routes import router
 
 
+router = APIRouter(prefix="/api", tags=["media"])
 MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", "/app/media")).resolve()
 FRAGRANCE_DIR = MEDIA_ROOT / "fragrances"
 MAX_IMAGE_BYTES = int(os.getenv("MAX_IMAGE_BYTES", str(8 * 1024 * 1024)))
@@ -39,7 +38,7 @@ def _looks_like_image(data: bytes, content_type: str) -> bool:
 
 
 def _local_path(image_url: str | None) -> Path | None:
-    prefix = "/api/quality/media/fragrances/"
+    prefix = "/media/fragrances/"
     if not image_url or not image_url.startswith(prefix):
         return None
     candidate = (FRAGRANCE_DIR / image_url.removeprefix(prefix)).resolve()
@@ -48,19 +47,6 @@ def _local_path(image_url: str | None) -> Path | None:
     except ValueError:
         return None
     return candidate
-
-
-@router.get("/media/fragrances/{filename}")
-def get_fragrance_image(filename: str):
-    ensure_media_dirs()
-    candidate = (FRAGRANCE_DIR / filename).resolve()
-    try:
-        candidate.relative_to(FRAGRANCE_DIR.resolve())
-    except ValueError:
-        raise HTTPException(404, "Bild nicht gefunden")
-    if not candidate.is_file():
-        raise HTTPException(404, "Bild nicht gefunden")
-    return FileResponse(candidate)
 
 
 @router.post("/fragrances/{fragrance_id}/image")
@@ -81,7 +67,7 @@ async def upload_fragrance_image(fragrance_id: UUID, file: UploadFile = File(...
     target = FRAGRANCE_DIR / filename
     target.write_bytes(data)
     previous = _local_path(item.image_url)
-    item.image_url = f"/api/quality/media/fragrances/{filename}"
+    item.image_url = f"/media/fragrances/{filename}"
     item.image_source_name = "Lokaler DGD-Upload"
     item.image_source_url = None
     item.image_usage_note = "Lokal auf dem DGD-Unraid-Server gespeichert. Rechte und Herkunft redaktionell prüfen."
