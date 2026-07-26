@@ -204,3 +204,15 @@ Die folgenden Container dürfen durch diesen Workflow nicht verändert oder für
 Die stabile Produktionsversion ist `dgd-core:1.2.0`.
 
 Ein späterer Produktions-Rollout ist ein eigener, bewusst freizugebender Schritt und gehört nicht zum normalen GitHub → Unraid → Neustart → Test-Ablauf.
+
+## Bildänderungen testen
+
+Bei Änderungen an Bildfeldern oder der Bilddarstellung zusätzlich prüfen:
+
+- leere Bild-URL zeigt den DGD-Fallback
+- nicht erreichbare Bild-URL fällt nach `onError` auf den Fallback zurück
+- Bildstatus und Quellenhinweise werden im Admin korrekt gespeichert
+- externe Links öffnen mit `target="_blank"` und `rel="noreferrer"`
+- relative Pfade wie `/media/...` bleiben für den späteren lokalen Upload zulässig
+- keine externen Bilder automatisch herunterladen oder in Produktion kopieren
+

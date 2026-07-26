@@ -25,6 +25,10 @@ class FragranceBase(BaseModel):
     perfumer: str | None = None
     price_eur: float | None = None
     image_url: str | None = None
+    image_source_name: str | None = Field(default=None, max_length=200)
+    image_source_url: str | None = None
+    image_usage_note: str | None = None
+    image_status: str = Field(default="OPEN", pattern="^(OPEN|VERIFIED|BROKEN)$")
     description: str | None = None
     top_notes: str | None = None
     heart_notes: str | None = None
@@ -52,6 +56,10 @@ class FragranceOut(BaseModel):
     perfumer: str | None = None
     price_eur: float | None = None
     image_url: str | None = None
+    image_source_name: str | None = None
+    image_source_url: str | None = None
+    image_usage_note: str | None = None
+    image_status: str = "OPEN"
     description: str | None = None
     top_notes: str | None = None
     heart_notes: str | None = None

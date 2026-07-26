@@ -179,3 +179,18 @@ Vor Beginn insbesondere lesen:
 - `backend/app/schemas.py`
 - `backend/app/migrations.py`
 - `backend/app/master_import_service.py`
+
+## Aktueller Stand: Bildverwaltung & Bildquellen 1.0
+
+Die Bildverwaltung wird bewusst in zwei Stufen umgesetzt. Stufe 1 verwaltet externe oder künftig lokale Bildpfade samt Quelle, Nutzungsnotiz und Prüfstatus. Ein echter Upload folgt erst mit einem klaren Unraid-Speicher-, Backup- und Löschkonzept.
+
+Umgesetzt in diesem Paket:
+
+- Migration `0007` für Bildmetadaten
+- Bildquelle, Quellenlink und Nutzungs-/Rechtehinweis je Duft
+- Status `OPEN`, `VERIFIED` oder `BROKEN`
+- einheitlicher Bildbaustein für Karten, Admin und Detailseite
+- belastbarer Fallback bei leerer oder defekter Bild-URL
+- Import-Unterstützung für die neuen Bildfelder
+- Vorbereitung auf spätere lokale Pfade wie `/media/...`
+

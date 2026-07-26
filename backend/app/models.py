@@ -44,6 +44,10 @@ class Fragrance(Base):
     perfumer: Mapped[str | None] = mapped_column(String(160), nullable=True)
     price_eur: Mapped[float | None] = mapped_column(Float, nullable=True)
     image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    image_source_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    image_source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    image_usage_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    image_status: Mapped[str] = mapped_column(String(30), nullable=False, default="OPEN", server_default="OPEN")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Bestehende Freitextfelder bleiben für Kompatibilität und Anzeige erhalten.

@@ -4,15 +4,17 @@ import {
   Search, Sparkles, LibraryBig, Tags, GitCompareArrows, Star,
   Moon, Sun, SlidersHorizontal, X, ChevronRight, FlaskConical,
   Settings, Plus, Pencil, Trash2, Save, ArrowLeft, RefreshCw, PackageOpen, ShieldCheck, CircleAlert, Menu,
-  BadgeEuro, Clock3, UserRound, Layers3, Info
+  BadgeEuro, Clock3, UserRound, Layers3, Info, ImageIcon, ExternalLink
 } from 'lucide-react';
 import './styles.css';
 import './detail.css';
+import './image.css';
 
 const euro = new Intl.NumberFormat('de-DE', {style:'currency', currency:'EUR'});
 const emptyFragrance = {
   name:'', brand_id:'', year:'', gender:'Unisex', concentration:'', perfumer:'',
-  price_eur:'', image_url:'', description:'', top_notes:'', heart_notes:'',
+  price_eur:'', image_url:'', image_source_name:'', image_source_url:'',
+  image_usage_note:'', image_status:'OPEN', description:'', top_notes:'', heart_notes:'',
   base_notes:'', accords:'', longevity:'', projection:'', sweetness:'', freshness:''
 };
 const emptyBrand = {name:'', country:'', description:''};
@@ -289,8 +291,13 @@ function FragranceAdmin({brands,items,notes,reload,flash,editing,setEditing}) {
         <Field label="Konzentration"><input value={form.concentration||''} onChange={e=>set('concentration',e.target.value)}/></Field>
         <Field label="Parfümeur"><input value={form.perfumer||''} onChange={e=>set('perfumer',e.target.value)}/></Field>
         <Field label="Preis in €"><input type="number" step=".01" value={form.price_eur??''} onChange={e=>set('price_eur',e.target.value)}/></Field>
-        <Field label="Bild-URL"><input value={form.image_url||''} onChange={e=>set('image_url',e.target.value)}/></Field>
+        <Field label="Bild-URL"><input value={form.image_url||''} onChange={e=>set('image_url',e.target.value)} placeholder="https://… oder später /media/…"/></Field>
+        <Field label="Bildstatus"><select value={form.image_status||'OPEN'} onChange={e=>set('image_status',e.target.value)}><option value="OPEN">Offen</option><option value="VERIFIED">Geprüft</option><option value="BROKEN">Fehlerhaft</option></select></Field>
+        <Field label="Bildquelle"><input value={form.image_source_name||''} onChange={e=>set('image_source_name',e.target.value)} placeholder="Hersteller, Händler, eigenes Bild …"/></Field>
+        <Field label="Link zur Bildquelle"><input value={form.image_source_url||''} onChange={e=>set('image_source_url',e.target.value)} placeholder="https://…"/></Field>
       </div>
+      <Field label="Nutzungs- / Rechtehinweis zum Bild"><textarea rows="2" value={form.image_usage_note||''} onChange={e=>set('image_usage_note',e.target.value)} placeholder="Interne Notiz zur Herkunft und erlaubten Nutzung"/></Field>
+      <ImageAdminPreview item={{...form,brand:brands.find(b=>b.id===form.brand_id)||{name:'DGD'}}}/>
       <Field label="Beschreibung"><textarea rows="3" value={form.description||''} onChange={e=>set('description',e.target.value)}/></Field>
       <div className="note-pyramid">
         <NotePicker title="Kopfnoten" notes={notes} selected={noteAssignments.top} onChange={value=>setNoteAssignments(v=>({...v,top:value}))}/>
@@ -610,7 +617,7 @@ function FragranceCard({item,onOpen}){
   const longevity=item.longevity!=null?Math.max(0,Math.min(10,Number(item.longevity))):null;
   return <article className="fragrance-card" onClick={()=>onOpen(item)}>
     <div className="bottle">
-      {item.image_url?<img src={item.image_url} alt={`${item.brand.name} ${item.name}`}/>:<span>{item.brand.name.slice(0,2).toUpperCase()}</span>}
+      <ManagedImage item={item} variant="card"/>
       <div className="card-badges">
         {item.gender&&<span>{item.gender}</span>}
         {item.concentration&&<span>{item.concentration}</span>}
@@ -636,11 +643,23 @@ function FragranceCard({item,onOpen}){
   </article>
 }
 function TwinCard({twin,onOpen}){return <article className="twin-card"><div className="similarity"><strong>{Math.round(twin.similarity)}%</strong><span>Ähnlichkeit</span></div><div className="twin-pair"><button onClick={()=>onOpen(twin.original)}><small>Original</small><b>{twin.original.name}</b><span>{twin.original.brand.name}</span></button><GitCompareArrows/><button onClick={()=>onOpen(twin.alternative)}><small>Alternative</small><b>{twin.alternative.name}</b><span>{twin.alternative.brand.name}</span></button></div><p>{twin.commonalities}</p><div className="saving"><span>Preisunterschied</span><strong>{twin.original.price_eur&&twin.alternative.price_eur?euro.format(twin.original.price_eur-twin.alternative.price_eur):'–'}</strong></div></article>}
-function ImageWithFallback({item,className=''}) {
+function ManagedImage({item,variant='detail',showStatus=false}) {
   const [broken,setBroken]=useState(false);
   useEffect(()=>setBroken(false),[item.image_url]);
-  if(!item.image_url||broken)return <div className={`detail-image-fallback ${className}`}><span>{item.brand.name.slice(0,2).toUpperCase()}</span><small>Bild folgt</small></div>;
-  return <img className={className} src={item.image_url} alt={`${item.brand.name} ${item.name}`} onError={()=>setBroken(true)}/>;
+  const fallback=!item.image_url||broken;
+  const status=broken?'BROKEN':(item.image_status||'OPEN');
+  const label={OPEN:'Offen',VERIFIED:'Geprüft',BROKEN:'Fehlerhaft'}[status]||'Offen';
+  return <div className={`managed-image managed-image-${variant}`}>
+    {fallback?<div className="managed-image-fallback"><ImageIcon/><span>{item.brand.name.slice(0,2).toUpperCase()}</span><small>Bild folgt</small></div>:<img src={item.image_url} alt={`${item.brand.name} ${item.name}`} onError={()=>setBroken(true)}/>}
+    {showStatus&&<span className={`image-status image-status-${status.toLowerCase()}`}>{label}</span>}
+  </div>;
+}
+
+function ImageAdminPreview({item}) {
+  return <section className="image-admin-preview">
+    <ManagedImage item={item} variant="admin" showStatus/>
+    <div><small>Bildverwaltung 1.0</small><b>{item.image_source_name||'Bildquelle noch offen'}</b><span>{item.image_usage_note||'Noch kein Nutzungs- oder Rechtehinweis hinterlegt.'}</span>{item.image_source_url&&<a href={item.image_source_url} target="_blank" rel="noreferrer"><ExternalLink size={14}/> Quelle öffnen</a>}</div>
+  </section>;
 }
 
 function NoteColumn({title,pyramid,rows,fallback}) {
@@ -684,7 +703,7 @@ function DetailPage({item,twins,loading,onBack,onOpen}) {
   return <main className="detail-page">
     <div className="detail-toolbar"><button onClick={onBack}><ArrowLeft size={18}/> Zurück zur Übersicht</button><span>DGD Duftprofil</span></div>
     <section className="detail-hero">
-      <div className="detail-visual"><ImageWithFallback item={item}/><div className="detail-image-glow"/></div>
+      <div className="detail-visual"><ManagedImage item={item} variant="detail" showStatus/><div className="detail-image-glow"/></div>
       <div className="detail-intro">
         <span className="kicker">{item.brand.name}</span>
         <h1>{item.name}</h1>
@@ -696,6 +715,7 @@ function DetailPage({item,twins,loading,onBack,onOpen}) {
         <p className="detail-description">{item.description||'Für diesen Duft ist noch keine ausführliche Beschreibung hinterlegt.'}</p>
         {accords.length>0&&<div className="detail-accords">{accords.map(accord=><span key={accord}>{accord}</span>)}</div>}
         <div className="detail-price-block"><small>Erfasster Preis</small><strong>{item.price_eur!=null?euro.format(item.price_eur):'Preis offen'}</strong><span>{item.gender||'Unisex'}</span></div>
+        <div className="detail-image-source"><ImageIcon size={17}/><div><small>Bildquelle</small><b>{item.image_source_name||'Noch nicht dokumentiert'}</b>{item.image_usage_note&&<span>{item.image_usage_note}</span>}</div>{item.image_source_url&&<a href={item.image_source_url} target="_blank" rel="noreferrer" aria-label="Bildquelle öffnen"><ExternalLink size={16}/></a>}</div>
       </div>
     </section>
 
