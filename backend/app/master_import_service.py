@@ -349,6 +349,9 @@ def _build_plan(db: Session, workbook, sheets, filename: str, *, apply: bool) ->
                 dgd_id=master_id,
                 name=str(data["Marke"]),
                 country=data.get("Land"),
+                founded_year=_int(data.get("Gründungsjahr") or data.get("Gruendungsjahr")),
+                website_url=data.get("Website") or data.get("Offizielle Website"),
+                verification_status=str(data.get("Verifizierungsstatus") or "OPEN").strip().upper(),
                 description=data.get("Notizen"),
                 master_data=master_data,
                 active=str(data.get("Status") or "Aktiv").strip().casefold()
@@ -365,6 +368,10 @@ def _build_plan(db: Session, workbook, sheets, filename: str, *, apply: bool) ->
         changes: dict[str, Any] = {"dgd_id": master_id, "master_data": master_data}
         if data.get("Land") is not None:
             changes["country"] = data.get("Land")
+        _fill_only(existing, "founded_year", _int(data.get("Gründungsjahr") or data.get("Gruendungsjahr")), changes)
+        _fill_only(existing, "website_url", data.get("Website") or data.get("Offizielle Website"), changes)
+        if data.get("Verifizierungsstatus") is not None:
+            changes["verification_status"] = str(data.get("Verifizierungsstatus")).strip().upper()
         _fill_only(existing, "description", data.get("Notizen"), changes)
         if _changed(existing, changes):
             report.brands.updated += 1

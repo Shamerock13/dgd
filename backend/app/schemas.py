@@ -4,6 +4,9 @@ from pydantic import BaseModel, ConfigDict, Field
 class BrandBase(BaseModel):
     name: str = Field(min_length=1, max_length=160)
     country: str | None = None
+    founded_year: int | None = Field(default=None, ge=1500, le=2200)
+    website_url: str | None = None
+    verification_status: str = Field(default="OPEN", pattern="^(OPEN|VERIFIED|REVIEW)$")
     description: str | None = None
 
 class BrandCreate(BrandBase):

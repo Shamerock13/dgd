@@ -216,3 +216,14 @@ Bei Änderungen an Bildfeldern oder der Bilddarstellung zusätzlich prüfen:
 - relative Pfade wie `/media/...` bleiben für den späteren lokalen Upload zulässig
 - keine externen Bilder automatisch herunterladen oder in Produktion kopieren
 
+## Markenprofile testen
+
+Bei Änderungen an Marken zusätzlich prüfen:
+
+- Markenkarte öffnet das eigene Profil statt nur einen Filter zu setzen
+- Herkunft, Gründungsjahr, Website und Status werden korrekt gespeichert
+- Duftliste enthält ausschließlich Düfte der gewählten Marke
+- Suche und Sortierung innerhalb der Marke funktionieren
+- Navigation Duftdetail → Marke → Duft funktioniert ohne veralteten Zustand
+- externe Website öffnet sicher mit `target="_blank"` und `rel="noreferrer"`
+

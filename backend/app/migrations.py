@@ -236,6 +236,19 @@ Migration(
             "CREATE INDEX IF NOT EXISTS ix_fragrances_image_status ON fragrances (image_status)",
         ),
     ),
+    Migration(
+        version="0008",
+        description="Markenprofile um Gründungsjahr, Website und Verifizierungsstatus ergänzen",
+        statements=(
+            "ALTER TABLE brands ADD COLUMN IF NOT EXISTS founded_year INTEGER",
+            "ALTER TABLE brands ADD COLUMN IF NOT EXISTS website_url TEXT",
+            "ALTER TABLE brands ADD COLUMN IF NOT EXISTS verification_status VARCHAR(40)",
+            "UPDATE brands SET verification_status = 'OPEN' WHERE verification_status IS NULL OR btrim(verification_status) = ''",
+            "ALTER TABLE brands ALTER COLUMN verification_status SET DEFAULT 'OPEN'",
+            "ALTER TABLE brands ALTER COLUMN verification_status SET NOT NULL",
+            "CREATE INDEX IF NOT EXISTS ix_brands_verification_status ON brands (verification_status)",
+        ),
+    ),
 
 )
 
