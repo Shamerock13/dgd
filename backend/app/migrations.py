@@ -249,6 +249,19 @@ Migration(
             "CREATE INDEX IF NOT EXISTS ix_brands_verification_status ON brands (verification_status)",
         ),
     ),
+    Migration(
+        version="0009",
+        description="Quellenregister und Verifizierungsstatus für die App absichern",
+        statements=(
+            "UPDATE master_sources SET trust_status = 'OPEN' WHERE trust_status IS NULL OR btrim(trust_status) = ''",
+            "UPDATE master_sources SET usage_status = 'OPEN' WHERE usage_status IS NULL OR btrim(usage_status) = ''",
+            "ALTER TABLE master_sources ALTER COLUMN trust_status SET DEFAULT 'OPEN'",
+            "ALTER TABLE master_sources ALTER COLUMN usage_status SET DEFAULT 'OPEN'",
+            "CREATE INDEX IF NOT EXISTS ix_master_sources_object ON master_sources (object_type, object_id)",
+            "CREATE INDEX IF NOT EXISTS ix_master_sources_trust_status ON master_sources (trust_status)",
+            "CREATE INDEX IF NOT EXISTS ix_master_sources_usage_status ON master_sources (usage_status)",
+        ),
+    ),
 
 )
 

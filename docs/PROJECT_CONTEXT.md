@@ -198,3 +198,7 @@ Umgesetzt in diesem Paket:
 
 Umgesetzt sind eigenständige Markenseiten mit Herkunft, Gründungsjahr, offizieller Website, Beschreibung und Verifizierungsstatus. Jede Markenseite zeigt Kennzahlen sowie alle zugeordneten Düfte mit eigener Suche und Sortierung. Von Duftdetailseiten kann direkt zum Markenprofil gewechselt werden. Schema-Version ist nun `0008`.
 
+
+## Aktueller Stand: Quellen & Verifizierung 1.0
+
+Das bestehende `master_sources`-Register ist jetzt über die App nutzbar. Quellen können Marken, Düften, Duftzwillingen oder allgemeinen Themen zugeordnet werden. Vertrauensstatus (`OPEN`, `REVIEW`, `TRUSTED`, `REJECTED`) und Nutzungsstatus (`OPEN`, `ALLOWED`, `RESTRICTED`, `INTERNAL`) bilden den redaktionellen Prüfprozess ab. Schema-Version ist nun `0009`.
