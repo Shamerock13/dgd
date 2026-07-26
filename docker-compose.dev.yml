@@ -32,10 +32,13 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       AUTO_SEED: ${AUTO_SEED}
+      MEDIA_ROOT: /app/media
+      MAX_IMAGE_BYTES: 8388608
       UPDATER_URL: http://127.0.0.1:65535
       UPDATER_TOKEN: ""
     volumes:
       - ./backend/app:/app/app
+      - /mnt/user/appdata/dgd-dev-media:/app/media
     ports:
       - "18080:8080"
     depends_on:

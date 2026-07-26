@@ -30,6 +30,7 @@ from .update_service import updater_request
 from .source_routes import router as source_router
 from .perfumer_routes import router as perfumer_router
 from .quality_routes import router as quality_router
+from .media_routes import router as media_router, MEDIA_ROOT, ensure_media_dirs
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -58,6 +59,9 @@ app = FastAPI(title="DGD API", version="1.2.0", lifespan=lifespan)
 app.include_router(source_router)
 app.include_router(perfumer_router)
 app.include_router(quality_router)
+app.include_router(media_router)
+ensure_media_dirs()
+app.mount("/media", StaticFiles(directory=MEDIA_ROOT), name="media")
 
 def fragrance_query():
     return select(Fragrance).options(joinedload(Fragrance.brand))

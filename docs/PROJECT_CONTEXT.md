@@ -211,3 +211,8 @@ Die vorhandene Tabelle `master_perfumers` ist jetzt vollständig über die App n
 ## Aktueller Stand: Datenqualität & redaktionelle Arbeitsliste 1.0
 
 Der Admin-Bereich besitzt nun eine dynamische Arbeitsliste unter `/api/quality/worklist`. Sie prüft Marken, Düfte, Duftzwillinge, Quellen und Parfümeure auf fehlende oder ungeprüfte Angaben. Aufgaben werden nach Priorität sortiert und führen direkt in den passenden Verwaltungsbereich. Der Qualitätswert ist ein redaktioneller Fortschrittsindikator und kein wissenschaftlicher Datenwert. Das Datenbankschema bleibt bei `0010`, da die Arbeitsliste aus den vorhandenen Tabellen berechnet wird.
+
+
+## Aktueller Stand: Lokaler Bildupload & Medienablage 1.0
+
+Duftbilder können nun als JPEG, PNG oder WebP bis 8 MB direkt im Admin hochgeladen werden. Die Dateien liegen persistent unter `/mnt/user/appdata/dgd-dev-media` und werden im Container über `/app/media` sowie öffentlich über `/media` bereitgestellt. Uploads erhalten kollisionsfreie Dateinamen, werden anhand von Dateisignatur und MIME-Typ geprüft und können ersetzt oder gelöscht werden. Externe Bild-URLs bleiben weiterhin möglich.
