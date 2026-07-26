@@ -5,7 +5,7 @@ import './verification.css';
 const emptySource={name:'',object_type:'FRAGRANCE',object_id:'',source_type:'OFFICIAL',file_or_url:'',source_date:'',usage_status:'OPEN',trust_status:'OPEN',note:''};
 const fieldLabels={year:'Erscheinungsjahr',concentration:'Konzentration',perfumer:'Parfümeur',description:'Beschreibung',image:'Bild',source:'Quelle',notes:'Duftpyramide'};
 
-export default function VerificationAdmin({api,flash,brands,items,twins}){
+export default function VerificationAdmin({api,flash,brands=[],items=[],twins=[]}){
   const [sources,setSources]=useState([]);
   const [summary,setSummary]=useState(null);
   const [profiles,setProfiles]=useState([]);
@@ -23,12 +23,19 @@ export default function VerificationAdmin({api,flash,brands,items,twins}){
         api('/api/enrichment/source-profiles'),
         api('/api/enrichment/tasks?status=PENDING'),
       ]);
-      setSources(rows);setSummary(stats);setProfiles(profileRows);setTasks(taskRows);
+      setSources(Array.isArray(rows)?rows:[]);setSummary(stats);setProfiles(Array.isArray(profileRows)?profileRows:[]);setTasks(Array.isArray(taskRows)?taskRows:[]);
     }catch(e){flash(e.message)}finally{setLoading(false)}
   };
   useEffect(()=>{load()},[]);
   useEffect(()=>setForm(editing?{...emptySource,...editing,source_date:editing.source_date?.slice(0,10)||''}:emptySource),[editing]);
-  const targets=useMemo(()=>form.object_type==='BRAND'?brands.map(x=>({id:x.id,label:x.name})):form.object_type==='TWIN'?twins.map(x=>({id:x.id,label:`${x.original.name} → ${x.alternative.name}`})):items.map(x=>({id:x.id,label:`${x.brand.name} – ${x.name}`})),[form.object_type,brands,items,twins]);
+  const targets=useMemo(()=>{
+    const brandRows=Array.isArray(brands)?brands:[];
+    const fragranceRows=Array.isArray(items)?items:[];
+    const twinRows=Array.isArray(twins)?twins:[];
+    if(form.object_type==='BRAND') return brandRows.filter(x=>x?.id).map(x=>({id:x.id,label:x.name||'Unbenannte Marke'}));
+    if(form.object_type==='TWIN') return twinRows.filter(x=>x?.id).map(x=>({id:x.id,label:`${x.original?.name||x.original_name||'Unbekannt'} → ${x.alternative?.name||x.alternative_name||'Unbekannt'}`}));
+    return fragranceRows.filter(x=>x?.id).map(x=>({id:x.id,label:`${x.brand?.name||x.brand_name||'Unbekannte Marke'} – ${x.name||'Unbenannter Duft'}`}));
+  },[form.object_type,brands,items,twins]);
   const visible=filter==='ALL'?sources:sources.filter(source=>source.trust_status===filter);
   const installProfiles=async()=>{try{const result=await api('/api/enrichment/source-profiles/install-defaults',{method:'POST'});flash(`${result.installed} Quellenprofile installiert oder aktualisiert.`);await load()}catch(e){flash(e.message)}};
   const refreshGaps=async()=>{try{const result=await api('/api/enrichment/scan-gaps',{method:'POST'});flash(`${result.created+result.updated} Datenaufträge aktualisiert.`);await load()}catch(e){flash(e.message)}};
@@ -40,12 +47,12 @@ export default function VerificationAdmin({api,flash,brands,items,twins}){
     </section>
 
     <section className="verification-review-block">
-      <div className="verification-section-head"><div><span className="kicker">Recherche-Regeln</span><h3>Quellenprofile</h3><p>Diese Profile steuern, welche Webquellen bevorzugt, eingeschränkt oder gar nicht automatisiert verwendet werden.</p></div><div><button onClick={installProfiles}>Empfohlene Quellen hinzufügen</button><button onClick={load} disabled={loading}><RefreshCw size={15}/> Aktualisieren</button></div></div>
+      <div className="verification-section-head"><div><span className="kicker">Recherche-Regeln</span><h3>Quellenprofile</h3><p>Diese Profile steuern, welche Webquellen bevorzugt, eingeschränkt oder gar nicht automatisiert verwendet werden.</p></div><div><button type="button" onClick={installProfiles}>Empfohlene Quellen hinzufügen</button><button type="button" onClick={load} disabled={loading}><RefreshCw size={15}/> Aktualisieren</button></div></div>
       <div className="verification-profile-list">{profiles.map(profile=><article key={profile.id} className={profile.blocked?'blocked':''}><div><b>{profile.name}</b><span>{profile.domain}</span></div><strong>{profile.blocked?'Gesperrt':`Priorität ${profile.priority}`}</strong><small>{profile.category}</small><p>{profile.note}</p></article>)}</div>
     </section>
 
     <section className="verification-review-block">
-      <div className="verification-section-head"><div><span className="kicker">Datenprüfung</span><h3>Fehlende Duftdaten</h3><p>Alle aktuell unvollständigen Düfte mit den konkret fehlenden Feldern.</p></div><button onClick={refreshGaps}>Datenlücken neu prüfen</button></div>
+      <div className="verification-section-head"><div><span className="kicker">Datenprüfung</span><h3>Fehlende Duftdaten</h3><p>Alle aktuell unvollständigen Düfte mit den konkret fehlenden Feldern.</p></div><button type="button" onClick={refreshGaps}>Datenlücken neu prüfen</button></div>
       <div className="verification-gap-list">{tasks.map(task=><article key={task.id}><div><b>{task.brand_name} – {task.fragrance_name}</b><span>{(task.missing_fields||[]).map(field=>fieldLabels[field]||field).join(' · ')}</span></div><strong>{(task.missing_fields||[]).length} offen</strong></article>)}</div>
       {!tasks.length&&<div className="verification-empty">Aktuell sind keine offenen Datenlücken erfasst.</div>}
     </section>
@@ -64,7 +71,7 @@ export default function VerificationAdmin({api,flash,brands,items,twins}){
         <label className="field"><span>Prüfnotiz</span><textarea rows="4" value={form.note||''} onChange={e=>setForm({...form,note:e.target.value})}/></label>
         <button className="primary"><Save/> Quelle speichern</button>
       </form>
-      <div className="admin-list source-list"><div className="source-list-head"><h3>Quellenregister</h3><select value={filter} onChange={e=>setFilter(e.target.value)}><option value="ALL">Alle</option><option value="OPEN">Offen</option><option value="REVIEW">In Prüfung</option><option value="TRUSTED">Vertrauenswürdig</option><option value="REJECTED">Verworfen</option></select></div>{visible.map(source=><article className="source-row" key={source.id}><div className={`source-trust trust-${source.trust_status.toLowerCase()}`}><ShieldCheck/></div><div><small>{source.object_type||'ALLGEMEIN'} · {source.source_type||'Quelle'}</small><b>{source.name}</b><span>{source.note||'Keine Prüfnotiz'}</span>{source.file_or_url?.startsWith('http')&&<a href={source.file_or_url} target="_blank" rel="noreferrer">Quelle öffnen <ExternalLink size={13}/></a>}</div><div><button onClick={()=>setEditing(source)}><Pencil/></button><button className="danger" onClick={()=>remove(source)}><Trash2/></button></div></article>)}</div>
+      <div className="admin-list source-list"><div className="source-list-head"><h3>Quellenregister</h3><select value={filter} onChange={e=>setFilter(e.target.value)}><option value="ALL">Alle</option><option value="OPEN">Offen</option><option value="REVIEW">In Prüfung</option><option value="TRUSTED">Vertrauenswürdig</option><option value="REJECTED">Verworfen</option></select></div>{visible.map(source=><article className="source-row" key={source.id}><div className={`source-trust trust-${String(source.trust_status||'OPEN').toLowerCase()}`}><ShieldCheck/></div><div><small>{source.object_type||'ALLGEMEIN'} · {source.source_type||'Quelle'}</small><b>{source.name}</b><span>{source.note||'Keine Prüfnotiz'}</span>{source.file_or_url?.startsWith('http')&&<a href={source.file_or_url} target="_blank" rel="noreferrer">Quelle öffnen <ExternalLink size={13}/></a>}</div><div><button type="button" onClick={()=>setEditing(source)}><Pencil/></button><button type="button" className="danger" onClick={()=>remove(source)}><Trash2/></button></div></article>)}</div>
     </div>
   </div>;
 }
