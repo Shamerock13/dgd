@@ -10,6 +10,7 @@ import './styles.css';
 import './detail.css';
 import './image.css';
 import './brand.css';
+import VerificationAdmin from './verification.jsx';
 
 const euro = new Intl.NumberFormat('de-DE', {style:'currency', currency:'EUR'});
 const emptyFragrance = {
@@ -235,6 +236,7 @@ function AdminCenter({brands,items,twins,notes,reload,flash}) {
       <button className={section==='notes'?'active':''} onClick={()=>{setSection('notes');setEditing(null)}}>Duftnoten <b>{notes.length}</b></button>
       <button className={section==='import'?'active':''} onClick={()=>{setSection('import');setEditing(null)}}>Import</button>
       <button className={section==='twins'?'active':''} onClick={()=>{setSection('twins');setEditing(null)}}>Duftzwillinge <b>{twins.length}</b></button>
+      <button className={section==='sources'?'active':''} onClick={()=>{setSection('sources');setEditing(null)}}>Quellen & Prüfung</button>
       <button className={section==='updates'?'active':''} onClick={()=>{setSection('updates');setEditing(null)}}>System & Updates</button>
     </div>
     {section==='fragrances'&&<FragranceAdmin brands={brands} items={items} notes={notes} reload={reload} flash={flash} editing={editing} setEditing={setEditing}/>}
@@ -242,6 +244,7 @@ function AdminCenter({brands,items,twins,notes,reload,flash}) {
     {section==='notes'&&<NoteAdmin notes={notes} reload={reload} flash={flash} editing={editing} setEditing={setEditing}/>}
     {section==='import'&&<ImportAdmin reload={reload} flash={flash}/>}
     {section==='twins'&&<TwinAdmin items={items} twins={twins} reload={reload} flash={flash}/>}
+    {section==='sources'&&<VerificationAdmin api={api} flash={flash} brands={brands} items={items} twins={twins}/>}
     {section==='updates'&&<UpdateCenter flash={flash}/>}
   </main>
 }

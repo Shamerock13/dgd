@@ -227,3 +227,12 @@ Bei Änderungen an Marken zusätzlich prüfen:
 - Navigation Duftdetail → Marke → Duft funktioniert ohne veralteten Zustand
 - externe Website öffnet sicher mit `target="_blank"` und `rel="noreferrer"`
 
+
+## Quellen und Verifizierung testen
+
+- Quelle anlegen, bearbeiten und löschen
+- Zuordnung zu Marke, Duft und Duftzwilling prüfen
+- Vertrauensfilter im Quellenregister prüfen
+- externe Quellenlinks nur mit `target="_blank"` und `rel="noreferrer"` öffnen
+- Statuswerte außerhalb der definierten Enum-Werte müssen vom Backend abgelehnt werden
+- Prüfübersicht muss nach Änderungen neu geladen werden

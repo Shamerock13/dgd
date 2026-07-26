@@ -171,3 +171,15 @@ Enthalten sind externe Bildpfade, Bildquelle, Quellenlink, Nutzungsnotiz, Prüfs
 
 **Nächstes größeres Paket:** Quellen & Verifizierung 1.0.
 
+
+## Fortschritt: Quellen & Verifizierung 1.0
+
+**Status: umgesetzt**
+
+- Quellenregister im Admin
+- Zuordnung zu Marken, Düften und Duftzwillingen
+- Vertrauens- und Nutzungsstatus
+- Prüfnotizen, Quellentyp, Datum sowie URL/Datei
+- Verifizierungsübersicht mit offenen Datensätzen
+
+**Nächstes größeres Paket:** Parfümeurprofile 1.0.
