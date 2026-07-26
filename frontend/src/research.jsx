@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {Check,ExternalLink,Play,Plus,RefreshCw,Search,ShieldAlert,Sparkles,Trash2} from 'lucide-react';
 import './research.css';
+import './research-review.css';
 
 const empty={brand_name:'',fragrance_name:'',year:'',concentration:'',description:'',image_url:''};
 const emptySource={name:'',url:'',adapter_type:'SINGLE',link_pattern:'',max_pages:20,same_domain_only:true,interval_hours:24,active:true,note:''};
