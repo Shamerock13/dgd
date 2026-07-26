@@ -1,0 +1,38 @@
+name: Apply perfumer profiles package
+
+on:
+  push:
+    branches:
+      - feature/perfumer-profiles-1
+    paths:
+      - tools/perfumer-profiles-trigger.txt
+      - tools/apply_perfumer_profiles.py
+
+permissions:
+  contents: write
+
+jobs:
+  apply-validate-clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/perfumer-profiles-1
+          fetch-depth: 0
+      - name: Apply package
+        run: python tools/apply_perfumer_profiles.py
+      - name: Validate backend
+        run: python -m compileall -q backend/app
+      - name: Validate frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+      - name: Commit package
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f .github/workflows/apply-perfumer-profiles.yml tools/apply_perfumer_profiles.py tools/perfumer-profiles-trigger.txt
+          git add backend/app/main.py backend/app/migrations.py backend/app/perfumer_routes.py backend/app/perfumer_schemas.py frontend/src/main.jsx frontend/src/perfumer.jsx frontend/src/perfumer.css docs/PROJECT_CONTEXT.md docs/ROADMAP.md docs/DEV_WORKFLOW.md
+          git commit -m "feat: add perfumer profiles"
+          git push origin feature/perfumer-profiles-1
