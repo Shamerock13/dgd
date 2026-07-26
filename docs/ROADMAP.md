@@ -211,3 +211,18 @@ Enthalten sind externe Bildpfade, Bildquelle, Quellenlink, Nutzungsnotiz, Prüfs
 - redaktioneller Qualitätswert und Aufgabenkennzahlen
 
 **Nächstes größeres Paket:** Lokaler Bildupload & Medienablage 1.0.
+
+
+## Fortschritt: Lokaler Bildupload & Medienablage 1.0
+
+**Status: umgesetzt**
+
+- persistenter Unraid-Medienordner
+- Upload für JPEG, PNG und WebP bis 8 MB
+- Prüfung von MIME-Typ und Dateisignatur
+- automatische kollisionsfreie Dateinamen
+- Ersetzen und Löschen lokaler Duftbilder
+- weiterhin Unterstützung externer Bild-URLs
+- dokumentierte Backup- und Speicherregeln
+
+**Nächstes größeres Paket:** Automatische Recherche & Import-Warteschlange 1.0.

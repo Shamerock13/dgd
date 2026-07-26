@@ -13,6 +13,7 @@ import './brand.css';
 import VerificationAdmin from './verification.jsx';
 import {PerfumerAdmin, PerfumerProfile} from './perfumer.jsx';
 import QualityWorklist from './quality.jsx';
+import MediaUpload from './media-upload.jsx';
 
 const euro = new Intl.NumberFormat('de-DE', {style:'currency', currency:'EUR'});
 const emptyFragrance = {
@@ -313,6 +314,7 @@ function FragranceAdmin({brands,items,notes,reload,flash,editing,setEditing}) {
       </div>
       <Field label="Nutzungs- / Rechtehinweis zum Bild"><textarea rows="2" value={form.image_usage_note||''} onChange={e=>set('image_usage_note',e.target.value)} placeholder="Interne Notiz zur Herkunft und erlaubten Nutzung"/></Field>
       <ImageAdminPreview item={{...form,brand:brands.find(b=>b.id===form.brand_id)||{name:'DGD'}}}/>
+      <MediaUpload item={editing?{...editing,...form}:null} flash={flash} onChanged={patch=>{setForm(current=>({...current,...patch}));if(editing)setEditing(current=>({...current,...patch}))}}/>
       <Field label="Beschreibung"><textarea rows="3" value={form.description||''} onChange={e=>set('description',e.target.value)}/></Field>
       <div className="note-pyramid">
         <NotePicker title="Kopfnoten" notes={notes} selected={noteAssignments.top} onChange={value=>setNoteAssignments(v=>({...v,top:value}))}/>

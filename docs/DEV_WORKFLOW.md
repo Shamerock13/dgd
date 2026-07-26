@@ -256,3 +256,14 @@ Bei Änderungen an Marken zusätzlich prüfen:
 - Schaltfläche `Bearbeiten` öffnet den passenden Admin-Bereich
 - erneute Prüfung aktualisiert die Arbeitsliste nach Änderungen
 - Qualitätswert ausdrücklich nur als redaktionellen Fortschrittsindikator behandeln
+
+
+## Lokale Medien testen und sichern
+
+- Upload mit JPEG, PNG und WebP testen
+- falsche Dateiendung beziehungsweise ungültige Signatur muss abgelehnt werden
+- Größenlimit von 8 MB prüfen
+- Ersetzen entfernt die vorherige lokale Datei
+- Löschen ist nur für lokale `/media/fragrances/...`-Dateien erlaubt
+- `/mnt/user/appdata/dgd-dev-media` muss in das Unraid-Backup aufgenommen werden
+- Datenbank und Medienordner immer gemeinsam sichern und wiederherstellen
