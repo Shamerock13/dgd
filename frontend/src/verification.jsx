@@ -1,28 +1,55 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {ExternalLink, Pencil, Plus, Save, ShieldCheck, Trash2, X} from 'lucide-react';
+import {ExternalLink, Pencil, Plus, RefreshCw, Save, ShieldCheck, Trash2, X} from 'lucide-react';
 import './verification.css';
 
 const emptySource={name:'',object_type:'FRAGRANCE',object_id:'',source_type:'OFFICIAL',file_or_url:'',source_date:'',usage_status:'OPEN',trust_status:'OPEN',note:''};
+const fieldLabels={year:'Erscheinungsjahr',concentration:'Konzentration',perfumer:'Parfümeur',description:'Beschreibung',image:'Bild',source:'Quelle',notes:'Duftpyramide'};
 
 export default function VerificationAdmin({api,flash,brands,items,twins}){
   const [sources,setSources]=useState([]);
   const [summary,setSummary]=useState(null);
+  const [profiles,setProfiles]=useState([]);
+  const [tasks,setTasks]=useState([]);
   const [form,setForm]=useState(emptySource);
   const [editing,setEditing]=useState(null);
   const [filter,setFilter]=useState('ALL');
+  const [loading,setLoading]=useState(false);
   const load=async()=>{
-    try{const [rows,stats]=await Promise.all([api('/api/sources'),api('/api/verification/summary')]);setSources(rows);setSummary(stats)}catch(e){flash(e.message)}
+    setLoading(true);
+    try{
+      const [rows,stats,profileRows,taskRows]=await Promise.all([
+        api('/api/sources'),
+        api('/api/verification/summary'),
+        api('/api/enrichment/source-profiles'),
+        api('/api/enrichment/tasks?status=PENDING'),
+      ]);
+      setSources(rows);setSummary(stats);setProfiles(profileRows);setTasks(taskRows);
+    }catch(e){flash(e.message)}finally{setLoading(false)}
   };
   useEffect(()=>{load()},[]);
   useEffect(()=>setForm(editing?{...emptySource,...editing,source_date:editing.source_date?.slice(0,10)||''}:emptySource),[editing]);
   const targets=useMemo(()=>form.object_type==='BRAND'?brands.map(x=>({id:x.id,label:x.name})):form.object_type==='TWIN'?twins.map(x=>({id:x.id,label:`${x.original.name} → ${x.alternative.name}`})):items.map(x=>({id:x.id,label:`${x.brand.name} – ${x.name}`})),[form.object_type,brands,items,twins]);
   const visible=filter==='ALL'?sources:sources.filter(source=>source.trust_status===filter);
+  const installProfiles=async()=>{try{const result=await api('/api/enrichment/source-profiles/install-defaults',{method:'POST'});flash(`${result.installed} Quellenprofile installiert oder aktualisiert.`);await load()}catch(e){flash(e.message)}};
+  const refreshGaps=async()=>{try{const result=await api('/api/enrichment/scan-gaps',{method:'POST'});flash(`${result.created+result.updated} Datenaufträge aktualisiert.`);await load()}catch(e){flash(e.message)}};
   const save=async e=>{e.preventDefault();const payload={...form,object_id:form.object_id||null,source_type:form.source_type||null,file_or_url:form.file_or_url||null,source_date:form.source_date?`${form.source_date}T00:00:00`:null,note:form.note||null};try{await api(editing?`/api/sources/${editing.id}`:'/api/sources',{method:editing?'PUT':'POST',body:JSON.stringify(payload)});flash(editing?'Quelle aktualisiert.':'Quelle angelegt.');setEditing(null);setForm(emptySource);await load()}catch(e){flash(e.message)}};
   const remove=async source=>{if(!confirm(`Quelle „${source.name}“ wirklich löschen?`))return;try{await api(`/api/sources/${source.id}`,{method:'DELETE'});flash('Quelle gelöscht.');await load()}catch(e){flash(e.message)}};
   return <div className="verification-admin">
     <section className="verification-summary">
-      <article><strong>{summary?.sources??'–'}</strong><span>Quellen</span></article><article className="trusted"><strong>{summary?.trusted??'–'}</strong><span>Vertrauenswürdig</span></article><article><strong>{summary?.review??'–'}</strong><span>In Prüfung</span></article><article><strong>{summary?.fragrances_without_source??'–'}</strong><span>Düfte ohne Quelle</span></article>
+      <article><strong>{summary?.sources??'–'}</strong><span>Quellen</span></article><article className="trusted"><strong>{summary?.trusted??'–'}</strong><span>Vertrauenswürdig</span></article><article><strong>{summary?.review??'–'}</strong><span>In Prüfung</span></article><article><strong>{tasks.length}</strong><span>Düfte mit Datenlücken</span></article>
     </section>
+
+    <section className="verification-review-block">
+      <div className="verification-section-head"><div><span className="kicker">Recherche-Regeln</span><h3>Quellenprofile</h3><p>Diese Profile steuern, welche Webquellen bevorzugt, eingeschränkt oder gar nicht automatisiert verwendet werden.</p></div><div><button onClick={installProfiles}>Empfohlene Quellen hinzufügen</button><button onClick={load} disabled={loading}><RefreshCw size={15}/> Aktualisieren</button></div></div>
+      <div className="verification-profile-list">{profiles.map(profile=><article key={profile.id} className={profile.blocked?'blocked':''}><div><b>{profile.name}</b><span>{profile.domain}</span></div><strong>{profile.blocked?'Gesperrt':`Priorität ${profile.priority}`}</strong><small>{profile.category}</small><p>{profile.note}</p></article>)}</div>
+    </section>
+
+    <section className="verification-review-block">
+      <div className="verification-section-head"><div><span className="kicker">Datenprüfung</span><h3>Fehlende Duftdaten</h3><p>Alle aktuell unvollständigen Düfte mit den konkret fehlenden Feldern.</p></div><button onClick={refreshGaps}>Datenlücken neu prüfen</button></div>
+      <div className="verification-gap-list">{tasks.map(task=><article key={task.id}><div><b>{task.brand_name} – {task.fragrance_name}</b><span>{(task.missing_fields||[]).map(field=>fieldLabels[field]||field).join(' · ')}</span></div><strong>{(task.missing_fields||[]).length} offen</strong></article>)}</div>
+      {!tasks.length&&<div className="verification-empty">Aktuell sind keine offenen Datenlücken erfasst.</div>}
+    </section>
+
     <div className="admin-grid">
       <form className="editor compact" onSubmit={save}>
         <div className="editor-title"><div>{editing?<><Pencil/> Quelle bearbeiten</>:<><Plus/> Neue Quelle</>}</div>{editing&&<button type="button" onClick={()=>setEditing(null)}><X/> Abbrechen</button>}</div>
