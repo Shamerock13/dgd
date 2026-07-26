@@ -206,3 +206,8 @@ Das bestehende `master_sources`-Register ist jetzt über die App nutzbar. Quelle
 ## Aktueller Stand: Parfümeurprofile 1.0
 
 Die vorhandene Tabelle `master_perfumers` ist jetzt vollständig über die App nutzbar. Profile enthalten Biografie, Nationalität, Geburtsjahr, Stil, bekannte Werke, Primärquelle, redaktionelle Notiz und Artikelstatus. Duftdetailseiten verlinken direkt auf passende Profile. Schema-Version ist `0010`.
+
+
+## Aktueller Stand: Datenqualität & redaktionelle Arbeitsliste 1.0
+
+Der Admin-Bereich besitzt nun eine dynamische Arbeitsliste unter `/api/quality/worklist`. Sie prüft Marken, Düfte, Duftzwillinge, Quellen und Parfümeure auf fehlende oder ungeprüfte Angaben. Aufgaben werden nach Priorität sortiert und führen direkt in den passenden Verwaltungsbereich. Der Qualitätswert ist ein redaktioneller Fortschrittsindikator und kein wissenschaftlicher Datenwert. Das Datenbankschema bleibt bei `0010`, da die Arbeitsliste aus den vorhandenen Tabellen berechnet wird.

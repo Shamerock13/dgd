@@ -245,3 +245,14 @@ Bei Änderungen an Marken zusätzlich prüfen:
 - Navigation Duftdetail → Parfümeurprofil → Duft prüfen
 - Primärquellen nur sicher extern öffnen
 - Frontend-Build und Backend-Compile ausführen
+
+
+## Datenqualität und Arbeitsliste testen
+
+- `/api/quality/worklist` liefert Summary, Kategorien und Aufgaben
+- fehlendes Bild, fehlende Quelle und fehlende Duftpyramide werden erkannt
+- exakt vorhandene Parfümeurprofile werden nicht fälschlich beanstandet
+- Prioritäts-, Kategorie- und Textfilter funktionieren gemeinsam
+- Schaltfläche `Bearbeiten` öffnet den passenden Admin-Bereich
+- erneute Prüfung aktualisiert die Arbeitsliste nach Änderungen
+- Qualitätswert ausdrücklich nur als redaktionellen Fortschrittsindikator behandeln
