@@ -41,7 +41,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/apply-brand-profiles.yml tools/apply_brand_profiles.py tools/fix_brand_profile_script.py tools/brand-profiles-trigger.txt
-          git add backend/app/models.py backend/app/schemas.py backend/app/migrations.py backend/app/master_import_service.py frontend/src/main.jsx frontend/src/brand.css docs/PROJECT_CONTEXT.md docs/ROADMAP.md docs/DEV_WORKFLOW.md
+          rm -f .github/workflows/apply-brand-profiles.yml tools/apply_brand_profiles.py tools/fix_brand_profile_script.py tools/brand-profiles-trigger.txt
+          git add -A
           git commit -m "feat: add brand profiles and verification metadata"
           git push origin feature/brand-profiles-1
