@@ -3,9 +3,11 @@ import {createRoot} from 'react-dom/client';
 import {
   Search, Sparkles, LibraryBig, Tags, GitCompareArrows, Star,
   Moon, Sun, SlidersHorizontal, X, ChevronRight, FlaskConical,
-  Settings, Plus, Pencil, Trash2, Save, ArrowLeft, RefreshCw, PackageOpen, ShieldCheck, CircleAlert, Menu
+  Settings, Plus, Pencil, Trash2, Save, ArrowLeft, RefreshCw, PackageOpen, ShieldCheck, CircleAlert, Menu,
+  BadgeEuro, Clock3, UserRound, Layers3, Info
 } from 'lucide-react';
 import './styles.css';
+import './detail.css';
 
 const euro = new Intl.NumberFormat('de-DE', {style:'currency', currency:'EUR'});
 const emptyFragrance = {
@@ -62,6 +64,7 @@ function App() {
   const [minLongevity,setMinLongevity]=useState('');
   const [sortBy,setSortBy]=useState('brand-name');
   const [selected,setSelected]=useState(null);
+  const [detailLoading,setDetailLoading]=useState(false);
   const [filters,setFilters]=useState(false);
   const [mobileNav,setMobileNav]=useState(false);
   const [loading,setLoading]=useState(true);
@@ -124,7 +127,21 @@ function App() {
     setMinPrice('');setMaxPrice('');setMinLongevity('');setSortBy('brand-name');
   };
 
-  const navigate=next=>{setTab(next);setMobileNav(false)};
+  const navigate=next=>{setSelected(null);setTab(next);setMobileNav(false)};
+  const openDetail=async item=>{
+    setSelected({...item,structured_notes:[]});
+    setDetailLoading(true);
+    setMobileNav(false);
+    window.scrollTo({top:0,behavior:'smooth'});
+    try{
+      const structured_notes=await api(`/api/fragrances/${item.id}/notes`);
+      setSelected(current=>current?.id===item.id?{...current,structured_notes}:current);
+    }catch(e){
+      flash(`Duftnoten konnten nicht geladen werden: ${e.message}`);
+    }finally{
+      setDetailLoading(false);
+    }
+  };
   const flash=(msg)=>{setNotice(msg);setTimeout(()=>setNotice(''),3500)};
   const discoveryItems=filteredItems.slice(0,6);
   const visibleItems=tab==='entdecken'?discoveryItems:filteredItems;
@@ -146,7 +163,7 @@ function App() {
 
     {notice && <div className="toast">{notice}</div>}
 
-    {tab==='admin' ? <AdminCenter brands={brands} items={items} twins={twins} notes={notes} reload={load} flash={flash}/> :
+    {selected ? <DetailPage item={selected} twins={twins} loading={detailLoading} onBack={()=>setSelected(null)} onOpen={openDetail}/> : tab==='admin' ? <AdminCenter brands={brands} items={items} twins={twins} notes={notes} reload={load} flash={flash}/> :
     <main>
       <section className="hero">
         <div className="eyebrow"><Sparkles size={16}/> Wissen, vergleichen, entdecken</div>
@@ -184,12 +201,12 @@ function App() {
           <div><span className="kicker">Duftdatenbank</span><h2>{query?`Ergebnisse für „${query}“`:tab==='entdecken'?'Ausgewählte Düfte':'Alle Düfte'}</h2></div>
           <div className="result-tools"><span className="result-count">{filteredItems.length} Treffer</span>{tab==='entdecken'&&filteredItems.length>6&&<button className="text-action" onClick={()=>navigate('duefte')}>Alle anzeigen <ChevronRight size={15}/></button>}</div>
         </div>
-        {loading?<div className="empty">Düfte werden geladen …</div>:visibleItems.length?<div className="card-grid">{visibleItems.map(i=><FragranceCard key={i.id} item={i} onOpen={setSelected}/>)}</div>:<div className="empty empty-search"><Search/><h3>Keine passenden Düfte</h3><p>Ändere die Suche oder entferne einzelne Filter.</p><button className="clear" onClick={resetFilters}>Filter zurücksetzen</button></div>}
+        {loading?<div className="empty">Düfte werden geladen …</div>:visibleItems.length?<div className="card-grid">{visibleItems.map(i=><FragranceCard key={i.id} item={i} onOpen={openDetail}/>)}</div>:<div className="empty empty-search"><Search/><h3>Keine passenden Düfte</h3><p>Ändere die Suche oder entferne einzelne Filter.</p><button className="clear" onClick={resetFilters}>Filter zurücksetzen</button></div>}
       </section>}
 
       {(tab==='entdecken'||tab==='zwillinge')&&<section className="content-section twin-section">
         <div className="section-head"><div><span className="kicker">Das Herzstück</span><h2>{tab==='entdecken'?'Starke Duftzwillinge':'Alle Duftzwillinge'}</h2></div>{tab==='entdecken'&&twins.length>4&&<button className="text-action" onClick={()=>navigate('zwillinge')}>Alle anzeigen <ChevronRight size={15}/></button>}</div>
-        <div className="twin-grid">{(tab==='entdecken'?twins.slice(0,4):twins).map(t=><TwinCard key={t.id} twin={t} onOpen={setSelected}/>)}</div>
+        <div className="twin-grid">{(tab==='entdecken'?twins.slice(0,4):twins).map(t=><TwinCard key={t.id} twin={t} onOpen={openDetail}/>)}</div>
       </section>}
 
       {tab==='entdecken'&&<section className="content-section brand-section">
@@ -199,7 +216,6 @@ function App() {
     </main>}
 
     <footer><b>DGD</b><span>Das große Parfum- & Duftzwillinge-Lexikon · Version 2.0 · Entwicklung</span></footer>
-    {selected&&<Detail item={selected} onClose={()=>setSelected(null)}/>}
   </div>
 }
 
@@ -620,6 +636,88 @@ function FragranceCard({item,onOpen}){
   </article>
 }
 function TwinCard({twin,onOpen}){return <article className="twin-card"><div className="similarity"><strong>{Math.round(twin.similarity)}%</strong><span>Ähnlichkeit</span></div><div className="twin-pair"><button onClick={()=>onOpen(twin.original)}><small>Original</small><b>{twin.original.name}</b><span>{twin.original.brand.name}</span></button><GitCompareArrows/><button onClick={()=>onOpen(twin.alternative)}><small>Alternative</small><b>{twin.alternative.name}</b><span>{twin.alternative.brand.name}</span></button></div><p>{twin.commonalities}</p><div className="saving"><span>Preisunterschied</span><strong>{twin.original.price_eur&&twin.alternative.price_eur?euro.format(twin.original.price_eur-twin.alternative.price_eur):'–'}</strong></div></article>}
-function Detail({item,onClose}){return <div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&onClose()}><article className="modal"><button className="modal-close" onClick={onClose}><X/></button><div className="modal-hero"><div className="big-bottle">{item.image_url?<img src={item.image_url}/>:<span>{item.brand.name.slice(0,2).toUpperCase()}</span>}</div><div><span className="kicker">{item.brand.name}</span><h2>{item.name}</h2><p>{item.description}</p><div className="meta">{item.gender} · {item.concentration||'Konzentration offen'} {item.year?`· ${item.year}`:''}</div><strong className="price">{item.price_eur!=null?euro.format(item.price_eur):'Preis offen'}</strong></div></div><div className="notes"><div><small>Kopfnote</small><p>{item.top_notes||'Noch nicht erfasst'}</p></div><div><small>Herznote</small><p>{item.heart_notes||'Noch nicht erfasst'}</p></div><div><small>Basisnote</small><p>{item.base_notes||'Noch nicht erfasst'}</p></div></div><div className="meters"><Meter label="Haltbarkeit" value={item.longevity}/><Meter label="Projektion" value={item.projection}/><Meter label="Süße" value={item.sweetness}/><Meter label="Frische" value={item.freshness}/></div></article></div>}
+function ImageWithFallback({item,className=''}) {
+  const [broken,setBroken]=useState(false);
+  useEffect(()=>setBroken(false),[item.image_url]);
+  if(!item.image_url||broken)return <div className={`detail-image-fallback ${className}`}><span>{item.brand.name.slice(0,2).toUpperCase()}</span><small>Bild folgt</small></div>;
+  return <img className={className} src={item.image_url} alt={`${item.brand.name} ${item.name}`} onError={()=>setBroken(true)}/>;
+}
+
+function NoteColumn({title,pyramid,rows,fallback}) {
+  const structured=rows.filter(row=>row.pyramid===pyramid).sort((a,b)=>a.position-b.position);
+  const legacy=structured.length?[]:(fallback||'').split(',').map(value=>value.trim()).filter(Boolean);
+  const notes=structured.length?structured.map(row=>({id:row.id,name:row.note.name,category:row.note.category})):legacy.map((name,index)=>({id:`legacy-${pyramid}-${index}`,name,category:null}));
+  return <article className={`detail-note-column note-${pyramid}`}>
+    <div className="detail-note-heading"><span>{pyramid==='top'?'01':pyramid==='heart'?'02':'03'}</span><div><small>Duftpyramide</small><h3>{title}</h3></div></div>
+    {notes.length?<div className="detail-note-list">{notes.map(note=><div key={note.id}><b>{note.name}</b>{note.category&&<small>{note.category}</small>}</div>)}</div>:<p className="detail-empty-copy">Noch nicht erfasst</p>}
+  </article>;
+}
+
+function DetailTwinCard({twin,item,onOpen}) {
+  const itemIsOriginal=twin.original.id===item.id;
+  const counterpart=itemIsOriginal?twin.alternative:twin.original;
+  const priceDistance=item.price_eur!=null&&counterpart.price_eur!=null?Math.abs(Number(item.price_eur)-Number(counterpart.price_eur)):null;
+  const cheaper=priceDistance!=null?(Number(counterpart.price_eur)<Number(item.price_eur)?counterpart:item):null;
+  return <article className="detail-twin-card">
+    <div className="detail-twin-score"><strong>{Math.round(twin.similarity)}%</strong><span>Ähnlichkeit</span></div>
+    <div className="detail-twin-main">
+      <small>{itemIsOriginal?'Alternative zu diesem Duft':'Zugeordnetes Original'}</small>
+      <h3>{counterpart.name}</h3>
+      <p>{counterpart.brand.name}</p>
+      <div className="detail-twin-prices"><span>{counterpart.price_eur!=null?euro.format(counterpart.price_eur):'Preis offen'}</span>{priceDistance!=null&&<b>{euro.format(priceDistance)} Abstand</b>}</div>
+      {cheaper&&<div className="detail-saving"><BadgeEuro size={17}/>{cheaper.id===counterpart.id?`${counterpart.name} ist günstiger`:`${item.name} ist günstiger`}</div>}
+    </div>
+    <div className="detail-twin-copy">
+      <div><small>Gemeinsamkeiten</small><p>{twin.commonalities||'Noch keine Beschreibung hinterlegt.'}</p></div>
+      <div><small>Unterschiede</small><p>{twin.differences||'Noch keine Beschreibung hinterlegt.'}</p></div>
+      {twin.source_note&&<div className="detail-source"><Info size={16}/><span>{twin.source_note}</span></div>}
+    </div>
+    <button className="detail-open-twin" onClick={()=>onOpen(counterpart)}>Duft öffnen <ChevronRight size={16}/></button>
+  </article>;
+}
+
+function DetailPage({item,twins,loading,onBack,onOpen}) {
+  const relatedTwins=twins.filter(twin=>twin.original.id===item.id||twin.alternative.id===item.id);
+  const accords=(item.accords||'').split(',').map(value=>value.trim()).filter(Boolean);
+  const structuredNotes=item.structured_notes||[];
+  useEffect(()=>window.scrollTo({top:0}),[item.id]);
+  return <main className="detail-page">
+    <div className="detail-toolbar"><button onClick={onBack}><ArrowLeft size={18}/> Zurück zur Übersicht</button><span>DGD Duftprofil</span></div>
+    <section className="detail-hero">
+      <div className="detail-visual"><ImageWithFallback item={item}/><div className="detail-image-glow"/></div>
+      <div className="detail-intro">
+        <span className="kicker">{item.brand.name}</span>
+        <h1>{item.name}</h1>
+        <div className="detail-meta-row">
+          <span><Clock3 size={15}/>{item.year||'Jahr offen'}</span>
+          <span><Layers3 size={15}/>{item.concentration||'Konzentration offen'}</span>
+          <span><UserRound size={15}/>{item.perfumer||'Parfümeur offen'}</span>
+        </div>
+        <p className="detail-description">{item.description||'Für diesen Duft ist noch keine ausführliche Beschreibung hinterlegt.'}</p>
+        {accords.length>0&&<div className="detail-accords">{accords.map(accord=><span key={accord}>{accord}</span>)}</div>}
+        <div className="detail-price-block"><small>Erfasster Preis</small><strong>{item.price_eur!=null?euro.format(item.price_eur):'Preis offen'}</strong><span>{item.gender||'Unisex'}</span></div>
+      </div>
+    </section>
+
+    <section className="detail-section">
+      <div className="detail-section-heading"><span className="kicker">Duftaufbau</span><h2>Die Notenpyramide</h2><p>Kopf, Herz und Basis zeigen, wie sich der Duft auf der Haut entwickelt.</p></div>
+      {loading?<div className="detail-loading">Strukturierte Duftnoten werden geladen …</div>:<div className="detail-note-grid">
+        <NoteColumn title="Kopfnoten" pyramid="top" rows={structuredNotes} fallback={item.top_notes}/>
+        <NoteColumn title="Herznoten" pyramid="heart" rows={structuredNotes} fallback={item.heart_notes}/>
+        <NoteColumn title="Basisnoten" pyramid="base" rows={structuredNotes} fallback={item.base_notes}/>
+      </div>}
+    </section>
+
+    <section className="detail-section detail-character">
+      <div className="detail-section-heading"><span className="kicker">Charakter</span><h2>So ist der Duft eingeordnet</h2></div>
+      <div className="detail-meter-grid"><Meter label="Haltbarkeit" value={item.longevity}/><Meter label="Projektion" value={item.projection}/><Meter label="Süße" value={item.sweetness}/><Meter label="Frische" value={item.freshness}/></div>
+    </section>
+
+    <section className="detail-section detail-twins-section">
+      <div className="detail-section-heading"><span className="kicker">Duftzwillinge 2.0</span><h2>{relatedTwins.length?`${relatedTwins.length} passende ${relatedTwins.length===1?'Verknüpfung':'Verknüpfungen'}`:'Noch keine Duftzwillinge'}</h2><p>Ähnlichkeit, Unterschiede, Preisabstand und Quellenhinweis direkt am Duft.</p></div>
+      {relatedTwins.length?<div className="detail-twin-list">{relatedTwins.map(twin=><DetailTwinCard key={twin.id} twin={twin} item={item} onOpen={onOpen}/>)}</div>:<div className="detail-no-twins"><GitCompareArrows/><h3>Noch keine Verknüpfung vorhanden</h3><p>Dieser Duft kann später über den Admin-Bereich mit Originalen oder Alternativen verbunden werden.</p></div>}
+    </section>
+  </main>;
+}
 
 createRoot(document.getElementById('root')).render(<App/>);
