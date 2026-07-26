@@ -1,0 +1,45 @@
+name: Apply sources verification package
+
+on:
+  push:
+    branches:
+      - feature/sources-verification-1
+    paths:
+      - tools/sources-verification-trigger.txt
+      - tools/apply_sources_verification.py
+  pull_request:
+    branches:
+      - main
+    paths:
+      - tools/sources-verification-trigger.txt
+      - tools/apply_sources_verification.py
+      - .github/workflows/apply-sources-verification.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-validate-clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/sources-verification-1
+          fetch-depth: 0
+      - name: Apply package
+        run: python tools/apply_sources_verification.py
+      - name: Validate backend
+        run: python -m compileall -q backend/app
+      - name: Validate frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+      - name: Commit generated package
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f .github/workflows/apply-sources-verification.yml tools/apply_sources_verification.py tools/sources-verification-trigger.txt
+          git add backend/app/main.py backend/app/migrations.py backend/app/source_routes.py backend/app/source_schemas.py frontend/src/main.jsx frontend/src/verification.jsx frontend/src/verification.css docs/PROJECT_CONTEXT.md docs/ROADMAP.md docs/DEV_WORKFLOW.md
+          git commit -m "feat: add sources and verification center"
+          git push origin feature/sources-verification-1
