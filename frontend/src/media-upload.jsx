@@ -5,7 +5,7 @@ import './media-upload.css';
 export default function MediaUpload({item, onChanged, flash}) {
   const inputRef=useRef(null);
   const [working,setWorking]=useState(false);
-  const isLocal=String(item?.image_url||'').startsWith('/media/fragrances/');
+  const isLocal=String(item?.image_url||'').startsWith('/api/quality/media/fragrances/');
 
   const upload=async file=>{
     if(!item?.id||!file)return;
@@ -13,7 +13,7 @@ export default function MediaUpload({item, onChanged, flash}) {
     form.append('file',file);
     setWorking(true);
     try{
-      const res=await fetch(`/api/fragrances/${item.id}/image`,{method:'POST',body:form});
+      const res=await fetch(`/api/quality/fragrances/${item.id}/image`,{method:'POST',body:form});
       const body=await res.json().catch(()=>({}));
       if(!res.ok)throw new Error(body.detail||`Fehler ${res.status}`);
       onChanged?.(body);
@@ -25,7 +25,7 @@ export default function MediaUpload({item, onChanged, flash}) {
     if(!item?.id||!isLocal||!confirm('Lokales Bild wirklich löschen?'))return;
     setWorking(true);
     try{
-      const res=await fetch(`/api/fragrances/${item.id}/image`,{method:'DELETE'});
+      const res=await fetch(`/api/quality/fragrances/${item.id}/image`,{method:'DELETE'});
       const body=await res.json().catch(()=>({}));
       if(!res.ok)throw new Error(body.detail||`Fehler ${res.status}`);
       onChanged?.({image_url:null,image_source_name:null,image_source_url:null,image_usage_note:null,image_status:'OPEN'});
