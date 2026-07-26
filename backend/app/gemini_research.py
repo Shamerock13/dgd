@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -13,7 +14,7 @@ from sqlalchemy.orm import Session
 from .research_enrichment import _upsert_finding
 
 
-MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 
@@ -78,7 +79,7 @@ async def _ask_gemini(client: httpx.AsyncClient, brand: str, name: str, missing_
         headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
         json={
             "contents": [{"role": "user", "parts": [{"text": _prompt(brand, name, missing_fields)}]}],
-            "tools": [{"googleSearch": {}}],
+            "tools": [{"google_search": {}}],
             "generationConfig": {"temperature": 0.1, "maxOutputTokens": 2200},
         },
     )
@@ -102,6 +103,11 @@ def _allowed_fields(missing: set[str]) -> set[str]:
     return allowed
 
 
+def _twin_fingerprint(fragrance_id, proposal: str) -> str:
+    raw = f"gemini::{fragrance_id}::{proposal.casefold()}".encode("utf-8")
+    return f"gemini::{hashlib.sha256(raw).hexdigest()}"
+
+
 def _insert_twins(db: Session, fragrance: dict, twins: list[dict], source: dict) -> int:
     created = 0
     for twin in twins[:5]:
@@ -109,7 +115,7 @@ def _insert_twins(db: Session, fragrance: dict, twins: list[dict], source: dict)
         evidence = str(twin.get("evidence") or "").strip()
         if not proposal or not evidence:
             continue
-        fingerprint = f'gemini::{fragrance["fragrance_id"]}::{proposal}'.casefold()
+        fingerprint = _twin_fingerprint(fragrance["fragrance_id"], proposal)
         if db.execute(text("SELECT id FROM twin_research_suggestions WHERE fingerprint=:fp"), {"fp": fingerprint}).scalar():
             continue
         alternative_id = db.execute(text("""
@@ -157,20 +163,23 @@ async def run_gemini_research(db: Session, limit: int = 5) -> dict:
             task = dict(task_row)
             try:
                 data, sources, usage = await _ask_gemini(client, task["brand_name"], task["name"], task["missing_fields"] or [])
-                stats["fragrances_searched"] += 1
-                stats["sources_found"] += len(sources)
-                stats["prompt_tokens"] += int(usage.get("promptTokenCount") or 0)
-                stats["output_tokens"] += int(usage.get("candidatesTokenCount") or 0)
                 primary = sources[0] if sources else {"name": "Gemini mit Google Search", "url": "https://www.google.com/search"}
                 source = {"name": primary["name"], "url": primary["url"], "excerpt": f'Gemini research for {task["brand_name"]} {task["name"]}'}
                 allowed = _allowed_fields(set(task["missing_fields"] or []))
+                findings_created = 0
                 for field in allowed:
                     value = data.get(field)
                     if value not in (None, "", []):
                         if _upsert_finding(db, task["fragrance_id"], field, value, source, 85):
-                            stats["findings_created"] += 1
-                stats["twins_created"] += _insert_twins(db, task, data.get("twins") or [], primary)
+                            findings_created += 1
+                twins_created = _insert_twins(db, task, data.get("twins") or [], primary)
                 db.commit()
+                stats["fragrances_searched"] += 1
+                stats["sources_found"] += len(sources)
+                stats["prompt_tokens"] += int(usage.get("promptTokenCount") or 0)
+                stats["output_tokens"] += int(usage.get("candidatesTokenCount") or 0)
+                stats["findings_created"] += findings_created
+                stats["twins_created"] += twins_created
             except Exception as exc:
                 db.rollback()
                 stats["errors"] += 1
