@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from .data_standards import compact_text
 from .gemini_research import MODEL, _allowed_fields, _ask_gemini, _insert_twins, gemini_configured
+from .grounding_policy import grounded_twin_counts, usable_grounding_sources
 from .research_enrichment import _upsert_finding
 
 
@@ -37,7 +38,12 @@ async def run_smart_gemini_research(db: Session, limit: int = 5) -> dict:
         FROM enrichment_tasks t JOIN fragrances f ON f.id=t.fragrance_id JOIN brands b ON b.id=f.brand_id
         WHERE t.status='PENDING' ORDER BY t.updated_at,b.name,f.name LIMIT :limit
     """), {"limit": max(1, min(limit, 10))}).mappings())
-    stats = {"provider": "gemini", "configured": True, "model": MODEL, "fragrances_searched": 0, "findings_created": 0, "twins_created": 0, "sources_found": 0, "known_twins_excluded": 0, "errors": 0, "prompt_tokens": 0, "output_tokens": 0}
+    stats = {
+        "provider": "gemini", "configured": True, "model": MODEL,
+        "fragrances_searched": 0, "findings_created": 0, "twins_created": 0,
+        "twins_blocked_ungrounded": 0, "sources_found": 0,
+        "known_twins_excluded": 0, "errors": 0, "prompt_tokens": 0, "output_tokens": 0,
+    }
     async with httpx.AsyncClient(timeout=httpx.Timeout(75.0, connect=15.0), follow_redirects=True) as client:
         for task_row in tasks:
             task = dict(task_row)
@@ -47,22 +53,26 @@ async def run_smart_gemini_research(db: Session, limit: int = 5) -> dict:
                 if known_twins:
                     exclusion = "\nBereits bekannte, geprüfte oder abgelehnte Duftzwillinge – nicht erneut vorschlagen:\n" + "\n".join(f"- {name}" for name in known_twins)
                 data, sources, usage = await _ask_gemini(client, task["brand_name"], f'{task["name"]}{exclusion}', task["missing_fields"] or [])
-                primary = sources[0] if sources else {"name": "Gemini mit Google Search", "url": "https://www.google.com/search"}
+                grounded_sources = usable_grounding_sources(sources)
+                primary = grounded_sources[0] if grounded_sources else {"name": "Gemini mit Google Search", "url": "https://www.google.com/search"}
                 source = {"name": primary["name"], "url": primary["url"], "excerpt": compact_text(f'Gemini-Recherche für {task["brand_name"]} {task["name"]}', 500)}
                 findings_created = 0
                 for field in _allowed_fields(set(task["missing_fields"] or [])):
                     value = data.get(field)
                     if value not in (None, "", []) and _upsert_finding(db, task["fragrance_id"], field, value, source, 85):
                         findings_created += 1
-                twins_created = _insert_twins(db, task, data.get("twins") or [], primary)
+                twins = data.get("twins") or []
+                _, blocked = grounded_twin_counts(twins, grounded_sources)
+                twins_created = _insert_twins(db, task, twins, grounded_sources[0]) if grounded_sources else 0
                 db.commit()
                 stats["fragrances_searched"] += 1
-                stats["sources_found"] += len(sources)
+                stats["sources_found"] += len(grounded_sources)
                 stats["known_twins_excluded"] += len(known_twins)
                 stats["prompt_tokens"] += int(usage.get("promptTokenCount") or 0)
                 stats["output_tokens"] += int(usage.get("candidatesTokenCount") or 0)
                 stats["findings_created"] += findings_created
                 stats["twins_created"] += twins_created
+                stats["twins_blocked_ungrounded"] += blocked
             except Exception as exc:
                 db.rollback()
                 stats["errors"] += 1
