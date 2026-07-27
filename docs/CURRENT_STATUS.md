@@ -1,6 +1,6 @@
 # DGD – Aktueller Projektstand
 
-Stand: 26. Juli 2026
+Stand: 27. Juli 2026
 
 Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf `main` vorhandenen Funktionsstand. Detailentscheidungen bleiben zusätzlich in den jeweiligen Fachdateien unter `docs/` dokumentiert.
 
@@ -16,12 +16,24 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 8. Automatische Recherche & Import-Warteschlange 1.0
 9. Recherchequellen & zeitgesteuerter Scanner 1.0
 10. Quellenadapter & Mehrseiten-Scanner 1.0
+11. Gemini-Recherche & Datenqualität 1.0
 
 ## Aktueller Recherche-Stand
 
 DGD kann einzelne öffentliche Produktseiten sowie verwaltete Recherchequellen prüfen. Quellen können als `SINGLE` oder `LIST` betrieben werden.
 
 Der Adapter `SINGLE` liest genau die hinterlegte Seite. Der Adapter `LIST` liest eine Listen-, Kategorie-, Marken- oder Suchseite, sammelt passende Produktlinks und arbeitet sie nacheinander ab.
+
+Zusätzlich steht Gemini mit Google Search als kontrollierter Rechercheanbieter zur Verfügung:
+
+- gezielte Recherche eines einzelnen Dufts mit offenen Feldern,
+- Markenrecherche nach weiteren, noch nicht vorhandenen Düften,
+- gemeinsamer deutscher Datenstandard mit festen Feld- und Zeichenlimits,
+- Ausschluss bereits vorhandener, offener, übernommener, abgelehnter oder konfliktbehafteter Feldwerte,
+- Ausschluss bereits bekannter oder geprüfter Duftzwillinge,
+- strikte Grounding-Pflicht für neue Gemini-Twin-Vorschläge,
+- serverseitige Normalisierung von Duftnoten und Akkorden,
+- sichtbarer Prüflauf vor der historischen Datenbereinigung.
 
 Sicherheits- und Lastgrenzen:
 
@@ -31,8 +43,10 @@ Sicherheits- und Lastgrenzen:
 - regulärer Ausdruck als Linkfilter
 - maximal 1 bis 100 Produktseiten pro Lauf
 - keine automatische Veröffentlichung
-- jeder Fund landet zunächst in der Import-Warteschlange
+- jeder Fund landet zunächst in der Import- oder Prüf-Warteschlange
 - Dublettenprüfung bleibt vor der Freigabe aktiv
+- Duftzwillinge ohne konkrete Grounding-Quelle werden nicht gespeichert
+- temporäre Gemini-Fehler `429`, `502`, `503` und `504` werden begrenzt wiederholt
 
 Scanläufe speichern zusätzlich die Anzahl gefundener Links und tatsächlich geprüfter Produktseiten. Fehler einzelner Unterseiten brechen einen gesamten Listenlauf nicht sofort ab.
 
@@ -40,10 +54,13 @@ Technische Detaildokumentation:
 
 - `docs/RESEARCH_AUTOMATION.md`
 - `docs/SOURCE_ADAPTERS.md`
+- `docs/GEMINI_RESEARCH_AND_DATA_QUALITY.md`
 
 ## Datenbankstand
 
 Das explizite DGD-Migrationsschema bleibt bei `0011`. Die Tabellen der verwalteten Recherchequellen und Scanläufe werden idempotent über die registrierten SQLAlchemy-Modelle angelegt. Bestehende Recherchetabellen werden beim Start um die Adapterfelder ergänzt.
+
+Die neueren Gemini-, Deduplizierungs-, Grounding- und Bereinigungsfunktionen verwenden die vorhandenen Recherche-, Prüf- und Twin-Tabellen. Die Twin-Vorschlagsstruktur unterstützt zusätzlich getrennte Angaben für Marke und Duftname sowie eine ausführlichere Vergleichsbegründung.
 
 ## Qualitätssicherung
 
