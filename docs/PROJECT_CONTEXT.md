@@ -41,7 +41,9 @@ Lokale Medien:
 
 - Backend: FastAPI, SQLAlchemy, PostgreSQL
 - Frontend: React, Vite
-- Vite baut während Paket 14 zwei HTML-Einstiege: `index.html` und `catalog.html`
+- Vite baut drei HTML-Einstiege: `index.html`, `admin.html` und den Weiterleitungs-Einstieg `catalog.html`
+- `/` ist die öffentliche Katalogansicht
+- `/admin.html` enthält das bestehende Admin-Center
 - Datenbankzugriff über `DATABASE_URL`
 - explizites DGD-Migrationsschema aktuell bis `0011`
 - zusätzliche Recherche-, Scanner-, Gemini- und Verlaufsstrukturen werden idempotent angelegt
@@ -52,7 +54,9 @@ Abgeschlossen sind alle Pakete bis einschließlich:
 
 13. **Scanner-Betrieb & automatische Fälligkeit 1.0**
 
-Paket 14 **Suche, Filter & Navigation 2.0** ist in Arbeit. Der paginierte Katalogendpunkt und ein eigenständiger Dev-Katalog unter `/catalog.html` sind umgesetzt. Der neue Katalog hält Suche, Filter, Sortierung, Seite und Duftdetail in der URL und wird vor der Ablösung der bisherigen Ansicht separat getestet.
+Paket 14 **Suche, Filter & Navigation 2.0** ist in Arbeit. Der paginierte Katalog ist als öffentliche Hauptansicht integriert und in Dev grundsätzlich bestätigt. Suche, Filter, Sortierung, Seite und Duftdetail bleiben in der URL erhalten.
+
+Für das Admin-Center ist eine getrennte, DOM-basierte Such- und Pagination-Schicht vorgesehen. Sie erweitert ausschließlich die vorhandenen Duft- und Markenlisten, ohne die React-Formulare oder Verwaltungsendpunkte umzubauen. Der Zustand bleibt in `sessionStorage`; nach dem Bearbeiten soll zum vorherigen Listeneintrag zurückgesprungen werden.
 
 Der Scanner-Worker läuft getrennt von API und Frontend. Er prüft ausschließlich aktive und fällige Quellen, meldet einen Heartbeat, speichert den letzten Zyklusstatus und verhindert parallele Doppelläufe derselben Quelle über PostgreSQL-Advisory-Locks.
 
@@ -99,11 +103,11 @@ cd /mnt/user/appdata/dgd-github
 GIT_SSH_COMMAND='ssh -i /root/.ssh/dgd_github -o IdentitiesOnly=yes -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no' \
 git pull origin main
 
-docker restart DGD-Dev-Backend DGD-Dev-Frontend
+docker restart DGD-Dev-Frontend
 ```
 
 ## Nächster Schritt
 
-**Katalog 2.0 unter `/catalog.html` in Dev abnehmen und anschließend in die öffentliche Hauptansicht integrieren.**
+**Admin-Suche und Pagination unter `/admin.html` in Dev abnehmen und anschließend die verlinkbaren Marken- und Parfümeuransichten fertigstellen.**
 
 Produktion wird erst nach erfolgreicher Dev-Abnahme in einem eigenen, ausdrücklich freigegebenen Schritt vorbereitet.

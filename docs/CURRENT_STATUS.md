@@ -26,16 +26,19 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 
 - den paginierten Backend-Endpunkt `GET /api/catalog/fragrances`,
 - gewichtete Suche und serverseitige Filter,
-- einen eigenständigen Dev-Katalog unter `/catalog.html`,
+- den Katalog 2.0 als öffentliche Hauptansicht unter `/`,
+- das bestehende Admin-Center getrennt unter `/admin.html`,
 - 24 Ergebnisse pro Seite,
 - URL-basierte Filter, Sortierung und Seitennummer,
 - verlinkbare Duftdetails,
 - Browser-Historie für Ergebnis- und Detailnavigation,
 - verzögerte Texteingabe und Schutz gegen verspätete Antworten.
 
-Die praktische Dev-Abnahme des Katalogs 2.0 ist erfolgreich: Suche, Filter, Pagination, Direktlinks, schmale Darstellung und Browser-Zurück-Navigation wurden bestätigt. Die bisherige öffentliche Ansicht und das Admin-Center bleiben bis zur geplanten Umschaltung unverändert.
+Die praktische Dev-Abnahme des öffentlichen Katalogs ist erfolgreich. Suche, Filter, Pagination, Direktlinks, schmale Darstellung und Browser-Zurück-Navigation wurden bestätigt. Die Umschaltung auf die Hauptansicht sieht in Dev ebenfalls korrekt aus.
 
-Noch offen sind die Integration als öffentliche Hauptansicht, dauerhaft verlinkbare Marken- und Parfümeuransichten sowie die stabilere Admin-Suche.
+Für die großen Admin-Listen ist eine zusätzliche Such- und Pagination-Schicht vorbereitet. Düfte und Marken werden mit 20 Einträgen pro Seite angezeigt; Suche, Seite und Rücksprung zum bearbeiteten Eintrag bleiben innerhalb der Sitzung erhalten. Die praktische Dev-Abnahme steht noch aus.
+
+Noch offen sind dauerhaft verlinkbare Marken- und Parfümeuransichten sowie die Dev-Abnahme der Admin-Listen.
 
 ## Scanner-Betrieb
 
@@ -92,7 +95,7 @@ Neue Pakete gelten erst nach erfolgreichem Test in der separaten Dev-Umgebung al
 
 ## Nächster Schritt
 
-**Katalog 2.0 als öffentliche Hauptansicht integrieren und anschließend die Admin-Suche stabilisieren.**
+**Admin-Suche und Pagination in Dev abnehmen; danach Paket 14 mit verlinkbaren Marken- und Parfümeuransichten abschließen.**
 
 ## Dokumentationsregel
 
