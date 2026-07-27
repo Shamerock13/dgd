@@ -45,6 +45,11 @@ class SourcePayload(BaseModel):
         return value
 
 
+class ScannerControlPayload(BaseModel):
+    enabled: bool
+    poll_seconds: int = Field(default=300, ge=60, le=86400)
+
+
 def _source(db: Session, source_id: UUID):
     row = db.execute(text("SELECT * FROM research_sources WHERE id=:id"), {"id": source_id}).mappings().first()
     if not row:
@@ -52,9 +57,26 @@ def _source(db: Session, source_id: UUID):
     return row
 
 
+def _scanner_status(db: Session):
+    row = db.execute(text("SELECT * FROM scanner_control WHERE id=1")).mappings().first()
+    if not row:
+        db.execute(text("INSERT INTO scanner_control(id,enabled,poll_seconds) VALUES(1,FALSE,300)"))
+        db.commit()
+        row = db.execute(text("SELECT * FROM scanner_control WHERE id=1")).mappings().first()
+    result = dict(row)
+    heartbeat = result.get("heartbeat_at")
+    poll_seconds = int(result.get("poll_seconds") or 300)
+    result["worker_online"] = bool(heartbeat and heartbeat >= datetime.now(timezone.utc) - timedelta(seconds=max(180, poll_seconds * 2)))
+    return result
+
+
 @router.get("/sources")
 def list_sources(db: Session = Depends(get_db)):
-    return list(db.execute(text("SELECT * FROM research_sources ORDER BY active DESC, name")).mappings())
+    return list(db.execute(text("""
+        SELECT s.*, CASE WHEN s.last_run_at IS NULL THEN CURRENT_TIMESTAMP
+        ELSE s.last_run_at + make_interval(hours => s.interval_hours) END AS next_run_at
+        FROM research_sources s ORDER BY active DESC, name
+    """)).mappings())
 
 
 @router.post("/sources", status_code=201)
@@ -103,14 +125,19 @@ def delete_source(source_id: UUID, db: Session = Depends(get_db)):
 
 
 async def _run_source(row, db: Session):
+    lock_key = f"dgd-research-source:{row['id']}"
+    locked = bool(db.execute(text("SELECT pg_try_advisory_lock(hashtext(:key))"), {"key": lock_key}).scalar())
+    if not locked:
+        return {"source_id": str(row["id"]), "name": row["name"], "status": "SKIPPED_LOCKED"}
+
     started = datetime.now(timezone.utc)
     run_id = uuid4()
-    db.execute(text("""
-        INSERT INTO research_scan_runs (id,source_id,status,started_at)
-        VALUES (:id,:source,'RUNNING',:started)
-    """), {"id": run_id, "source": row["id"], "started": started})
-    db.commit()
     try:
+        db.execute(text("""
+            INSERT INTO research_scan_runs (id,source_id,status,started_at)
+            VALUES (:id,:source,'RUNNING',:started)
+        """), {"id": run_id, "source": row["id"], "started": started})
+        db.commit()
         result = await scan_source_adapter(row, db)
         db.execute(text("""
             UPDATE research_scan_runs SET status='SUCCESS',finished_at=CURRENT_TIMESTAMP,
@@ -125,11 +152,15 @@ async def _run_source(row, db: Session):
         db.commit()
         return {"source_id": str(row["id"]), "name": row["name"], "status": "SUCCESS", **result}
     except Exception as exc:
+        db.rollback()
         message = str(getattr(exc, "detail", exc))[:1000]
         db.execute(text("UPDATE research_scan_runs SET status='FAILED',finished_at=CURRENT_TIMESTAMP,error_message=:error WHERE id=:id"), {"id": run_id, "error": message})
         db.execute(text("UPDATE research_sources SET last_run_at=CURRENT_TIMESTAMP,last_status='FAILED',last_error=:error,updated_at=CURRENT_TIMESTAMP WHERE id=:id"), {"id": row["id"], "error": message})
         db.commit()
         return {"source_id": str(row["id"]), "name": row["name"], "status": "FAILED", "error": message}
+    finally:
+        db.execute(text("SELECT pg_advisory_unlock(hashtext(:key))"), {"key": lock_key})
+        db.commit()
 
 
 @router.post("/sources/{source_id}/scan")
@@ -143,7 +174,29 @@ async def scan_active_sources(due_only: bool = False, db: Session = Depends(get_
     now = datetime.now(timezone.utc)
     selected = [row for row in rows if not due_only or not row["last_run_at"] or row["last_run_at"] + timedelta(hours=row["interval_hours"]) <= now]
     results = [await _run_source(row, db) for row in selected]
-    return {"requested": len(selected), "successful": sum(r["status"] == "SUCCESS" for r in results), "failed": sum(r["status"] == "FAILED" for r in results), "results": results}
+    return {
+        "requested": len(selected),
+        "successful": sum(r["status"] == "SUCCESS" for r in results),
+        "failed": sum(r["status"] == "FAILED" for r in results),
+        "skipped_locked": sum(r["status"] == "SKIPPED_LOCKED" for r in results),
+        "results": results,
+    }
+
+
+@router.get("/scanner/status")
+def scanner_status(db: Session = Depends(get_db)):
+    return _scanner_status(db)
+
+
+@router.put("/scanner/status")
+def update_scanner_status(payload: ScannerControlPayload, db: Session = Depends(get_db)):
+    db.execute(text("""
+        INSERT INTO scanner_control(id,enabled,poll_seconds,updated_at)
+        VALUES(1,:enabled,:poll,CURRENT_TIMESTAMP)
+        ON CONFLICT(id) DO UPDATE SET enabled=EXCLUDED.enabled,poll_seconds=EXCLUDED.poll_seconds,updated_at=CURRENT_TIMESTAMP
+    """), {"enabled": payload.enabled, "poll": payload.poll_seconds})
+    db.commit()
+    return _scanner_status(db)
 
 
 @router.get("/scan-runs")
