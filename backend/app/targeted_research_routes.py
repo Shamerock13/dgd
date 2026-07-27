@@ -3,7 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -19,6 +19,12 @@ from .gemini_research import (
 )
 from .grounding_policy import grounded_twin_counts, usable_grounding_sources
 from .research_enrichment import _upsert_finding
+from .research_run_history import (
+    cooldown_remaining_minutes,
+    ensure_research_run_table,
+    latest_successful_run,
+    record_research_run,
+)
 
 router = APIRouter(prefix="/api/enrichment", tags=["targeted-research"])
 
@@ -43,10 +49,56 @@ def _known_twin_names(db: Session, fragrance_id: UUID) -> list[str]:
     """), {"id": fragrance_id}).all()]
 
 
+@router.get("/research-history")
+def list_research_history(
+    limit: int = Query(default=200, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    ensure_research_run_table(db)
+    rows = db.execute(text("""
+        SELECT DISTINCT ON (r.fragrance_id)
+               r.*, f.name AS fragrance_name, b.name AS brand_name
+        FROM gemini_research_runs r
+        JOIN fragrances f ON f.id=r.fragrance_id
+        JOIN brands b ON b.id=f.brand_id
+        ORDER BY r.fragrance_id, r.created_at DESC
+        LIMIT :limit
+    """), {"limit": limit}).mappings()
+    return list(rows)
+
+
+@router.get("/tasks/{fragrance_id}/research-history")
+def fragrance_research_history(
+    fragrance_id: UUID,
+    limit: int = Query(default=10, ge=1, le=50),
+    db: Session = Depends(get_db),
+):
+    ensure_research_run_table(db)
+    return list(db.execute(text("""
+        SELECT * FROM gemini_research_runs
+        WHERE fragrance_id=:fragrance_id
+        ORDER BY created_at DESC
+        LIMIT :limit
+    """), {"fragrance_id": fragrance_id, "limit": limit}).mappings())
+
+
 @router.post("/tasks/{fragrance_id}/research")
-async def research_single_fragrance(fragrance_id: UUID, db: Session = Depends(get_db)):
+async def research_single_fragrance(
+    fragrance_id: UUID,
+    force: bool = Query(default=False),
+    db: Session = Depends(get_db),
+):
     if not gemini_configured():
         raise HTTPException(503, "Gemini ist nicht konfiguriert.")
+
+    ensure_research_run_table(db)
+    latest = latest_successful_run(db, fragrance_id)
+    remaining = cooldown_remaining_minutes(latest)
+    if remaining and not force:
+        raise HTTPException(
+            409,
+            f"Dieser Duft wurde gerade erst recherchiert. Noch etwa {remaining} Minuten geschützt. Nutze ‚Trotzdem erneut suchen‘ für einen bewussten neuen Lauf.",
+        )
 
     task = db.execute(text("""
         SELECT t.fragrance_id, t.missing_fields, f.name, b.name AS brand_name
@@ -60,7 +112,8 @@ async def research_single_fragrance(fragrance_id: UUID, db: Session = Depends(ge
         raise HTTPException(404, "Für diesen Duft gibt es keinen offenen Datenauftrag.")
 
     task = dict(task)
-    allowed_fields = _allowed_fields(set(task["missing_fields"] or []))
+    requested_fields = task["missing_fields"] or []
+    allowed_fields = _allowed_fields(set(requested_fields))
     known_findings = known_finding_values(db, fragrance_id, allowed_fields)
     known_twins = _known_twin_names(db, fragrance_id)
     exclusion = exclusion_prompt(known_findings)
@@ -68,6 +121,7 @@ async def research_single_fragrance(fragrance_id: UUID, db: Session = Depends(ge
         exclusion += "\nBereits bekannte, geprüfte oder abgelehnte Duftzwillinge – nicht erneut vorschlagen:\n" + "\n".join(f"- {name}" for name in known_twins)
     research_name = f'{task["name"]}{exclusion}'
 
+    usage: dict = {}
     try:
         async with httpx.AsyncClient(
             timeout=httpx.Timeout(75.0, connect=15.0),
@@ -77,7 +131,7 @@ async def research_single_fragrance(fragrance_id: UUID, db: Session = Depends(ge
                 client,
                 task["brand_name"],
                 research_name,
-                task["missing_fields"] or [],
+                requested_fields,
             )
 
         grounded_sources = usable_grounding_sources(sources)
@@ -108,12 +162,40 @@ async def research_single_fragrance(fragrance_id: UUID, db: Session = Depends(ge
         twins = data.get("twins") or []
         _, twins_blocked_ungrounded = grounded_twin_counts(twins, grounded_sources)
         twins_created = _insert_twins(db, task, twins, grounded_sources[0]) if grounded_sources else 0
+        prompt_tokens = int(usage.get("promptTokenCount") or 0)
+        output_tokens = int(usage.get("candidatesTokenCount") or 0)
+        record_research_run(
+            db,
+            fragrance_id=fragrance_id,
+            status="SUCCESS",
+            model=MODEL,
+            requested_fields=requested_fields,
+            sources_found=len(grounded_sources),
+            findings_created=findings_created,
+            twins_created=twins_created,
+            prompt_tokens=prompt_tokens,
+            output_tokens=output_tokens,
+        )
         db.commit()
     except HTTPException:
         db.rollback()
         raise
     except Exception as exc:
         db.rollback()
+        try:
+            record_research_run(
+                db,
+                fragrance_id=fragrance_id,
+                status="ERROR",
+                model=MODEL,
+                requested_fields=requested_fields,
+                prompt_tokens=int(usage.get("promptTokenCount") or 0),
+                output_tokens=int(usage.get("candidatesTokenCount") or 0),
+                error_message=f"{type(exc).__name__}: {exc}",
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
         raise HTTPException(502, f"Gemini-Recherche fehlgeschlagen: {type(exc).__name__}: {exc}") from exc
 
     return {
@@ -122,7 +204,7 @@ async def research_single_fragrance(fragrance_id: UUID, db: Session = Depends(ge
         "fragrance_id": str(fragrance_id),
         "brand_name": task["brand_name"],
         "fragrance_name": task["name"],
-        "requested_fields": task["missing_fields"] or [],
+        "requested_fields": requested_fields,
         "known_twins_excluded": len(known_twins),
         "known_findings_excluded": known_value_count(known_findings),
         "findings_skipped_known": findings_skipped_known,
@@ -130,6 +212,8 @@ async def research_single_fragrance(fragrance_id: UUID, db: Session = Depends(ge
         "twins_created": twins_created,
         "twins_blocked_ungrounded": twins_blocked_ungrounded,
         "sources_found": len(grounded_sources),
-        "prompt_tokens": int(usage.get("promptTokenCount") or 0),
-        "output_tokens": int(usage.get("candidatesTokenCount") or 0),
+        "prompt_tokens": prompt_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": prompt_tokens + output_tokens,
+        "forced": force,
     }
