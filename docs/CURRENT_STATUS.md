@@ -23,7 +23,7 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 
 ## Paket 15 in Arbeit
 
-**Datenvalidierung & Importqualität 2.0** besitzt als ersten Baustein einen getrennten, nur lesenden Qualitätsprüfpfad:
+**Datenvalidierung & Importqualität 2.0** besitzt einen getrennten, nur lesenden Qualitätsprüfpfad:
 
 ```text
 POST /api/import/quality/preview
@@ -38,7 +38,7 @@ Die Vorschau:
 - liefert pro Zeile Entscheidung, Begründung, Fehler und Kandidaten,
 - verändert den bisherigen Import und die Datenbank noch nicht.
 
-Die praktische Dev-Abnahme dieses Backend-Bausteins steht noch aus. Danach wird die Qualitätsvorschau in das Admin-Center integriert.
+Der Backend-Prüfpfad wurde praktisch in Dev bestätigt. Im Admin-Bereich **Datenimport** ist zusätzlich eine getrennte Schaltfläche **Qualität & Dubletten prüfen** integriert. Sie zeigt `CREATE`, `DUPLICATE`, `REVIEW` und `BLOCK`, den Gesamtstatus sowie Kandidaten und Fehler pro Zeile. Die bestehende Importvorschau und der Commit-Pfad bleiben unverändert. Die praktische Dev-Abnahme der neuen Admin-Anzeige steht noch aus.
 
 ## Paket 14 abgeschlossen
 
@@ -60,7 +60,7 @@ Die Dev-Umgebung besitzt den getrennten Container `DGD-Dev-Scanner`. Der Worker 
 
 ## Datenbankstand
 
-Das explizite DGD-Migrationsschema bleibt bei `0011`. Für den ersten Baustein von Paket 15 ist keine Datenbankänderung erforderlich.
+Das explizite DGD-Migrationsschema bleibt bei `0011`. Für die bisherigen Bausteine von Paket 15 ist keine Datenbankänderung erforderlich.
 
 ## Qualitätssicherung
 
@@ -76,7 +76,7 @@ Neue Pakete gelten erst nach erfolgreichem Test in der separaten Dev-Umgebung al
 
 ## Nächster Schritt
 
-**Den Qualitätsprüfpfad in Dev testen und anschließend die Vorschau in das Admin-Center integrieren.**
+**Die Qualitätsvorschau im Admin-Center praktisch testen und danach die Absicherung des Import-Commit-Pfads planen.**
 
 ## Dokumentationsregel
 
