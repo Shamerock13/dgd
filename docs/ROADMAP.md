@@ -31,18 +31,25 @@ Bereits umgesetzt und in Dev bestätigt:
 - serverseitige Filter für Marke, Zielgruppe, Konzentration, Duftnote, Jahr, Preis und Haltbarkeit
 - definierte Sortierungen und begrenzte Seitengröße
 - Facetten für Konzentrationen und Jahresbereich
-- eigener Dev-Katalog unter `/catalog.html`
+- Katalog 2.0 als öffentliche Hauptansicht unter `/`
+- Admin-Center getrennt unter `/admin.html`
 - echte Pagination mit 24 Ergebnissen pro Seite
 - URL-basierte Filter, Sortierung und Seitennummer
 - verlinkbare Duftdetails und Browser-Historie
 - verzögerte Suche und Schutz gegen verspätete Antworten
 - erfolgreiche praktische Dev-Abnahme von Suche, Filtern, Pagination, Direktlinks, Browser-Zurück und responsiver Darstellung
 
+Vorbereitet, Dev-Abnahme offen:
+
+- Suche in den Admin-Listen für Düfte und Marken
+- Pagination mit 20 Einträgen pro Admin-Seite
+- Erhalt von Suche und Seite innerhalb der Browsersitzung
+- Rücksprung zum bearbeiteten Datensatz nach dem Speichern
+
 Noch offen:
 
-- Katalog 2.0 als öffentliche Hauptansicht integrieren
 - dauerhaft verlinkbare Marken- und Parfümeuransichten
-- stabilere Admin-Suche
+- praktische Dev-Abnahme der Admin-Listen
 
 Für später vorgemerkt:
 
@@ -82,7 +89,7 @@ Für später vorgemerkt:
 
 ### Admin-Bereich 2.0
 
-- Suche, Filter und Pagination in großen Listen
+- weitere Suche, Filter und Pagination in großen Speziallisten
 - klarere Formulare und bessere mobile Bedienung
 
 ### Vergleich & Bewertung 2.0
