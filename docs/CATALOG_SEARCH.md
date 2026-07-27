@@ -47,6 +47,28 @@ Die Antwort enthält:
 - `pagination`: Seite, Seitengröße, Gesamtzahl, Seitenzahl sowie Vor-/Zurück-Status
 - `facets`: verfügbare Konzentrationen sowie kleinste und größte Jahreszahl
 
+## Katalog 2.0 im Frontend
+
+Der neue Katalog ist während der Dev-Abnahme unter folgender Seite erreichbar:
+
+```text
+/catalog.html
+```
+
+Die bestehende Hauptansicht erhält vorübergehend die Schaltfläche **Katalog 2.0 testen**. Der neue Katalog:
+
+- verwendet ausschließlich den paginierten Katalogendpunkt,
+- lädt standardmäßig 24 Düfte pro Seite,
+- bietet Suche und Filter für Marke, Zielgruppe, Konzentration, Duftnote, Jahr, Preis und Haltbarkeit,
+- speichert Suchbegriff, Filter, Sortierung und Seite in der URL,
+- verzögert Texteingaben um 300 ms, damit nicht jeder Tastendruck eine Anfrage auslöst,
+- ignoriert verspätete Antworten älterer Suchanfragen,
+- besitzt verlinkbare Duftdetails über den URL-Parameter `fragrance`,
+- verwendet die Browser-Historie beim Öffnen und Schließen von Ergebnissen,
+- zeigt Lade-, Leer- und Fehlerzustände getrennt an.
+
+Die alte Ansicht und das Admin-Center bleiben während dieses Zwischenschritts unverändert. Nach erfolgreicher Dev-Abnahme wird entschieden, ob der Katalog die bisherige öffentliche Ansicht direkt ersetzt oder schrittweise in `main.jsx` integriert wird.
+
 ## Sicherheits- und Lastgrenzen
 
 - Suchtext maximal 120 Zeichen
@@ -57,8 +79,15 @@ Die Antwort enthält:
 
 ## Noch offen in Paket 14
 
-- Frontend an den paginierten Endpunkt anbinden
-- Filterzustand in der URL speichern
-- dauerhaft verlinkbare Duft-, Marken- und Parfümeuransichten
-- zuverlässige Browser-Zurück-Navigation
+- neuen Katalog in der Dev-Umgebung praktisch abnehmen
+- dauerhaft verlinkbare Marken- und Parfümeuransichten
 - Admin-Suche getrennt stabilisieren
+- Entscheidung und Umsetzung der Ablösung der bisherigen öffentlichen Duftliste
+
+## Spätere Verbesserungen
+
+- Tippfehler-Toleranz über PostgreSQL `pg_trgm`
+- Vorschläge und Autovervollständigung
+- Filterfacetten mit Trefferzahlen
+- mehrere Duftnoten mit UND-/ODER-Verknüpfung
+- kanonische, lesbare Slugs zusätzlich zu UUID-Links
