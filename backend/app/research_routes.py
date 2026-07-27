@@ -2,7 +2,6 @@ import ipaddress
 import json
 import re
 import socket
-from datetime import datetime, timezone
 from html import unescape
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
@@ -13,6 +12,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from .data_standards import FIELD_LIMITS, compact_name, compact_text, normalize_candidate
 from .database import get_db
 
 router = APIRouter(prefix="/api/research", tags=["research"])
@@ -28,8 +28,8 @@ class CandidateUpdate(BaseModel):
     fragrance_name: str = Field(min_length=1, max_length=200)
     year: int | None = Field(default=None, ge=1800, le=2200)
     concentration: str | None = Field(default=None, max_length=80)
-    description: str | None = None
-    image_url: str | None = None
+    description: str | None = Field(default=None, max_length=350)
+    image_url: str | None = Field(default=None, max_length=2000)
 
 
 def _public_url(value: str) -> str:
@@ -47,15 +47,15 @@ def _public_url(value: str) -> str:
     return value.strip()
 
 
-def _clean(value):
+def _clean(value, limit: int = 2000):
     if value is None:
         return None
     if isinstance(value, dict):
         value = value.get("name") or value.get("value")
     if isinstance(value, list):
         value = ", ".join(str(part) for part in value if part)
-    value = re.sub(r"\s+", " ", unescape(str(value))).strip()
-    return value or None
+    cleaned = compact_text(unescape(str(value)), limit)
+    return cleaned or None
 
 
 def _json_ld_candidates(html: str):
@@ -78,10 +78,15 @@ def _json_ld_candidates(html: str):
             kinds = set(kind if isinstance(kind, list) else [kind])
             if not kinds.intersection({"Product", "IndividualProduct"}):
                 continue
-            name = _clean(entry.get("name"))
-            brand = _clean(entry.get("brand") or entry.get("manufacturer"))
+            name = _clean(entry.get("name"), 200)
+            brand = _clean(entry.get("brand") or entry.get("manufacturer"), 160)
             if name:
-                rows.append({"fragrance_name": name, "brand_name": brand or "Unbekannte Marke", "description": _clean(entry.get("description")), "image_url": _clean(entry.get("image"))})
+                rows.append(normalize_candidate({
+                    "fragrance_name": name,
+                    "brand_name": brand or "Unbekannte Marke",
+                    "description": _clean(entry.get("description"), FIELD_LIMITS["description"]),
+                    "image_url": _clean(entry.get("image"), FIELD_LIMITS["url"]),
+                }))
     return rows
 
 
@@ -90,9 +95,14 @@ def _fallback_candidate(html: str):
     description = re.search(r'<meta[^>]+name=["\']description["\'][^>]+content=["\'](.*?)["\']', html, re.I | re.S)
     if not title:
         return []
-    raw = _clean(title.group(1))
+    raw = _clean(title.group(1), 360)
     parts = re.split(r"\s+[|–—-]\s+", raw or "", maxsplit=1)
-    return [{"fragrance_name": parts[0], "brand_name": parts[1] if len(parts) > 1 else "Unbekannte Marke", "description": _clean(description.group(1)) if description else None, "image_url": None}]
+    return [normalize_candidate({
+        "fragrance_name": parts[0],
+        "brand_name": parts[1] if len(parts) > 1 else "Unbekannte Marke",
+        "description": _clean(description.group(1), FIELD_LIMITS["description"]) if description else None,
+        "image_url": None,
+    })]
 
 
 def _duplicate(db: Session, brand: str, name: str):
@@ -111,15 +121,14 @@ def list_candidates(status: str = "PENDING", db: Session = Depends(get_db)):
     if status != "ALL":
         query += " WHERE status=:status"
         params["status"] = status
-    query += " ORDER BY created_at DESC"
-    return list(db.execute(text(query), params).mappings())
+    return list(db.execute(text(query + " ORDER BY created_at DESC"), params).mappings())
 
 
 @router.post("/scan")
 async def scan_page(payload: ScanRequest, db: Session = Depends(get_db)):
     url = _public_url(payload.url)
     try:
-        async with httpx.AsyncClient(follow_redirects=True, timeout=15, headers={"User-Agent": "DGD-Research/1.0"}) as client:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=15, headers={"User-Agent": "DGD-Research/1.1"}) as client:
             response = await client.get(url)
             response.raise_for_status()
             if "text/html" not in response.headers.get("content-type", ""):
@@ -130,25 +139,28 @@ async def scan_page(payload: ScanRequest, db: Session = Depends(get_db)):
     except Exception as exc:
         raise HTTPException(502, f"Quelle konnte nicht gelesen werden: {exc}") from exc
 
-    discovered = _json_ld_candidates(html) or _fallback_candidate(html)
-    created = 0
-    duplicates = 0
-    for row in discovered[:50]:
+    json_rows = _json_ld_candidates(html)
+    discovered = json_rows or _fallback_candidate(html)
+    created = duplicates = 0
+    for raw_row in discovered[:50]:
+        row = normalize_candidate(raw_row)
+        if not row["fragrance_name"]:
+            continue
         duplicate = _duplicate(db, row["brand_name"], row["fragrance_name"])
-        fingerprint = f'{row["brand_name"].strip().casefold()}::{row["fragrance_name"].strip().casefold()}::{url}'
-        exists = db.execute(text("SELECT id FROM research_candidates WHERE fingerprint=:fingerprint"), {"fingerprint": fingerprint}).first()
-        if exists:
+        fingerprint = f'{row["brand_name"].casefold()}::{row["fragrance_name"].casefold()}::{url}'
+        if db.execute(text("SELECT id FROM research_candidates WHERE fingerprint=:fingerprint"), {"fingerprint": fingerprint}).first():
             continue
         db.execute(text("""
             INSERT INTO research_candidates
-            (id, fingerprint, source_name, source_url, brand_name, fragrance_name, description, image_url, status, confidence, duplicate_fragrance_id, raw_data, created_at, updated_at)
-            VALUES (:id,:fingerprint,:source_name,:source_url,:brand_name,:fragrance_name,:description,:image_url,'PENDING',:confidence,:duplicate_id,CAST(:raw_data AS JSONB),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+            (id,fingerprint,source_name,source_url,brand_name,fragrance_name,description,image_url,status,confidence,duplicate_fragrance_id,raw_data,created_at,updated_at)
+            VALUES(:id,:fingerprint,:source_name,:source_url,:brand_name,:fragrance_name,:description,:image_url,'PENDING',:confidence,:duplicate_id,CAST(:raw_data AS JSONB),CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
         """), {
-            "id": uuid4(), "fingerprint": fingerprint, "source_name": payload.source_name or urlparse(url).hostname,
-            "source_url": url, "brand_name": row["brand_name"], "fragrance_name": row["fragrance_name"],
+            "id": uuid4(), "fingerprint": fingerprint,
+            "source_name": compact_text(payload.source_name or urlparse(url).hostname, FIELD_LIMITS["source_name"]),
+            "source_url": url[:FIELD_LIMITS["url"]], "brand_name": row["brand_name"], "fragrance_name": row["fragrance_name"],
             "description": row.get("description"), "image_url": row.get("image_url"),
-            "confidence": 90 if discovered and row in _json_ld_candidates(html) else 55,
-            "duplicate_id": UUID(duplicate["id"]) if duplicate else None, "raw_data": json.dumps(row, ensure_ascii=False),
+            "confidence": 90 if json_rows else 55, "duplicate_id": UUID(duplicate["id"]) if duplicate else None,
+            "raw_data": json.dumps(row, ensure_ascii=False),
         })
         created += 1
         duplicates += 1 if duplicate else 0
@@ -158,12 +170,13 @@ async def scan_page(payload: ScanRequest, db: Session = Depends(get_db)):
 
 @router.put("/candidates/{candidate_id}")
 def update_candidate(candidate_id: UUID, payload: CandidateUpdate, db: Session = Depends(get_db)):
+    row = normalize_candidate(payload.model_dump())
     result = db.execute(text("""
-        UPDATE research_candidates SET brand_name=:brand, fragrance_name=:name, year=:year,
-        concentration=:concentration, description=:description, image_url=:image_url, updated_at=CURRENT_TIMESTAMP
+        UPDATE research_candidates SET brand_name=:brand,fragrance_name=:name,year=:year,
+        concentration=:concentration,description=:description,image_url=:image_url,updated_at=CURRENT_TIMESTAMP
         WHERE id=:id AND status='PENDING' RETURNING *
-    """), {"id": candidate_id, "brand": payload.brand_name, "name": payload.fragrance_name, "year": payload.year,
-          "concentration": payload.concentration, "description": payload.description, "image_url": payload.image_url}).mappings().first()
+    """), {"id": candidate_id, "brand": row["brand_name"], "name": row["fragrance_name"], "year": payload.year,
+           "concentration": row["concentration"], "description": row["description"], "image_url": row["image_url"]}).mappings().first()
     if not result:
         raise HTTPException(404, "Offener Vorschlag nicht gefunden")
     db.commit()
@@ -175,30 +188,31 @@ def approve_candidate(candidate_id: UUID, db: Session = Depends(get_db)):
     row = db.execute(text("SELECT * FROM research_candidates WHERE id=:id AND status='PENDING' FOR UPDATE"), {"id": candidate_id}).mappings().first()
     if not row:
         raise HTTPException(404, "Offener Vorschlag nicht gefunden")
-    duplicate = _duplicate(db, row["brand_name"], row["fragrance_name"])
+    normalized = normalize_candidate(dict(row))
+    duplicate = _duplicate(db, normalized["brand_name"], normalized["fragrance_name"])
     if duplicate:
-        db.execute(text("UPDATE research_candidates SET status='DUPLICATE', duplicate_fragrance_id=:duplicate, updated_at=CURRENT_TIMESTAMP WHERE id=:id"), {"id": candidate_id, "duplicate": UUID(duplicate["id"])})
+        db.execute(text("UPDATE research_candidates SET status='DUPLICATE',duplicate_fragrance_id=:duplicate,updated_at=CURRENT_TIMESTAMP WHERE id=:id"), {"id": candidate_id, "duplicate": UUID(duplicate["id"])})
         db.commit()
         raise HTTPException(409, "Der Duft existiert bereits und wurde als Dublette markiert.")
-    brand_id = db.execute(text("SELECT id FROM brands WHERE lower(trim(name))=lower(trim(:name)) LIMIT 1"), {"name": row["brand_name"]}).scalar()
+    brand_id = db.execute(text("SELECT id FROM brands WHERE lower(trim(name))=lower(trim(:name)) LIMIT 1"), {"name": normalized["brand_name"]}).scalar()
     if not brand_id:
         brand_id = uuid4()
-        db.execute(text("INSERT INTO brands (id,name,verification_status,active) VALUES (:id,:name,'OPEN',true)"), {"id": brand_id, "name": row["brand_name"]})
+        db.execute(text("INSERT INTO brands(id,name,verification_status,active) VALUES(:id,:name,'OPEN',true)"), {"id": brand_id, "name": normalized["brand_name"]})
     fragrance_id = uuid4()
     db.execute(text("""
-        INSERT INTO fragrances (id,name,brand_id,year,gender,concentration,description,image_url,image_source_name,image_source_url,image_status,created_at)
-        VALUES (:id,:name,:brand_id,:year,'Unisex',:concentration,:description,:image_url,:source_name,:source_url,'OPEN',CURRENT_TIMESTAMP)
-    """), {"id": fragrance_id, "name": row["fragrance_name"], "brand_id": brand_id, "year": row["year"],
-          "concentration": row["concentration"], "description": row["description"], "image_url": row["image_url"],
-          "source_name": row["source_name"], "source_url": row["source_url"]})
-    db.execute(text("UPDATE research_candidates SET status='APPROVED', approved_fragrance_id=:fragrance, updated_at=CURRENT_TIMESTAMP WHERE id=:id"), {"id": candidate_id, "fragrance": fragrance_id})
+        INSERT INTO fragrances(id,name,brand_id,year,gender,concentration,description,image_url,image_source_name,image_source_url,image_status,created_at)
+        VALUES(:id,:name,:brand_id,:year,'Unisex',:concentration,:description,:image_url,:source_name,:source_url,'OPEN',CURRENT_TIMESTAMP)
+    """), {"id": fragrance_id, "name": normalized["fragrance_name"], "brand_id": brand_id, "year": row["year"],
+           "concentration": normalized["concentration"], "description": normalized["description"], "image_url": normalized["image_url"],
+           "source_name": compact_text(row["source_name"], FIELD_LIMITS["source_name"]), "source_url": row["source_url"][:FIELD_LIMITS["url"]]})
+    db.execute(text("UPDATE research_candidates SET status='APPROVED',approved_fragrance_id=:fragrance,updated_at=CURRENT_TIMESTAMP WHERE id=:id"), {"id": candidate_id, "fragrance": fragrance_id})
     db.commit()
     return {"status": "APPROVED", "fragrance_id": fragrance_id}
 
 
 @router.post("/candidates/{candidate_id}/reject")
 def reject_candidate(candidate_id: UUID, db: Session = Depends(get_db)):
-    changed = db.execute(text("UPDATE research_candidates SET status='REJECTED', updated_at=CURRENT_TIMESTAMP WHERE id=:id AND status='PENDING'"), {"id": candidate_id}).rowcount
+    changed = db.execute(text("UPDATE research_candidates SET status='REJECTED',updated_at=CURRENT_TIMESTAMP WHERE id=:id AND status='PENDING'"), {"id": candidate_id}).rowcount
     if not changed:
         raise HTTPException(404, "Offener Vorschlag nicht gefunden")
     db.commit()
