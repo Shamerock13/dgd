@@ -5,8 +5,8 @@ const SUPPORTED_HEADINGS = new Map([
 ]);
 
 const stateByKey = new Map();
+const controllers = new WeakMap();
 let mutationQueued = false;
-let observerPaused = false;
 
 function readState(key) {
   if (stateByKey.has(key)) return stateByKey.get(key);
@@ -40,16 +40,10 @@ function createButton(label, onClick, disabled = false, current = false) {
   return button;
 }
 
-function enhanceList(list) {
-  if (list.dataset.adminListEnhanced === 'true') return;
-  const heading = list.querySelector(':scope > h3');
-  const key = SUPPORTED_HEADINGS.get(heading?.textContent?.trim());
-  if (!key) return;
-
-  list.dataset.adminListEnhanced = 'true';
+function buildController(list, key, heading) {
   const state = readState(key);
-  const rows = Array.from(list.querySelectorAll(':scope > .admin-row'));
   const originalHeading = heading.textContent.trim();
+  let rows = [];
 
   const tools = document.createElement('div');
   tools.className = 'admin-list-tools';
@@ -74,6 +68,22 @@ function enhanceList(list) {
   pagination.className = 'admin-list-pagination';
   pagination.setAttribute('aria-label', `${originalHeading} Seiten`);
   list.append(pagination);
+
+  function bindEditButtons() {
+    rows.forEach(row => {
+      if (row.dataset.adminReturnBound === 'true') return;
+      const buttons = row.querySelectorAll(':scope > div:last-child button');
+      const editButton = Array.from(buttons).find(button => !button.classList.contains('danger'));
+      if (!editButton) return;
+      row.dataset.adminReturnBound = 'true';
+      editButton.addEventListener('click', () => {
+        const current = readState(key);
+        const title = row.querySelector('b')?.textContent?.trim() || row.textContent.trim();
+        current.returnText = title;
+        saveState(key, current);
+      });
+    });
+  }
 
   function render({scroll = false} = {}) {
     const current = readState(key);
@@ -116,6 +126,12 @@ function enhanceList(list) {
     }
   }
 
+  function refresh() {
+    rows = Array.from(list.querySelectorAll(':scope > .admin-row'));
+    bindEditButtons();
+    render();
+  }
+
   input.addEventListener('input', () => {
     const current = readState(key);
     current.query = input.value;
@@ -124,30 +140,39 @@ function enhanceList(list) {
     render();
   });
 
-  rows.forEach(row => {
-    const buttons = row.querySelectorAll(':scope > div:last-child button');
-    const editButton = Array.from(buttons).find(button => !button.classList.contains('danger'));
-    if (!editButton) return;
-    editButton.addEventListener('click', () => {
-      const current = readState(key);
-      const title = row.querySelector('b')?.textContent?.trim() || row.textContent.trim();
-      current.returnText = title;
-      saveState(key, current);
-    });
-  });
+  refresh();
+  return {refresh};
+}
 
-  render();
+function enhanceList(list) {
+  const existing = controllers.get(list);
+  if (existing) {
+    existing.refresh();
+    return;
+  }
+
+  const heading = list.querySelector(':scope > h3');
+  const key = SUPPORTED_HEADINGS.get(heading?.textContent?.trim());
+  if (!key) return;
+
+  list.dataset.adminListEnhanced = 'true';
+  controllers.set(list, buildController(list, key, heading));
 }
 
 function scan() {
-  if (observerPaused) return;
-  observerPaused = true;
   document.querySelectorAll('.admin-list').forEach(enhanceList);
-  observerPaused = false;
 }
 
-const observer = new MutationObserver(() => {
-  if (observerPaused || mutationQueued) return;
+function mutationTouchesAdminRows(mutation) {
+  const nodes = [...mutation.addedNodes, ...mutation.removedNodes].filter(node => node.nodeType === Node.ELEMENT_NODE);
+  return nodes.some(node =>
+    node.matches?.('.admin-list, .admin-row') ||
+    node.querySelector?.('.admin-list, .admin-row')
+  );
+}
+
+const observer = new MutationObserver(mutations => {
+  if (mutationQueued || !mutations.some(mutationTouchesAdminRows)) return;
   mutationQueued = true;
   requestAnimationFrame(() => {
     mutationQueued = false;
