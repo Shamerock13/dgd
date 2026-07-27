@@ -20,15 +20,22 @@ Diese Roadmap zeigt den aktuellen Entwicklungsstand und die Reihenfolge der näc
 12. ✅ Gemini-Rechercheverlauf & Tokenkontrolle 1.0
 13. ✅ Scanner-Betrieb & automatische Fälligkeit 1.0
 
-## Als Nächstes
+## In Arbeit
 
-14. ⏭️ Suche, Filter & Navigation 2.0
+14. 🚧 Suche, Filter & Navigation 2.0
 
-Geplante Schwerpunkte:
+Bereits umgesetzt:
 
-- verbesserte Volltextsuche und Treffergewichtung
-- Filter für Duftfamilie, Noten, Marke, Jahr und Konzentration
-- Pagination statt vollständigem Laden großer Datenmengen
+- paginierter Katalogendpunkt `GET /api/catalog/fragrances`
+- gewichtete Suche nach Duftname, Marke, strukturierter Duftnote, Akkorden, Parfümeur und Beschreibung
+- serverseitige Filter für Marke, Zielgruppe, Konzentration, Duftnote, Jahr, Preis und Haltbarkeit
+- definierte Sortierungen und begrenzte Seitengröße
+- Facetten für Konzentrationen und Jahresbereich
+
+Noch offen:
+
+- Frontend an die serverseitige Suche und Pagination anbinden
+- Filterzustand in der URL speichern
 - dauerhaft verlinkbare Detailseiten
 - zuverlässige Browser-Zurück-Navigation
 - stabilere Admin-Suche
