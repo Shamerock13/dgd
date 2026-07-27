@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from .data_standards import compact_text
 from .database import get_db
+from .finding_history import exclusion_prompt, is_known_value, known_finding_values, known_value_count
 from .gemini_research import (
     MODEL,
     _allowed_fields,
@@ -59,10 +60,12 @@ async def research_single_fragrance(fragrance_id: UUID, db: Session = Depends(ge
         raise HTTPException(404, "Für diesen Duft gibt es keinen offenen Datenauftrag.")
 
     task = dict(task)
+    allowed_fields = _allowed_fields(set(task["missing_fields"] or []))
+    known_findings = known_finding_values(db, fragrance_id, allowed_fields)
     known_twins = _known_twin_names(db, fragrance_id)
-    exclusion = ""
+    exclusion = exclusion_prompt(known_findings)
     if known_twins:
-        exclusion = "\nBereits bekannte, geprüfte oder abgelehnte Duftzwillinge – nicht erneut vorschlagen:\n" + "\n".join(f"- {name}" for name in known_twins)
+        exclusion += "\nBereits bekannte, geprüfte oder abgelehnte Duftzwillinge – nicht erneut vorschlagen:\n" + "\n".join(f"- {name}" for name in known_twins)
     research_name = f'{task["name"]}{exclusion}'
 
     try:
@@ -91,12 +94,15 @@ async def research_single_fragrance(fragrance_id: UUID, db: Session = Depends(ge
             ),
         }
 
-        findings_created = 0
-        for field in _allowed_fields(set(task["missing_fields"] or [])):
+        findings_created = findings_skipped_known = 0
+        for field in allowed_fields:
             value = data.get(field)
-            if value not in (None, "", []) and _upsert_finding(
-                db, task["fragrance_id"], field, value, source, 85
-            ):
+            if value in (None, "", []):
+                continue
+            if is_known_value(field, value, known_findings):
+                findings_skipped_known += 1
+                continue
+            if _upsert_finding(db, task["fragrance_id"], field, value, source, 85):
                 findings_created += 1
 
         twins = data.get("twins") or []
@@ -118,6 +124,8 @@ async def research_single_fragrance(fragrance_id: UUID, db: Session = Depends(ge
         "fragrance_name": task["name"],
         "requested_fields": task["missing_fields"] or [],
         "known_twins_excluded": len(known_twins),
+        "known_findings_excluded": known_value_count(known_findings),
+        "findings_skipped_known": findings_skipped_known,
         "findings_created": findings_created,
         "twins_created": twins_created,
         "twins_blocked_ungrounded": twins_blocked_ungrounded,
