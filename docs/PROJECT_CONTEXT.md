@@ -1,6 +1,8 @@
 # DGD – Projektkontext
 
-Wir arbeiten am Repository `Shamerock13/dgd`.
+Stand: 27. Juli 2026
+
+Wir arbeiten am Repository `Shamerock13/dgd`. Diese Datei beschreibt Architektur, Betriebsregeln, zentrale Datenflüsse und den aktuell maßgeblichen Entwicklungsstand. Ergänzend gelten `docs/CURRENT_STATUS.md`, `docs/ROADMAP.md` und `docs/DEV_WORKFLOW.md`.
 
 ## Aktuelle Architektur
 
@@ -9,23 +11,29 @@ Wir arbeiten am Repository `Shamerock13/dgd`.
 - `DGD-App`
 - `DGD-PostgreSQL`
 - `DGD-Updater`
-- Stabile Produktionsversion: `dgd-core:1.2.0`
-- Die Produktion darf niemals direkt verändert oder für Tests verwendet werden.
+- stabile Produktionsversion: `dgd-core:1.2.0`
+- Produktion und produktive Datenbank werden niemals direkt für Entwicklung oder Tests verwendet.
 
 ### Separate Dev-Umgebung
 
 - `DGD-Dev-Frontend`
 - `DGD-Dev-Backend`
 - `DGD-Dev-PostgreSQL`
-- Eigenes Docker-Netzwerk: `dgd-dev`
+- Docker-Netzwerk: `dgd-dev`
 - Frontend-Port: `15173`
 - Backend-Port: `18080`
 - PostgreSQL-Port: `55432`
 
-### Lokales Repository auf Unraid
+Das lokale Repository auf Unraid liegt unter:
 
 ```text
 /mnt/user/appdata/dgd-github
+```
+
+Lokale Medien der Dev-Umgebung liegen persistent unter:
+
+```text
+/mnt/user/appdata/dgd-dev-media
 ```
 
 ## Technik
@@ -36,40 +44,34 @@ Wir arbeiten am Repository `Shamerock13/dgd`.
 - SQLAlchemy
 - PostgreSQL
 - Datenbankzugriff über `DATABASE_URL`
-- `Base.metadata.create_all()` plus eigene Migrationen
-- Schema-Migrationen bis `0006`
+- `Base.metadata.create_all()` plus eigene idempotente Migrationen
+- explizites DGD-Migrationsschema aktuell bis `0011`
+- zusätzliche Recherche-, Scanner-, Gemini- und Verlaufsstrukturen werden idempotent über registrierte Modelle beziehungsweise `CREATE TABLE IF NOT EXISTS` und abgesicherte `ALTER TABLE`-Anweisungen angelegt.
 
 ### Frontend
 
 - React
 - Vite
-- Relative API-Aufrufe über `/api`
-- Vite-Proxy zeigt auf `DGD-Dev-Backend:8080`
-- Duftdetails werden als eigene Ansicht innerhalb der App dargestellt.
-- Strukturierte Duftnoten werden über `GET /api/fragrances/{fragrance_id}/notes` geladen.
+- relative API-Aufrufe über `/api`
+- Vite-Proxy auf `DGD-Dev-Backend:8080`
+- eigene Duft-, Marken- und Parfümeuransichten innerhalb der App
+- Admin-Bereiche für Datenpflege, Quellen, Recherche, Import und Qualitätssicherung
 
-## Datenbestand
+## Zentrale Datenbereiche
 
-Nach Master-Import ungefähr:
+Vorhanden sind unter anderem:
 
-- 52 Marken
-- 253 Düfte
-- 135 Duftzwillinge
-- 2 Quellen
-- Aktuell keine Parfümeure aus der Quelldatei; die Struktur dafür ist vorhanden.
-
-## Datenbank und Import
-
-Vorhandene Tabellen und Strukturen:
-
-- `brands`
-- `fragrances`
-- `twin_matches`
-- Duftnoten und Zuordnungen
-- `master_sources`
-- `master_import_runs`
-- `master_perfumers`
-- `dgd_schema_migrations`
+- Marken und Düfte
+- Duftzwillinge und Twin-Prüfvorschläge
+- strukturierte Duftnoten und Freitextfelder
+- Quellen- und Verifizierungsregister
+- Parfümeurprofile
+- Bildmetadaten und lokale Medienpfade
+- Master-Import und Importhistorie
+- Recherchekandidaten und Import-Warteschlange
+- verwaltete Recherchequellen und Scanläufe
+- Ergänzungsaufträge und Feldfunde
+- Gemini-Rechercheverlauf mit Token- und Ergebniskennzahlen
 
 Der Master-Import läuft über:
 
@@ -79,145 +81,89 @@ POST /api/import/master/commit
 GET  /api/import/master/runs
 ```
 
-Eine frische Datenbank zeigte einen Fehler in Migration `0005`. Dieser wurde behoben, indem Legacy-Spalten mit `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` vor den `UPDATE`-Anweisungen angelegt werden.
+## Aktueller Funktionsstand
 
-## Bereits umgesetzt
+Umgesetzt sind:
 
-- Isolierte Dev-Umgebung
-- GitHub-Repository-Struktur
-- Moderne Startseite
-- Neue Duftkarten
-- Entdecken-Seite mit begrenzter Auswahl
-- Markenbereich
-- Suche
-- Filter
-- Sortierung
-- Mobile Navigation
-- Aktive Filter-Chips
-- Eigene Duftdetailansicht statt Modal
-- Zurück-Navigation zur vorherigen Übersicht
-- Strukturierte Kopf-, Herz- und Basisnoten
-- Freitext-Fallback für noch nicht strukturierte Duftnoten
-- Duftcharakter mit Haltbarkeit, Projektion, Süße und Frische
-- Zugehörige Duftzwillinge direkt am Duft
-- Ähnlichkeit, Gemeinsamkeiten, Unterschiede und Quellenhinweise
-- Preisabstand und Kennzeichnung des günstigeren Duftes
-- Responsive Detailansicht
-- Bild-Fallback bei fehlenden oder fehlerhaften Bildquellen
+1. Detailansicht & Duftzwillinge 2.0
+2. Bildverwaltung & Bildquellen 1.0
+3. Markenprofile 1.0
+4. Quellen & Verifizierung 1.0
+5. Parfümeurprofile 1.0
+6. Datenqualität & redaktionelle Arbeitsliste 1.0
+7. Lokaler Bildupload & Medienablage 1.0
+8. Automatische Recherche & Import-Warteschlange 1.0
+9. Recherchequellen & zeitgesteuerter Scanner 1.0
+10. Quellenadapter & Mehrseiten-Scanner 1.0
+11. Gemini-Recherche & Datenqualität 1.0
+12. Gemini-Rechercheverlauf & Tokenkontrolle 1.0
 
-## Zielbild DGD 2.0
+Die detaillierte Statusbeschreibung steht in `docs/CURRENT_STATUS.md`; die Reihenfolge weiterer Pakete in `docs/ROADMAP.md`.
 
-DGD soll sich von einer einfachen Datenbankoberfläche zu einem hochwertigen Parfum- und Duftzwillinge-Lexikon entwickeln.
+## Recherche- und Prüfprinzipien
 
-Langfristig geplant:
+- öffentliche Rechercheziele dürfen nur über HTTP oder HTTPS angesprochen werden
+- private, lokale, reservierte und Link-Local-Ziele bleiben blockiert
+- Recherchetreffer werden nicht automatisch veröffentlicht
+- neue Produkte landen zunächst in der Import-Warteschlange
+- Feldvorschläge landen zunächst in der Prüfliste
+- Duftzwillinge aus Gemini benötigen eine konkrete brauchbare Grounding-Quelle
+- bereits offene, übernommene, abgelehnte oder konfliktbehaftete Feldwerte werden nicht erneut vorgeschlagen
+- bereits bekannte oder geprüfte Twin-Kandidaten werden ausgeschlossen
+- Duftnoten und Akkorde werden zentral normalisiert
+- historische Bereinigungen verwenden zuerst einen nicht schreibenden Prüflauf
+- Gemini-Läufe protokollieren Zeitpunkt, Status, Modell, Quellen, Treffer und Tokenverbrauch
+- ein 15-minütiger Schutz verhindert versehentliche direkte Wiederholungen; ein bewusster Neustart bleibt möglich
 
-- Bessere Bildverwaltung und einheitliche Bildquellen
-- Markenprofile
-- Parfümeurprofile
-- Sichtbare Quellen und Verifizierungsstatus
-- Bessere Admin-Suche und Pagination
-- Saubere Datenvalidierung
-- Master-Import als zentrale Datenquelle
-- Erweiterter Vergleich und nachvollziehbare Ähnlichkeitsbewertung
-- Später eventuell Benutzerbewertungen, Favoriten und Sammlungen
+Wichtige Fachdateien:
+
+```text
+docs/RESEARCH_AUTOMATION.md
+docs/SOURCE_ADAPTERS.md
+docs/GEMINI_RESEARCH_AND_DATA_QUALITY.md
+```
 
 ## Arbeitsweise
 
-- Änderungen zuerst direkt im GitHub-Repository durchführen.
-- Größere zusammenhängende Pakete statt vieler kleiner Änderungen umsetzen.
-- Vor jeder Änderung den aktuellen Code lesen.
-- Änderungen möglichst als sauberen Commit auf `main` einspielen.
-- Keine Produktionscontainer verändern.
-- Keine produktive Datenbank anfassen.
-- Nach jedem größeren Paket Projektstand, Entscheidungen, neue Ideen und nächste Schritte in den Dateien unter `docs/` dokumentieren.
-- Der Chat ist kein dauerhafter Projektspeicher; maßgeblich ist die Dokumentation im Repository.
+- vor jedem größeren Paket zuerst `docs/PROJECT_CONTEXT.md`, `docs/ROADMAP.md` und `docs/DEV_WORKFLOW.md` lesen
+- danach den aktuellen Code und relevante Konfigurationen prüfen
+- Änderungen zuerst im GitHub-Repository auf einem passenden Branch umsetzen
+- zusammengehörige Änderungen gemeinsam entwickeln
+- zentrale GitHub-CI muss Backend-Compile und Frontend-Build erfolgreich abschließen
+- anschließend per sauberem Squash-Commit nach `main` mergen
+- Tests ausschließlich in der separaten Dev-Umgebung durchführen
+- Produktion nicht verändern
+- nach jedem größeren Paket Status, Roadmap, Projektkontext und technische Fachdateien aktualisieren
+- der Chat ist kein dauerhaftes Projektgedächtnis; maßgeblich ist das Repository
 
-Danach werden Änderungen auf Unraid geholt mit:
+Aktuellen Stand auf Unraid holen:
 
 ```bash
 cd /mnt/user/appdata/dgd-github
-GIT_SSH_COMMAND='ssh -i /root/.ssh/dgd_github -o IdentitiesOnly=yes' git pull origin main
-docker restart DGD-Dev-Frontend DGD-Dev-Backend
+GIT_SSH_COMMAND='ssh -i /root/.ssh/dgd_github -o IdentitiesOnly=yes -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no' \
+git pull origin main
 ```
 
-## Zuletzt abgeschlossenes Paket
-
-**Detailansicht & Duftzwillinge 2.0**
-
-Umgesetzt in:
-
-- `frontend/src/main.jsx`
-- `frontend/src/detail.css`
-
-Validiert mit:
+Je nach Paket anschließend die betroffenen Dev-Container neu starten. Frontend und Backend gemeinsam:
 
 ```bash
-cd frontend
-npm install
-npm run build
+docker restart DGD-Dev-Backend DGD-Dev-Frontend
 ```
 
 ## Nächstes größeres Paket
 
-**Bildverwaltung & Bildquellen**
+**Scanner-Betrieb & automatische Fälligkeit 1.0**
 
-Geplante Schwerpunkte:
+Ziele:
 
-- Einheitliche Strategie für externe und spätere lokale Bilder
-- Robuste Fehlerbehandlung bei ungültigen Bild-URLs
-- Wiederverwendbare Bildkomponente für Karten und Detailseiten
-- Bessere Platzhalter und Fallbacks
-- Prüfung, wie Bildquellen und Bildstatus im Master-Import gepflegt werden sollen
+- eigener Scanner-Worker getrennt von Frontend und API
+- regelmäßiger Abruf ausschließlich fälliger aktiver Quellen
+- Sperre gegen parallele Doppelläufe derselben Quelle
+- klarer Ein-/Ausschalter für den automatischen Betrieb
+- Laufzeit-, Fehler- und Erfolgskennzahlen
+- sichtbarer letzter und nächster geplanter Lauf
+- kontrollierte Wiederholung temporärer Fehler
+- keine automatische Freigabe von Warteschlangen-Treffern
+- dokumentierte Betriebs-, Neustart-, Backup- und Wiederherstellungsregeln
 
-Vor Beginn insbesondere lesen:
-
-- `frontend/src/main.jsx`
-- `frontend/src/styles.css`
-- `frontend/src/detail.css`
-- `backend/app/main.py`
-- `backend/app/models.py`
-- `backend/app/schemas.py`
-- `backend/app/migrations.py`
-- `backend/app/master_import_service.py`
-
-## Aktueller Stand: Bildverwaltung & Bildquellen 1.0
-
-Die Bildverwaltung wird bewusst in zwei Stufen umgesetzt. Stufe 1 verwaltet externe oder künftig lokale Bildpfade samt Quelle, Nutzungsnotiz und Prüfstatus. Ein echter Upload folgt erst mit einem klaren Unraid-Speicher-, Backup- und Löschkonzept.
-
-Umgesetzt in diesem Paket:
-
-- Migration `0007` für Bildmetadaten
-- Bildquelle, Quellenlink und Nutzungs-/Rechtehinweis je Duft
-- Status `OPEN`, `VERIFIED` oder `BROKEN`
-- einheitlicher Bildbaustein für Karten, Admin und Detailseite
-- belastbarer Fallback bei leerer oder defekter Bild-URL
-- Import-Unterstützung für die neuen Bildfelder
-- Vorbereitung auf spätere lokale Pfade wie `/media/...`
-
-## Aktueller Stand: Markenprofile 1.0
-
-Umgesetzt sind eigenständige Markenseiten mit Herkunft, Gründungsjahr, offizieller Website, Beschreibung und Verifizierungsstatus. Jede Markenseite zeigt Kennzahlen sowie alle zugeordneten Düfte mit eigener Suche und Sortierung. Von Duftdetailseiten kann direkt zum Markenprofil gewechselt werden. Schema-Version ist nun `0008`.
-
-
-## Aktueller Stand: Quellen & Verifizierung 1.0
-
-Das bestehende `master_sources`-Register ist jetzt über die App nutzbar. Quellen können Marken, Düften, Duftzwillingen oder allgemeinen Themen zugeordnet werden. Vertrauensstatus (`OPEN`, `REVIEW`, `TRUSTED`, `REJECTED`) und Nutzungsstatus (`OPEN`, `ALLOWED`, `RESTRICTED`, `INTERNAL`) bilden den redaktionellen Prüfprozess ab. Schema-Version ist nun `0009`.
-
-## Aktueller Stand: Parfümeurprofile 1.0
-
-Die vorhandene Tabelle `master_perfumers` ist jetzt vollständig über die App nutzbar. Profile enthalten Biografie, Nationalität, Geburtsjahr, Stil, bekannte Werke, Primärquelle, redaktionelle Notiz und Artikelstatus. Duftdetailseiten verlinken direkt auf passende Profile. Schema-Version ist `0010`.
-
-
-## Aktueller Stand: Datenqualität & redaktionelle Arbeitsliste 1.0
-
-Der Admin-Bereich besitzt nun eine dynamische Arbeitsliste unter `/api/quality/worklist`. Sie prüft Marken, Düfte, Duftzwillinge, Quellen und Parfümeure auf fehlende oder ungeprüfte Angaben. Aufgaben werden nach Priorität sortiert und führen direkt in den passenden Verwaltungsbereich. Der Qualitätswert ist ein redaktioneller Fortschrittsindikator und kein wissenschaftlicher Datenwert. Das Datenbankschema bleibt bei `0010`, da die Arbeitsliste aus den vorhandenen Tabellen berechnet wird.
-
-
-## Aktueller Stand: Lokaler Bildupload & Medienablage 1.0
-
-Duftbilder können nun als JPEG, PNG oder WebP bis 8 MB direkt im Admin hochgeladen werden. Die Dateien liegen persistent unter `/mnt/user/appdata/dgd-dev-media` und werden im Container über `/app/media` sowie öffentlich über `/media` bereitgestellt. Uploads erhalten kollisionsfreie Dateinamen, werden anhand von Dateisignatur und MIME-Typ geprüft und können ersetzt oder gelöscht werden. Externe Bild-URLs bleiben weiterhin möglich.
-
-
-## Aktueller Stand: Automatische Recherche & Import-Warteschlange 1.0
-
-Der Admin-Bereich besitzt nun eine kontrollierte Recherche-Warteschlange. Öffentliche HTTP-/HTTPS-Seiten können manuell gescannt werden; JSON-LD-Produktdaten und Seitentitel werden als Vorschläge erfasst. Jeder Treffer enthält Quelle, Konfidenz und Dublettenhinweis. Erst eine ausdrückliche Freigabe legt Marke und Duft an. Private und interne Netzwerkziele sind aus Sicherheitsgründen gesperrt. Schema-Version ist `0011`.
+Produktion wird für dieses Paket erst nach erfolgreicher Dev-Abnahme in einem eigenen, ausdrücklich freigegebenen Schritt vorbereitet.
