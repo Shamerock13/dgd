@@ -35,8 +35,17 @@ def _fragrances(db: Session) -> list[Fragrance]:
 
 
 def _payload(fragrance: Fragrance, score: float, match_type: str) -> dict[str, Any]:
-    return {"id": str(fragrance.id), "brand": fragrance.brand.name, "name": fragrance.name,
-            "score": round(score, 4), "match_type": match_type}
+    return {
+        "id": str(fragrance.id),
+        "brand": fragrance.brand.name,
+        "name": fragrance.name,
+        "score": round(score, 4),
+        "match_type": match_type,
+    }
+
+
+def _visible_rows(rows: list[dict[str, Any]], row_limit: int | None) -> list[dict[str, Any]]:
+    return rows if row_limit is None else rows[:row_limit]
 
 
 def find_candidates(fragrances: list[Fragrance], brand: str | None, name: str | None) -> list[dict[str, Any]]:
@@ -58,7 +67,11 @@ def find_candidates(fragrances: list[Fragrance], brand: str | None, name: str | 
     return exact or normalized or sorted(similar, key=lambda row: row["score"], reverse=True)[:5]
 
 
-def analyze_fragrance_import(db: Session, rows: list[dict[str, Any]]) -> dict[str, Any]:
+def analyze_fragrance_import(
+    db: Session,
+    rows: list[dict[str, Any]],
+    row_limit: int | None = 500,
+) -> dict[str, Any]:
     mapped, fragrances = map_rows(rows, "fragrances"), _fragrances(db)
     seen: dict[tuple[str, str], int] = {}
     result, counts = [], {"CREATE": 0, "DUPLICATE": 0, "REVIEW": 0, "BLOCK": 0}
@@ -86,17 +99,37 @@ def analyze_fragrance_import(db: Session, rows: list[dict[str, Any]]) -> dict[st
         if duplicate_in_file:
             row_errors.append(f"Doppelte Duftidentität; erste Zeile: {first_row}")
         counts[action] += 1
-        result.append({"row": parsed["_row"], "brand": parsed.get("brand"), "name": parsed.get("name"),
-                       "normalized_brand": key[0], "normalized_name": key[1], "action": action,
-                       "reason": reason, "errors": row_errors, "candidates": candidates})
-    return {"import_type": "fragrances", "total_rows": len(result), "counts": counts,
-            "safe_to_commit": counts["BLOCK"] == 0 and counts["REVIEW"] == 0,
-            "rows": result[:500], "rows_truncated": len(result) > 500,
-            "rules": {"normalized_duplicate": "sicherer Dublettenfund",
-                      "similar_candidate": "nur Prüfhinweis", "similarity_threshold": SIMILARITY_REVIEW_THRESHOLD}}
+        result.append({
+            "row": parsed["_row"],
+            "brand": parsed.get("brand"),
+            "name": parsed.get("name"),
+            "normalized_brand": key[0],
+            "normalized_name": key[1],
+            "action": action,
+            "reason": reason,
+            "errors": row_errors,
+            "candidates": candidates,
+        })
+    return {
+        "import_type": "fragrances",
+        "total_rows": len(result),
+        "counts": counts,
+        "safe_to_commit": counts["BLOCK"] == 0 and counts["REVIEW"] == 0,
+        "rows": _visible_rows(result, row_limit),
+        "rows_truncated": row_limit is not None and len(result) > row_limit,
+        "rules": {
+            "normalized_duplicate": "sicherer Dublettenfund",
+            "similar_candidate": "nur Prüfhinweis",
+            "similarity_threshold": SIMILARITY_REVIEW_THRESHOLD,
+        },
+    }
 
 
-def analyze_twin_import(db: Session, rows: list[dict[str, Any]]) -> dict[str, Any]:
+def analyze_twin_import(
+    db: Session,
+    rows: list[dict[str, Any]],
+    row_limit: int | None = 500,
+) -> dict[str, Any]:
     mapped, fragrances = map_rows(rows, "twins"), _fragrances(db)
     existing = {(str(row.original_id), str(row.alternative_id)) for row in db.scalars(select(TwinMatch))}
     result, counts = [], {"CREATE": 0, "DUPLICATE": 0, "REVIEW": 0, "BLOCK": 0}
@@ -122,10 +155,21 @@ def analyze_twin_import(db: Session, rows: list[dict[str, Any]]) -> dict[str, An
         else:
             action, reason = "CREATE", "Beide Duftreferenzen sind eindeutig."
         counts[action] += 1
-        result.append({"row": parsed["_row"], "original": f'{parsed.get("original_brand") or ""} – {parsed.get("original_name") or ""}',
-                       "alternative": f'{parsed.get("alternative_brand") or ""} – {parsed.get("alternative_name") or ""}',
-                       "action": action, "reason": reason, "errors": errors,
-                       "original_candidates": original, "alternative_candidates": alternative})
-    return {"import_type": "twins", "total_rows": len(result), "counts": counts,
-            "safe_to_commit": counts["BLOCK"] == 0 and counts["REVIEW"] == 0,
-            "rows": result[:500], "rows_truncated": len(result) > 500}
+        result.append({
+            "row": parsed["_row"],
+            "original": f'{parsed.get("original_brand") or ""} – {parsed.get("original_name") or ""}',
+            "alternative": f'{parsed.get("alternative_brand") or ""} – {parsed.get("alternative_name") or ""}',
+            "action": action,
+            "reason": reason,
+            "errors": errors,
+            "original_candidates": original,
+            "alternative_candidates": alternative,
+        })
+    return {
+        "import_type": "twins",
+        "total_rows": len(result),
+        "counts": counts,
+        "safe_to_commit": counts["BLOCK"] == 0 and counts["REVIEW"] == 0,
+        "rows": _visible_rows(result, row_limit),
+        "rows_truncated": row_limit is not None and len(result) > row_limit,
+    }
