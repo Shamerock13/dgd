@@ -64,6 +64,27 @@ def _resolved_candidate(
     raise ReviewDecisionError(f"Für {label} muss ein vorhandener Duft ausgewählt werden.")
 
 
+def _bind_fragrance_candidate(parsed: dict[str, Any], candidate: dict[str, Any]) -> None:
+    parsed["brand"] = candidate["brand"]
+    parsed["name"] = candidate["name"]
+    parsed["_resolved_existing_id"] = candidate["id"]
+
+
+def _bind_twin_candidates(
+    parsed: dict[str, Any],
+    original: dict[str, Any],
+    alternative: dict[str, Any],
+) -> None:
+    if original["id"] == alternative["id"]:
+        raise ReviewDecisionError(f"Zeile {parsed['_row']}: Original und Alternative dürfen nicht identisch sein.")
+    parsed["original_brand"] = original["brand"]
+    parsed["original_name"] = original["name"]
+    parsed["alternative_brand"] = alternative["brand"]
+    parsed["alternative_name"] = alternative["name"]
+    parsed["_resolved_original_id"] = original["id"]
+    parsed["_resolved_alternative_id"] = alternative["id"]
+
+
 def resolve_review_rows(
     rows: list[dict[str, Any]],
     import_type: str,
@@ -111,6 +132,13 @@ def resolve_review_rows(
             raise ReviewDecisionError(f"Zeile {row_number} enthält weiterhin Validierungsfehler.")
 
         if quality_row.get("action") != "REVIEW":
+            if import_type == "fragrances" and quality_row.get("action") == "DUPLICATE":
+                candidate = _resolved_candidate(quality_row.get("candidates") or [], None, "Duft")
+                _bind_fragrance_candidate(parsed, candidate)
+            elif import_type == "twins":
+                original = _resolved_candidate(quality_row.get("original_candidates") or [], None, "Original")
+                alternative = _resolved_candidate(quality_row.get("alternative_candidates") or [], None, "Alternative")
+                _bind_twin_candidates(parsed, original, alternative)
             resolved.append(parsed)
             continue
 
@@ -134,9 +162,7 @@ def resolve_review_rows(
             if choice != "use_existing":
                 raise ReviewDecisionError(f"Für Zeile {row_number} wurde keine gültige Entscheidung gewählt.")
             candidate = _candidate(quality_row.get("candidates") or [], decision.get("candidate_id"), "Duft")
-            parsed["brand"] = candidate["brand"]
-            parsed["name"] = candidate["name"]
-            parsed["_resolved_existing_id"] = candidate["id"]
+            _bind_fragrance_candidate(parsed, candidate)
             resolved.append(parsed)
             report.append({
                 "row": row_number,
@@ -158,14 +184,7 @@ def resolve_review_rows(
             decision.get("alternative_id"),
             "Alternative",
         )
-        if original["id"] == alternative["id"]:
-            raise ReviewDecisionError(f"Zeile {row_number}: Original und Alternative dürfen nicht identisch sein.")
-        parsed["original_brand"] = original["brand"]
-        parsed["original_name"] = original["name"]
-        parsed["alternative_brand"] = alternative["brand"]
-        parsed["alternative_name"] = alternative["name"]
-        parsed["_resolved_original_id"] = original["id"]
-        parsed["_resolved_alternative_id"] = alternative["id"]
+        _bind_twin_candidates(parsed, original, alternative)
         resolved.append(parsed)
         report.append({
             "row": row_number,
