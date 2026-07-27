@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from .research_enrichment import _upsert_finding
 
 
-MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
 API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 RESEARCH_SCHEMA = {
@@ -48,6 +48,38 @@ RESEARCH_SCHEMA = {
     ],
 }
 
+NOTE_TRANSLATIONS = {
+    "lemon": "Zitrone",
+    "mandarin orange": "Mandarine",
+    "mandarin": "Mandarine",
+    "cardamom": "Kardamom",
+    "pink pepper": "Rosa Pfeffer",
+    "black pepper": "Schwarzer Pfeffer",
+    "bergamot": "Bergamotte",
+    "orange blossom": "Orangenblüte",
+    "lavender": "Lavendel",
+    "vanilla": "Vanille",
+    "amber": "Amber",
+    "musk": "Moschus",
+    "cedar": "Zedernholz",
+    "sandalwood": "Sandelholz",
+    "patchouli": "Patchouli",
+    "rose": "Rose",
+    "jasmine": "Jasmin",
+    "apple": "Apfel",
+    "pear": "Birne",
+    "pineapple": "Ananas",
+    "grapefruit": "Grapefruit",
+    "cinnamon": "Zimt",
+    "tobacco": "Tabak",
+    "leather": "Leder",
+    "coffee": "Kaffee",
+    "coconut": "Kokosnuss",
+    "violet": "Veilchen",
+    "iris": "Iris",
+    "tonka bean": "Tonkabohne",
+}
+
 
 def gemini_configured() -> bool:
     return bool(os.getenv("GEMINI_API_KEY", "").strip())
@@ -58,6 +90,55 @@ def _json_from_text(value: str) -> dict:
     value = re.sub(r"^```(?:json)?\s*", "", value, flags=re.I)
     value = re.sub(r"\s*```$", "", value)
     return json.loads(value)
+
+
+def _clean_text(value) -> str:
+    text_value = str(value or "").strip()
+    text_value = text_value.strip("{}[]()")
+    text_value = text_value.strip().strip('"\'`')
+    text_value = re.sub(r"^[,;:\s]+|[,;:\s]+$", "", text_value)
+    text_value = re.sub(r"\s+", " ", text_value).strip()
+    return text_value
+
+
+def _clean_list(value, translate_notes: bool = False) -> list[str]:
+    if value in (None, ""):
+        return []
+    if isinstance(value, str):
+        raw = value.strip()
+        try:
+            parsed = json.loads(raw)
+            values = parsed if isinstance(parsed, list) else [parsed]
+        except (json.JSONDecodeError, TypeError):
+            values = re.split(r"[,;|\n]+", raw)
+    elif isinstance(value, (list, tuple, set)):
+        values = value
+    else:
+        values = [value]
+
+    result = []
+    seen = set()
+    for item in values:
+        cleaned = _clean_text(item)
+        if not cleaned:
+            continue
+        if translate_notes:
+            cleaned = NOTE_TRANSLATIONS.get(cleaned.casefold(), cleaned)
+        fingerprint = cleaned.casefold()
+        if fingerprint not in seen:
+            seen.add(fingerprint)
+            result.append(cleaned)
+    return result
+
+
+def _normalize_research_data(data: dict) -> dict:
+    normalized = dict(data)
+    for field in ("accords", "top_notes", "heart_notes", "base_notes"):
+        normalized[field] = _clean_list(data.get(field), translate_notes=True)
+    for field in ("concentration", "perfumer", "description", "image"):
+        value = data.get(field)
+        normalized[field] = _clean_text(value) if value not in (None, "") else None
+    return normalized
 
 
 def _sources(payload: dict) -> list[dict]:
@@ -74,16 +155,20 @@ def _sources(payload: dict) -> list[dict]:
 
 
 def _prompt(brand: str, name: str, missing_fields: list[str]) -> str:
-    return f"""Research the fragrance {brand} {name} using Google Search.
-Never invent facts. Use null or empty arrays when evidence is insufficient.
-Focus on these missing fields: {', '.join(missing_fields)}.
-Also look for explicitly documented fragrance alternatives, dupes, clones, inspired-by products, or 'smells like' comparisons.
+    return f"""Recherchiere den Duft {brand} {name} mit Google Search.
+Antworte vollständig auf Deutsch. Erfinde keine Fakten und verwende null oder leere Listen, wenn Belege fehlen.
+Konzentriere dich besonders auf diese fehlenden Felder: {', '.join(missing_fields)}.
+Suche außerdem nach ausdrücklich belegten Duftalternativen, Dupes, Klonen, Inspired-by-Produkten oder Vergleichen wie „riecht ähnlich wie“.
 
-Rules:
-- confidence must be 0-100.
-- only include twins when a web source explicitly states the comparison.
-- prefer official brand pages, then established fragrance databases.
-- keep description factual and concise.
+Regeln:
+- Duftnoten und Akkorde müssen als saubere deutsche Einzelbegriffe ausgegeben werden, ohne Klammern, Anführungszeichen oder JSON-Zeichen.
+- Beispiele: Lemon → Zitrone, Mandarin Orange → Mandarine, Cardamom → Kardamom, Pink Pepper → Rosa Pfeffer.
+- Beschreibungen und Begründungen müssen auf Deutsch formuliert sein.
+- Markennamen, Parfümnamen und Namen von Parfümeuren dürfen nicht übersetzt werden.
+- confidence muss zwischen 0 und 100 liegen.
+- Duftzwillinge nur aufnehmen, wenn eine Webquelle den Vergleich ausdrücklich nennt.
+- Offizielle Markenseiten bevorzugen, danach etablierte Duftdatenbanken.
+- Die Beschreibung sachlich und knapp halten.
 """
 
 
@@ -110,7 +195,7 @@ async def _ask_gemini(client: httpx.AsyncClient, brand: str, name: str, missing_
     if not text_value:
         raise ValueError("Gemini returned no text response")
     usage = payload.get("usageMetadata") or {}
-    return _json_from_text(text_value), _sources(payload), usage
+    return _normalize_research_data(_json_from_text(text_value)), _sources(payload), usage
 
 
 def _allowed_fields(missing: set[str]) -> set[str]:
@@ -131,8 +216,8 @@ def _twin_fingerprint(fragrance_id, proposal: str) -> str:
 def _insert_twins(db: Session, fragrance: dict, twins: list[dict], source: dict) -> int:
     created = 0
     for twin in twins[:5]:
-        proposal = str(twin.get("alternative") or "").strip()
-        evidence = str(twin.get("evidence") or "").strip()
+        proposal = _clean_text(twin.get("alternative"))
+        evidence = _clean_text(twin.get("evidence"))
         if not proposal or not evidence:
             continue
         fingerprint = _twin_fingerprint(fragrance["fragrance_id"], proposal)
@@ -150,8 +235,8 @@ def _insert_twins(db: Session, fragrance: dict, twins: list[dict], source: dict)
                    :fingerprint,'AI_GROUNDED',90)
         """), {
             "id": uuid4(), "original": fragrance["fragrance_id"], "alternative": alternative_id,
-            "proposal": proposal, "source": source["name"], "url": source["url"],
-            "excerpt": evidence[:1000], "phrase": evidence[:300],
+            "proposal": proposal[:300], "source": source["name"], "url": source["url"],
+            "excerpt": evidence[:1000], "phrase": evidence[:80],
             "confidence": max(0, min(100, int(twin.get("confidence") or 65))), "fingerprint": fingerprint,
         })
         created += 1
@@ -184,7 +269,7 @@ async def run_gemini_research(db: Session, limit: int = 5) -> dict:
             try:
                 data, sources, usage = await _ask_gemini(client, task["brand_name"], task["name"], task["missing_fields"] or [])
                 primary = sources[0] if sources else {"name": "Gemini mit Google Search", "url": "https://www.google.com/search"}
-                source = {"name": primary["name"], "url": primary["url"], "excerpt": f'Gemini research for {task["brand_name"]} {task["name"]}'}
+                source = {"name": primary["name"], "url": primary["url"], "excerpt": f'Gemini-Recherche für {task["brand_name"]} {task["name"]}'}
                 allowed = _allowed_fields(set(task["missing_fields"] or []))
                 findings_created = 0
                 for field in allowed:
