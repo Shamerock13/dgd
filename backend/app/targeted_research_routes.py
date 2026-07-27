@@ -16,6 +16,7 @@ from .gemini_research import (
     _insert_twins,
     gemini_configured,
 )
+from .grounding_policy import grounded_twin_counts, usable_grounding_sources
 from .research_enrichment import _upsert_finding
 
 router = APIRouter(prefix="/api/enrichment", tags=["targeted-research"])
@@ -76,7 +77,8 @@ async def research_single_fragrance(fragrance_id: UUID, db: Session = Depends(ge
                 task["missing_fields"] or [],
             )
 
-        primary = sources[0] if sources else {
+        grounded_sources = usable_grounding_sources(sources)
+        primary = grounded_sources[0] if grounded_sources else {
             "name": "Gemini mit Google Search",
             "url": "https://www.google.com/search",
         }
@@ -97,7 +99,9 @@ async def research_single_fragrance(fragrance_id: UUID, db: Session = Depends(ge
             ):
                 findings_created += 1
 
-        twins_created = _insert_twins(db, task, data.get("twins") or [], primary)
+        twins = data.get("twins") or []
+        _, twins_blocked_ungrounded = grounded_twin_counts(twins, grounded_sources)
+        twins_created = _insert_twins(db, task, twins, grounded_sources[0]) if grounded_sources else 0
         db.commit()
     except HTTPException:
         db.rollback()
@@ -116,7 +120,8 @@ async def research_single_fragrance(fragrance_id: UUID, db: Session = Depends(ge
         "known_twins_excluded": len(known_twins),
         "findings_created": findings_created,
         "twins_created": twins_created,
-        "sources_found": len(sources),
+        "twins_blocked_ungrounded": twins_blocked_ungrounded,
+        "sources_found": len(grounded_sources),
         "prompt_tokens": int(usage.get("promptTokenCount") or 0),
         "output_tokens": int(usage.get("candidatesTokenCount") or 0),
     }
