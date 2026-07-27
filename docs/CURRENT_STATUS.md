@@ -23,22 +23,25 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 
 ## Paket 15 in Arbeit
 
-**Datenvalidierung & Importqualität 2.0** besitzt einen getrennten, nur lesenden Qualitätsprüfpfad:
+**Datenvalidierung & Importqualität 2.0** besitzt folgende Prüf- und Sicherheitsendpunkte:
 
 ```text
 POST /api/import/quality/preview
+POST /api/import/quality/commit
 ```
 
-Die Vorschau:
+Die Qualitätslogik:
 
 - normalisiert Marken- und Duftidentitäten konservativ,
 - erkennt exakte und sicher normalisierte Dubletten,
 - meldet ähnliche Schreibweisen ausschließlich als manuellen Prüfhinweis,
 - blockiert unvollständige oder widersprüchliche Zeilen,
 - liefert pro Zeile Entscheidung, Begründung, Fehler und Kandidaten,
-- verändert den bisherigen Import und die Datenbank noch nicht.
+- führt niemals allein aufgrund eines ähnlichen Namens Datensätze zusammen.
 
-Der Backend-Prüfpfad wurde praktisch in Dev bestätigt. Im Admin-Bereich **Datenimport** ist zusätzlich eine getrennte Schaltfläche **Qualität & Dubletten prüfen** integriert. Sie zeigt `CREATE`, `DUPLICATE`, `REVIEW` und `BLOCK`, den Gesamtstatus sowie Kandidaten und Fehler pro Zeile. Die bestehende Importvorschau und der Commit-Pfad bleiben unverändert. Die praktische Dev-Abnahme der neuen Admin-Anzeige steht noch aus.
+Backend-Prüfpfad und Admin-Anzeige wurden praktisch in Dev bestätigt. Im Admin-Bereich **Datenimport** zeigt **Qualität & Dubletten prüfen** die Entscheidungen `CREATE`, `DUPLICATE`, `REVIEW` und `BLOCK` samt Kandidaten und Fehlern.
+
+Der nächste Baustein schützt den Schreibvorgang: Das Admin-Center verwendet `/api/import/quality/commit`, prüft die Datei unmittelbar vor dem Schreiben erneut und stoppt den gesamten Import bei `REVIEW` oder `BLOCK`. Sichere Dubletten folgen weiterhin dem Modus `skip` oder `update`. Die praktische Dev-Abnahme dieses Commit-Schutzes steht noch aus.
 
 ## Paket 14 abgeschlossen
 
@@ -76,7 +79,7 @@ Neue Pakete gelten erst nach erfolgreichem Test in der separaten Dev-Umgebung al
 
 ## Nächster Schritt
 
-**Die Qualitätsvorschau im Admin-Center praktisch testen und danach die Absicherung des Import-Commit-Pfads planen.**
+**Den abgesicherten Import-Commit in Dev mit einer konfliktfreien und einer gesperrten Datei testen.**
 
 ## Dokumentationsregel
 
