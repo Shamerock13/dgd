@@ -19,12 +19,28 @@ Diese Roadmap zeigt den aktuellen Entwicklungsstand und die Reihenfolge der näc
 11. ✅ Gemini-Recherche & Datenqualität 1.0
 12. ✅ Gemini-Rechercheverlauf & Tokenkontrolle 1.0
 13. ✅ Scanner-Betrieb & automatische Fälligkeit 1.0
+14. ✅ Suche, Filter & Navigation 2.0
 
-## In Arbeit
+## Als Nächstes
 
-14. 🚧 Suche, Filter & Navigation 2.0
+15. 🚧 Datenvalidierung & Importqualität 2.0
 
-Bereits umgesetzt und in Dev bestätigt:
+Geplanter Schwerpunkt:
+
+- strengere Backend-Validierung
+- robustere Dublettenerkennung bei Schreibvarianten
+- klarere Konflikt- und Fehlerberichte
+- bessere Nachvollziehbarkeit von Importentscheidungen
+- sichere Behandlung unvollständiger oder widersprüchlicher Datensätze
+
+## Danach vorgesehen
+
+16. ⬜ Admin-Bereich 2.0
+17. ⬜ Vergleich & Bewertung 2.0
+18. ⬜ Preisbeobachtung & Händlervergleich 1.0
+19. ⬜ Spätere Benutzerfunktionen
+
+## Paket 14 – umgesetzter Umfang
 
 - paginierter Katalogendpunkt `GET /api/catalog/fragrances`
 - gewichtete Suche nach Duftname, Marke, strukturierter Duftnote, Akkorden, Parfümeur und Beschreibung
@@ -37,18 +53,13 @@ Bereits umgesetzt und in Dev bestätigt:
 - URL-basierte Filter, Sortierung und Seitennummer
 - verlinkbare Duftdetails und Browser-Historie
 - verzögerte Suche und Schutz gegen verspätete Antworten
-- erfolgreiche praktische Dev-Abnahme von Suche, Filtern, Pagination, Direktlinks, Browser-Zurück und responsiver Darstellung
 - Suche in den Admin-Listen für Düfte und Marken
 - Pagination mit 20 Einträgen pro Admin-Seite
 - Erhalt von Suche und Seite innerhalb der Browsersitzung
 - Rücksprung zum bearbeiteten Datensatz nach dem Speichern
-- erfolgreiche praktische Dev-Abnahme der Admin-Listen
-
-Vorbereitet, Dev-Abnahme offen:
-
 - dauerhaft verlinkbare Markenprofile mit Stammdaten und Duftliste
 - dauerhaft verlinkbare Parfümeurprofile mit exakter Zuordnung der Kreationen
-- Browser-Historie zwischen Suche, Duftdetail und Profilen
+- erfolgreiche vollständige Dev-Abnahme aller Paketbestandteile
 
 Für später vorgemerkt:
 
@@ -57,14 +68,6 @@ Für später vorgemerkt:
 - Filterfacetten mit Trefferzahlen
 - Mehrfachauswahl von Duftnoten mit UND-/ODER-Logik
 - lesbare Slugs zusätzlich zu UUID-Links
-
-## Danach vorgesehen
-
-15. ⬜ Datenvalidierung & Importqualität 2.0
-16. ⬜ Admin-Bereich 2.0
-17. ⬜ Vergleich & Bewertung 2.0
-18. ⬜ Preisbeobachtung & Händlervergleich 1.0
-19. ⬜ Spätere Benutzerfunktionen
 
 ## Paket 13 – umgesetzter Umfang
 
@@ -79,12 +82,6 @@ Für später vorgemerkt:
 - weiterhin keine automatische Freigabe von Treffern
 
 ## Spätere Pakete
-
-### Datenvalidierung & Importqualität 2.0
-
-- strengere Backend-Validierung
-- robustere Dublettenerkennung bei Schreibvarianten
-- klarere Konflikte und Fehlerberichte
 
 ### Admin-Bereich 2.0
 
