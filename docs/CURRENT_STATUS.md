@@ -20,9 +20,24 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 12. Gemini-Rechercheverlauf & Tokenkontrolle 1.0
 13. Scanner-Betrieb & automatische Fälligkeit 1.0
 
+## Paket 14 in Arbeit
+
+**Suche, Filter & Navigation 2.0** besitzt jetzt:
+
+- den paginierten Backend-Endpunkt `GET /api/catalog/fragrances`,
+- gewichtete Suche und serverseitige Filter,
+- einen eigenständigen Dev-Katalog unter `/catalog.html`,
+- 24 Ergebnisse pro Seite,
+- URL-basierte Filter, Sortierung und Seitennummer,
+- verlinkbare Duftdetails,
+- Browser-Historie für Ergebnis- und Detailnavigation,
+- verzögerte Texteingabe und Schutz gegen verspätete Antworten.
+
+Die bisherige öffentliche Ansicht und das Admin-Center bleiben während der Dev-Abnahme unverändert. Die praktische Abnahme und die Entscheidung über die endgültige Integration stehen noch aus.
+
 ## Scanner-Betrieb
 
-Die Dev-Umgebung besitzt jetzt den getrennten Container `DGD-Dev-Scanner`. Der Worker:
+Die Dev-Umgebung besitzt den getrennten Container `DGD-Dev-Scanner`. Der Worker:
 
 - läuft unabhängig von Frontend und API,
 - prüft ausschließlich aktive und fällige Recherchequellen,
@@ -73,9 +88,9 @@ npm run build
 
 Das Paket gilt erst nach erfolgreichem Test in der separaten Dev-Umgebung als praktisch abgenommen.
 
-## Nächstes größeres Paket
+## Nächster Schritt
 
-**Suche, Filter & Navigation 2.0**
+**Dev-Abnahme des Katalogs 2.0 und anschließende Integration in die öffentliche Hauptansicht.**
 
 ## Dokumentationsregel
 
