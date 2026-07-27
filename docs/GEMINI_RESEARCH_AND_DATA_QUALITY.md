@@ -27,6 +27,31 @@ Endpoint:
 POST /api/enrichment/tasks/{fragrance_id}/research
 ```
 
+## Recherche-Verlauf und Tokenkontrolle
+
+Jeder gezielte Gemini-Lauf wird in `gemini_research_runs` protokolliert. Gespeichert werden:
+
+- Duft und angeforderte Felder,
+- Zeitpunkt und Status,
+- verwendetes Modell,
+- Anzahl gefundener Quellen,
+- neu angelegte Feldfunde und Twin-Hinweise,
+- Prompt-, Ausgabe- und Gesamttokens,
+- eine gekürzte Fehlermeldung bei fehlgeschlagenen Läufen.
+
+Die Oberfläche zeigt den letzten Lauf direkt am offenen Duftauftrag. Erfolgreiche Läufe erhalten eine Schutzzeit von 15 Minuten. Innerhalb dieser Zeit ist ein erneuter Start nur über **Trotzdem erneut suchen** und eine zusätzliche Bestätigung möglich.
+
+Endpoints:
+
+```text
+GET  /api/enrichment/research-history?limit=500
+GET  /api/enrichment/tasks/{fragrance_id}/research-history?limit=10
+POST /api/enrichment/tasks/{fragrance_id}/research?force=false
+POST /api/enrichment/tasks/{fragrance_id}/research?force=true
+```
+
+Die Schutzzeit verhindert versehentliche Doppelstarts, blockiert aber keine bewusst erzwungene erneute Prüfung.
+
 ## Markenrecherche
 
 Unter **Quellen & Prüfung → Weitere Düfte einer Marke suchen** kann eine einzelne Marke ausgewählt werden.
@@ -148,6 +173,7 @@ backend/app/grounding_policy.py
 backend/app/finding_dedupe.py
 backend/app/data_standards.py
 backend/app/combined_research_routes.py
+backend/app/research_run_history.py
 ```
 
 ## Wichtige Frontend-Datei
