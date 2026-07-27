@@ -33,7 +33,9 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 - Browser-Historie für Ergebnis- und Detailnavigation,
 - verzögerte Texteingabe und Schutz gegen verspätete Antworten.
 
-Die bisherige öffentliche Ansicht und das Admin-Center bleiben während der Dev-Abnahme unverändert. Die praktische Abnahme und die Entscheidung über die endgültige Integration stehen noch aus.
+Die praktische Dev-Abnahme des Katalogs 2.0 ist erfolgreich: Suche, Filter, Pagination, Direktlinks, schmale Darstellung und Browser-Zurück-Navigation wurden bestätigt. Die bisherige öffentliche Ansicht und das Admin-Center bleiben bis zur geplanten Umschaltung unverändert.
+
+Noch offen sind die Integration als öffentliche Hauptansicht, dauerhaft verlinkbare Marken- und Parfümeuransichten sowie die stabilere Admin-Suche.
 
 ## Scanner-Betrieb
 
@@ -86,11 +88,11 @@ npm install
 npm run build
 ```
 
-Das Paket gilt erst nach erfolgreichem Test in der separaten Dev-Umgebung als praktisch abgenommen.
+Neue Pakete gelten erst nach erfolgreichem Test in der separaten Dev-Umgebung als praktisch abgenommen.
 
 ## Nächster Schritt
 
-**Dev-Abnahme des Katalogs 2.0 und anschließende Integration in die öffentliche Hauptansicht.**
+**Katalog 2.0 als öffentliche Hauptansicht integrieren und anschließend die Admin-Suche stabilisieren.**
 
 ## Dokumentationsregel
 
