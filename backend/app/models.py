@@ -180,3 +180,15 @@ class MasterImportRun(Base):
     status: Mapped[str] = mapped_column(String(30), nullable=False)
     report: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class ImportQualityRun(Base):
+    __tablename__ = "import_quality_runs"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+    filename: Mapped[str] = mapped_column(String(500), nullable=False)
+    import_type: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
+    duplicate_mode: Mapped[str] = mapped_column(String(20), nullable=False, default="skip")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
+    report: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)

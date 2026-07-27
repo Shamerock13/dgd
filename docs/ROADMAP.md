@@ -25,22 +25,30 @@ Diese Roadmap zeigt den aktuellen Entwicklungsstand. Maßgeblich für den tatsä
 
 15. 🚧 Datenvalidierung & Importqualität 2.0
 
-Erster Baustein vorbereitet, Dev-Abnahme offen:
+Bereits praktisch in Dev bestätigt:
 
-- neuer Prüfendpunkt `POST /api/import/quality/preview`
+- Qualitätsvorschau `POST /api/import/quality/preview`
 - konservative Normalisierung von Marken- und Duftnamen
 - sichere Erkennung exakter und normalisierter Dubletten
 - ähnliche Treffer nur als manuelle Prüfhinweise
 - Entscheidungen `CREATE`, `DUPLICATE`, `REVIEW` und `BLOCK`
-- konkrete Begründungen, Fehler und Kandidaten pro Importzeile
-- keine automatische Zusammenführung und noch keine Änderung am bisherigen Commit-Pfad
+- Qualitätsanzeige im Admin-Center
+- geschützter Commit über `POST /api/import/quality/commit`
+- vollständiger Importstopp bei ungelösten oder blockierten Zeilen
+- kein Teilschreibvorgang beim Abbruch
+
+Aktueller Baustein, Dev-Abnahme offen:
+
+- bewusste Auflösung von `REVIEW`-Zeilen
+- neuer Duft, vorhandenen Kandidaten verwenden oder Zeile ausschließen
+- bewusste Original-/Alternativzuordnung bei Duftzwillingen
+- erneute serverseitige Prüfung aller Entscheidungen
+- dauerhafte Importberichte über `GET /api/import/quality/runs`
 
 Danach:
 
-- Qualitätsvorschau im Admin-Center darstellen
-- Konflikte vor dem Commit verbindlich auflösen
-- Importentscheidungen nachvollziehbar protokollieren
 - Master-Import mit denselben Regeln absichern
+- Paket 15 vollständig dokumentieren und abschließen
 
 ## Danach vorgesehen
 

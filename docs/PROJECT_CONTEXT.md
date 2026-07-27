@@ -44,13 +44,19 @@ Abgeschlossen sind alle Pakete bis einschließlich:
 
 14. **Suche, Filter & Navigation 2.0**
 
-Paket 15 **Datenvalidierung & Importqualität 2.0** ist in Arbeit. Der erste Backend-Baustein ergänzt einen getrennten Qualitätsprüfpfad unter:
+Paket 15 **Datenvalidierung & Importqualität 2.0** ist in Arbeit. Die Qualitätsprüfung und der geschützte Commit wurden in Dev bestätigt. Relevante Endpunkte:
 
 ```text
 POST /api/import/quality/preview
+POST /api/import/quality/commit
+GET  /api/import/quality/runs
 ```
 
-Der Prüfpfad verwendet die vorhandenen CSV-/XLSX-Parser und Zeilenvalidatoren, ergänzt jedoch eine konservative Identitätsnormalisierung und Kandidatensuche. Exakte sowie sicher normalisierte Treffer werden als Dubletten erkannt. Ähnliche Treffer bleiben reine Prüfhinweise und werden niemals automatisch zusammengeführt. Der bisherige Vorschau- und Commit-Pfad bleibt zunächst unverändert.
+Die Qualitätslogik verwendet die vorhandenen CSV-/XLSX-Parser und Zeilenvalidatoren, ergänzt jedoch eine konservative Identitätsnormalisierung und Kandidatensuche. Exakte sowie sicher normalisierte Treffer werden als Dubletten erkannt. Ähnliche Treffer bleiben zunächst `REVIEW` und werden niemals automatisch zusammengeführt.
+
+Der aktuelle Baustein erlaubt für `REVIEW`-Zeilen bewusste Entscheidungen: neuen Duft anlegen, einen angebotenen vorhandenen Kandidaten verwenden oder die Zeile ausschließen. Bei Duftzwillingen werden Original und Alternative ausdrücklich gewählt. Der Server analysiert dieselbe Datei direkt vor dem Schreiben erneut und akzeptiert ausschließlich Kandidaten, die weiterhin zur aktuellen Prüfung gehören.
+
+Importversuche und Entscheidungen werden in `import_quality_runs` als JSON-Bericht gespeichert. Die Tabelle wird idempotent über die registrierten SQLAlchemy-Modelle angelegt.
 
 Der öffentliche Katalog unterstützt serverseitige Suche, Filter, Pagination und dauerhaft verlinkbare Duft-, Marken- und Parfümeuransichten. Die Admin-Listen für Düfte und Marken besitzen Suche und Pagination. Paket 14 wurde vollständig in Dev bestätigt.
 
@@ -61,6 +67,8 @@ Der Scanner-Worker läuft getrennt von API und Frontend. Er prüft ausschließli
 ```text
 GET /api/catalog/fragrances
 POST /api/import/quality/preview
+POST /api/import/quality/commit
+GET /api/import/quality/runs
 GET /api/research/sources
 POST /api/research/sources/{source_id}/scan
 POST /api/research/sources/scan-active
@@ -75,6 +83,8 @@ PUT /api/research/scanner/status
 - private, lokale, reservierte und Link-Local-Ziele bleiben blockiert
 - keine automatische Veröffentlichung
 - ähnliche Importkandidaten niemals automatisch zusammenführen
+- manuelle Importentscheidungen nur gegen die unmittelbar neu berechneten Kandidaten akzeptieren
+- blockierte Zeilen können nicht manuell freigegeben werden
 - Feldvorschläge und Produkte landen zunächst in Prüf- beziehungsweise Import-Warteschlangen
 - Gemini-Twins benötigen eine konkrete brauchbare Grounding-Quelle
 - Duftnoten und Akkorde werden zentral normalisiert
@@ -97,11 +107,11 @@ cd /mnt/user/appdata/dgd-github
 GIT_SSH_COMMAND='ssh -i /root/.ssh/dgd_github -o IdentitiesOnly=yes -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no' \
 git pull origin main
 
-docker restart DGD-Dev-Backend
+docker restart DGD-Dev-Backend DGD-Dev-Frontend
 ```
 
 ## Nächster Schritt
 
-**Qualitätsprüfpfad in Dev testen und anschließend in das Admin-Center integrieren.**
+**Manuelle REVIEW-Entscheidungen und gespeicherte Importberichte in Dev testen.**
 
 Produktion wird erst nach erfolgreicher Dev-Abnahme in einem eigenen, ausdrücklich freizugebenden Schritt vorbereitet.
