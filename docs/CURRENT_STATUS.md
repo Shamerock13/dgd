@@ -36,9 +36,9 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 
 Die praktische Dev-Abnahme des öffentlichen Katalogs ist erfolgreich. Suche, Filter, Pagination, Direktlinks, schmale Darstellung und Browser-Zurück-Navigation wurden bestätigt. Die Umschaltung auf die Hauptansicht sieht in Dev ebenfalls korrekt aus.
 
-Für die großen Admin-Listen ist eine zusätzliche Such- und Pagination-Schicht vorbereitet. Düfte und Marken werden mit 20 Einträgen pro Seite angezeigt; Suche, Seite und Rücksprung zum bearbeiteten Eintrag bleiben innerhalb der Sitzung erhalten. Die praktische Dev-Abnahme steht noch aus.
+Auch die großen Admin-Listen sind praktisch abgenommen. Duft- und Markenlisten zeigen 20 Einträge pro Seite, lassen sich durchsuchen und behalten Suchtext, Seite sowie den Rücksprung zum bearbeiteten Datensatz innerhalb der Sitzung bei.
 
-Noch offen sind dauerhaft verlinkbare Marken- und Parfümeuransichten sowie die Dev-Abnahme der Admin-Listen.
+Noch offen sind dauerhaft verlinkbare Marken- und Parfümeuransichten.
 
 ## Scanner-Betrieb
 
@@ -95,7 +95,7 @@ Neue Pakete gelten erst nach erfolgreichem Test in der separaten Dev-Umgebung al
 
 ## Nächster Schritt
 
-**Admin-Suche und Pagination in Dev abnehmen; danach Paket 14 mit verlinkbaren Marken- und Parfümeuransichten abschließen.**
+**Dauerhaft verlinkbare Marken- und Parfümeuransichten umsetzen und danach Paket 14 abschließen.**
 
 ## Dokumentationsregel
 

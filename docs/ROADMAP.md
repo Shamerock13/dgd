@@ -38,18 +38,15 @@ Bereits umgesetzt und in Dev bestätigt:
 - verlinkbare Duftdetails und Browser-Historie
 - verzögerte Suche und Schutz gegen verspätete Antworten
 - erfolgreiche praktische Dev-Abnahme von Suche, Filtern, Pagination, Direktlinks, Browser-Zurück und responsiver Darstellung
-
-Vorbereitet, Dev-Abnahme offen:
-
 - Suche in den Admin-Listen für Düfte und Marken
 - Pagination mit 20 Einträgen pro Admin-Seite
 - Erhalt von Suche und Seite innerhalb der Browsersitzung
 - Rücksprung zum bearbeiteten Datensatz nach dem Speichern
+- erfolgreiche praktische Dev-Abnahme der Admin-Listen
 
 Noch offen:
 
 - dauerhaft verlinkbare Marken- und Parfümeuransichten
-- praktische Dev-Abnahme der Admin-Listen
 
 Für später vorgemerkt:
 

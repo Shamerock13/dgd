@@ -54,9 +54,9 @@ Abgeschlossen sind alle Pakete bis einschließlich:
 
 13. **Scanner-Betrieb & automatische Fälligkeit 1.0**
 
-Paket 14 **Suche, Filter & Navigation 2.0** ist in Arbeit. Der paginierte Katalog ist als öffentliche Hauptansicht integriert und in Dev grundsätzlich bestätigt. Suche, Filter, Sortierung, Seite und Duftdetail bleiben in der URL erhalten.
+Paket 14 **Suche, Filter & Navigation 2.0** ist in Arbeit. Der paginierte Katalog ist als öffentliche Hauptansicht integriert und in Dev bestätigt. Suche, Filter, Sortierung, Seite und Duftdetail bleiben in der URL erhalten.
 
-Für das Admin-Center ist eine getrennte, DOM-basierte Such- und Pagination-Schicht vorgesehen. Sie erweitert ausschließlich die vorhandenen Duft- und Markenlisten, ohne die React-Formulare oder Verwaltungsendpunkte umzubauen. Der Zustand bleibt in `sessionStorage`; nach dem Bearbeiten soll zum vorherigen Listeneintrag zurückgesprungen werden.
+Die Admin-Listen für Düfte und Marken besitzen eine getrennte, DOM-basierte Such- und Pagination-Schicht. Sie verändert weder React-Formulare noch Verwaltungsendpunkte. Suchtext und Seite bleiben in `sessionStorage`; nach dem Bearbeiten wird zum vorherigen Listeneintrag zurückgesprungen. Diese Funktionen wurden praktisch in Dev bestätigt.
 
 Der Scanner-Worker läuft getrennt von API und Frontend. Er prüft ausschließlich aktive und fällige Quellen, meldet einen Heartbeat, speichert den letzten Zyklusstatus und verhindert parallele Doppelläufe derselben Quelle über PostgreSQL-Advisory-Locks.
 
@@ -108,6 +108,6 @@ docker restart DGD-Dev-Frontend
 
 ## Nächster Schritt
 
-**Admin-Suche und Pagination unter `/admin.html` in Dev abnehmen und anschließend die verlinkbaren Marken- und Parfümeuransichten fertigstellen.**
+**Dauerhaft verlinkbare Marken- und Parfümeuransichten umsetzen und danach Paket 14 abschließen.**
 
 Produktion wird erst nach erfolgreicher Dev-Abnahme in einem eigenen, ausdrücklich freigegebenen Schritt vorbereitet.
