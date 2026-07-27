@@ -2,9 +2,9 @@
 
 Stand: 27. Juli 2026
 
-Wir arbeiten am Repository `Shamerock13/dgd`. Diese Datei beschreibt Architektur, Betriebsregeln, zentrale Datenflüsse und den aktuell maßgeblichen Entwicklungsstand. Ergänzend gelten `docs/CURRENT_STATUS.md`, `docs/ROADMAP.md` und `docs/DEV_WORKFLOW.md`.
+Wir arbeiten am Repository `Shamerock13/dgd`. Ergänzend gelten `docs/CURRENT_STATUS.md`, `docs/ROADMAP.md` und `docs/DEV_WORKFLOW.md`.
 
-## Aktuelle Architektur
+## Architektur
 
 ### Produktion auf Unraid
 
@@ -18,19 +18,20 @@ Wir arbeiten am Repository `Shamerock13/dgd`. Diese Datei beschreibt Architektur
 
 - `DGD-Dev-Frontend`
 - `DGD-Dev-Backend`
+- `DGD-Dev-Scanner`
 - `DGD-Dev-PostgreSQL`
 - Docker-Netzwerk: `dgd-dev`
 - Frontend-Port: `15173`
 - Backend-Port: `18080`
 - PostgreSQL-Port: `55432`
 
-Das lokale Repository auf Unraid liegt unter:
+Lokales Repository:
 
 ```text
 /mnt/user/appdata/dgd-github
 ```
 
-Lokale Medien der Dev-Umgebung liegen persistent unter:
+Lokale Medien:
 
 ```text
 /mnt/user/appdata/dgd-dev-media
@@ -38,132 +39,67 @@ Lokale Medien der Dev-Umgebung liegen persistent unter:
 
 ## Technik
 
-### Backend
-
-- FastAPI
-- SQLAlchemy
-- PostgreSQL
+- Backend: FastAPI, SQLAlchemy, PostgreSQL
+- Frontend: React, Vite
 - Datenbankzugriff über `DATABASE_URL`
-- `Base.metadata.create_all()` plus eigene idempotente Migrationen
 - explizites DGD-Migrationsschema aktuell bis `0011`
-- zusätzliche Recherche-, Scanner-, Gemini- und Verlaufsstrukturen werden idempotent über registrierte Modelle beziehungsweise `CREATE TABLE IF NOT EXISTS` und abgesicherte `ALTER TABLE`-Anweisungen angelegt.
-
-### Frontend
-
-- React
-- Vite
-- relative API-Aufrufe über `/api`
-- Vite-Proxy auf `DGD-Dev-Backend:8080`
-- eigene Duft-, Marken- und Parfümeuransichten innerhalb der App
-- Admin-Bereiche für Datenpflege, Quellen, Recherche, Import und Qualitätssicherung
-
-## Zentrale Datenbereiche
-
-Vorhanden sind unter anderem:
-
-- Marken und Düfte
-- Duftzwillinge und Twin-Prüfvorschläge
-- strukturierte Duftnoten und Freitextfelder
-- Quellen- und Verifizierungsregister
-- Parfümeurprofile
-- Bildmetadaten und lokale Medienpfade
-- Master-Import und Importhistorie
-- Recherchekandidaten und Import-Warteschlange
-- verwaltete Recherchequellen und Scanläufe
-- Ergänzungsaufträge und Feldfunde
-- Gemini-Rechercheverlauf mit Token- und Ergebniskennzahlen
-
-Der Master-Import läuft über:
-
-```text
-POST /api/import/master/preview
-POST /api/import/master/commit
-GET  /api/import/master/runs
-```
+- zusätzliche Recherche-, Scanner-, Gemini- und Verlaufsstrukturen werden idempotent angelegt
 
 ## Aktueller Funktionsstand
 
-Umgesetzt sind:
+Umgesetzt sind alle Pakete bis einschließlich:
 
-1. Detailansicht & Duftzwillinge 2.0
-2. Bildverwaltung & Bildquellen 1.0
-3. Markenprofile 1.0
-4. Quellen & Verifizierung 1.0
-5. Parfümeurprofile 1.0
-6. Datenqualität & redaktionelle Arbeitsliste 1.0
-7. Lokaler Bildupload & Medienablage 1.0
-8. Automatische Recherche & Import-Warteschlange 1.0
-9. Recherchequellen & zeitgesteuerter Scanner 1.0
-10. Quellenadapter & Mehrseiten-Scanner 1.0
-11. Gemini-Recherche & Datenqualität 1.0
-12. Gemini-Rechercheverlauf & Tokenkontrolle 1.0
+13. **Scanner-Betrieb & automatische Fälligkeit 1.0**
 
-Die detaillierte Statusbeschreibung steht in `docs/CURRENT_STATUS.md`; die Reihenfolge weiterer Pakete in `docs/ROADMAP.md`.
+Der Scanner-Worker läuft getrennt von API und Frontend. Er prüft ausschließlich aktive und fällige Quellen, meldet einen Heartbeat, speichert den letzten Zyklusstatus und verhindert parallele Doppelläufe derselben Quelle über PostgreSQL-Advisory-Locks.
+
+Die Automatik wird im Bereich **Recherche & Anreicherung** gesteuert. Der Worker veröffentlicht keine Treffer automatisch; neue Produkte bleiben in der Import-Warteschlange.
+
+Wichtige Endpunkte:
+
+```text
+GET /api/research/sources
+POST /api/research/sources/{source_id}/scan
+POST /api/research/sources/scan-active
+GET /api/research/scan-runs
+GET /api/research/scanner/status
+PUT /api/research/scanner/status
+```
 
 ## Recherche- und Prüfprinzipien
 
-- öffentliche Rechercheziele dürfen nur über HTTP oder HTTPS angesprochen werden
+- nur öffentliche HTTP- und HTTPS-Ziele
 - private, lokale, reservierte und Link-Local-Ziele bleiben blockiert
-- Recherchetreffer werden nicht automatisch veröffentlicht
-- neue Produkte landen zunächst in der Import-Warteschlange
-- Feldvorschläge landen zunächst in der Prüfliste
-- Duftzwillinge aus Gemini benötigen eine konkrete brauchbare Grounding-Quelle
-- bereits offene, übernommene, abgelehnte oder konfliktbehaftete Feldwerte werden nicht erneut vorgeschlagen
-- bereits bekannte oder geprüfte Twin-Kandidaten werden ausgeschlossen
+- keine automatische Veröffentlichung
+- Feldvorschläge und Produkte landen zunächst in Prüf- beziehungsweise Import-Warteschlangen
+- Gemini-Twins benötigen eine konkrete brauchbare Grounding-Quelle
+- bekannte Feldwerte und Twin-Kandidaten werden ausgeschlossen
 - Duftnoten und Akkorde werden zentral normalisiert
-- historische Bereinigungen verwenden zuerst einen nicht schreibenden Prüflauf
-- Gemini-Läufe protokollieren Zeitpunkt, Status, Modell, Quellen, Treffer und Tokenverbrauch
-- ein 15-minütiger Schutz verhindert versehentliche direkte Wiederholungen; ein bewusster Neustart bleibt möglich
-
-Wichtige Fachdateien:
-
-```text
-docs/RESEARCH_AUTOMATION.md
-docs/SOURCE_ADAPTERS.md
-docs/GEMINI_RESEARCH_AND_DATA_QUALITY.md
-```
+- Gemini-Läufe protokollieren Status, Quellen, Treffer und Tokenverbrauch
 
 ## Arbeitsweise
 
-- vor jedem größeren Paket zuerst `docs/PROJECT_CONTEXT.md`, `docs/ROADMAP.md` und `docs/DEV_WORKFLOW.md` lesen
-- danach den aktuellen Code und relevante Konfigurationen prüfen
-- Änderungen zuerst im GitHub-Repository auf einem passenden Branch umsetzen
-- zusammengehörige Änderungen gemeinsam entwickeln
-- zentrale GitHub-CI muss Backend-Compile und Frontend-Build erfolgreich abschließen
+- vor jedem größeren Paket zuerst `PROJECT_CONTEXT`, `ROADMAP` und `DEV_WORKFLOW` lesen
+- danach aktuellen Code und relevante Konfigurationen prüfen
+- Änderungen auf einem Feature-Branch im GitHub-Repository umsetzen
+- GitHub-CI muss Backend-Compile und Frontend-Build erfolgreich abschließen
 - anschließend per sauberem Squash-Commit nach `main` mergen
-- Tests ausschließlich in der separaten Dev-Umgebung durchführen
+- Tests ausschließlich in der Dev-Umgebung
 - Produktion nicht verändern
-- nach jedem größeren Paket Status, Roadmap, Projektkontext und technische Fachdateien aktualisieren
-- der Chat ist kein dauerhaftes Projektgedächtnis; maßgeblich ist das Repository
+- Dokumentation im selben Paket aktualisieren
 
-Aktuellen Stand auf Unraid holen:
+## Dev-Aktualisierung
 
 ```bash
 cd /mnt/user/appdata/dgd-github
 GIT_SSH_COMMAND='ssh -i /root/.ssh/dgd_github -o IdentitiesOnly=yes -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no' \
 git pull origin main
-```
 
-Je nach Paket anschließend die betroffenen Dev-Container neu starten. Frontend und Backend gemeinsam:
-
-```bash
-docker restart DGD-Dev-Backend DGD-Dev-Frontend
+docker compose -f docker-compose.dev.yml up -d --build backend scanner-worker frontend
 ```
 
 ## Nächstes größeres Paket
 
-**Scanner-Betrieb & automatische Fälligkeit 1.0**
+**Suche, Filter & Navigation 2.0**
 
-Ziele:
-
-- eigener Scanner-Worker getrennt von Frontend und API
-- regelmäßiger Abruf ausschließlich fälliger aktiver Quellen
-- Sperre gegen parallele Doppelläufe derselben Quelle
-- klarer Ein-/Ausschalter für den automatischen Betrieb
-- Laufzeit-, Fehler- und Erfolgskennzahlen
-- sichtbarer letzter und nächster geplanter Lauf
-- kontrollierte Wiederholung temporärer Fehler
-- keine automatische Freigabe von Warteschlangen-Treffern
-- dokumentierte Betriebs-, Neustart-, Backup- und Wiederherstellungsregeln
-
-Produktion wird für dieses Paket erst nach erfolgreicher Dev-Abnahme in einem eigenen, ausdrücklich freigegebenen Schritt vorbereitet.
+Produktion wird erst nach erfolgreicher Dev-Abnahme in einem eigenen, ausdrücklich freigegebenen Schritt vorbereitet.

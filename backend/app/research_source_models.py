@@ -44,6 +44,19 @@ class ResearchScanRun(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
+class ScannerControl(Base):
+    __tablename__ = "scanner_control"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    poll_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=300)
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_cycle_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_cycle_status: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    last_cycle_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+
 @event.listens_for(Base.metadata, "after_create")
 def ensure_research_adapter_columns(target, connection, **kwargs):
     if connection.dialect.name != "postgresql":
@@ -70,6 +83,7 @@ def ensure_research_adapter_columns(target, connection, **kwargs):
         "ALTER TABLE research_scan_runs ALTER COLUMN pages_scanned SET NOT NULL",
         "ALTER TABLE research_scan_runs ALTER COLUMN links_discovered SET DEFAULT 0",
         "ALTER TABLE research_scan_runs ALTER COLUMN links_discovered SET NOT NULL",
+        "INSERT INTO scanner_control(id,enabled,poll_seconds) VALUES(1,FALSE,300) ON CONFLICT(id) DO NOTHING",
     )
     for statement in statements:
         connection.execute(text(statement))

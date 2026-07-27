@@ -2,7 +2,7 @@
 
 Stand: 27. Juli 2026
 
-Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf `main` vorhandenen Funktionsstand. Detailentscheidungen bleiben zusätzlich in den jeweiligen Fachdateien unter `docs/` dokumentiert.
+Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf `main` vorhandenen Funktionsstand. Detailentscheidungen stehen zusätzlich in den jeweiligen Fachdateien unter `docs/`.
 
 ## Umgesetzte Pakete
 
@@ -17,54 +17,53 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 9. Recherchequellen & zeitgesteuerter Scanner 1.0
 10. Quellenadapter & Mehrseiten-Scanner 1.0
 11. Gemini-Recherche & Datenqualität 1.0
+12. Gemini-Rechercheverlauf & Tokenkontrolle 1.0
+13. Scanner-Betrieb & automatische Fälligkeit 1.0
 
-## Aktueller Recherche-Stand
+## Scanner-Betrieb
 
-DGD kann einzelne öffentliche Produktseiten sowie verwaltete Recherchequellen prüfen. Quellen können als `SINGLE` oder `LIST` betrieben werden.
+Die Dev-Umgebung besitzt jetzt den getrennten Container `DGD-Dev-Scanner`. Der Worker:
 
-Der Adapter `SINGLE` liest genau die hinterlegte Seite. Der Adapter `LIST` liest eine Listen-, Kategorie-, Marken- oder Suchseite, sammelt passende Produktlinks und arbeitet sie nacheinander ab.
+- läuft unabhängig von Frontend und API,
+- prüft ausschließlich aktive und fällige Recherchequellen,
+- verwendet PostgreSQL-Advisory-Locks gegen parallele Doppelläufe derselben Quelle,
+- speichert Heartbeat, letzten Zyklusstatus und Fehler,
+- kann im Bereich **Recherche & Anreicherung** ein- oder ausgeschaltet werden,
+- zeigt pro Quelle den nächsten geplanten Lauf,
+- legt Treffer weiterhin ausschließlich in der Import-Warteschlange ab.
 
-Zusätzlich steht Gemini mit Google Search als kontrollierter Rechercheanbieter zur Verfügung:
+API-Endpunkte:
 
-- gezielte Recherche eines einzelnen Dufts mit offenen Feldern,
-- Markenrecherche nach weiteren, noch nicht vorhandenen Düften,
-- gemeinsamer deutscher Datenstandard mit festen Feld- und Zeichenlimits,
-- Ausschluss bereits vorhandener, offener, übernommener, abgelehnter oder konfliktbehafteter Feldwerte,
-- Ausschluss bereits bekannter oder geprüfter Duftzwillinge,
-- strikte Grounding-Pflicht für neue Gemini-Twin-Vorschläge,
-- serverseitige Normalisierung von Duftnoten und Akkorden,
-- sichtbarer Prüflauf vor der historischen Datenbereinigung.
+```text
+GET /api/research/scanner/status
+PUT /api/research/scanner/status
+```
 
-Sicherheits- und Lastgrenzen:
+Der Worker wird über folgenden Moduleinstieg gestartet:
+
+```text
+python -m app.scanner_worker
+```
+
+## Recherche- und Sicherheitsregeln
 
 - nur öffentliche HTTP- und HTTPS-Ziele
 - interne, private, reservierte und lokale Netzwerkziele bleiben blockiert
-- optional nur Links derselben Domain
-- regulärer Ausdruck als Linkfilter
-- maximal 1 bis 100 Produktseiten pro Lauf
+- `SINGLE`- und `LIST`-Adapter
+- höchstens 100 Produktseiten pro Mehrseitenlauf
 - keine automatische Veröffentlichung
-- jeder Fund landet zunächst in der Import- oder Prüf-Warteschlange
-- Dublettenprüfung bleibt vor der Freigabe aktiv
-- Duftzwillinge ohne konkrete Grounding-Quelle werden nicht gespeichert
-- temporäre Gemini-Fehler `429`, `502`, `503` und `504` werden begrenzt wiederholt
-
-Scanläufe speichern zusätzlich die Anzahl gefundener Links und tatsächlich geprüfter Produktseiten. Fehler einzelner Unterseiten brechen einen gesamten Listenlauf nicht sofort ab.
-
-Technische Detaildokumentation:
-
-- `docs/RESEARCH_AUTOMATION.md`
-- `docs/SOURCE_ADAPTERS.md`
-- `docs/GEMINI_RESEARCH_AND_DATA_QUALITY.md`
+- Dublettenprüfung vor Freigabe
+- Gemini-Twins nur mit konkreter Grounding-Quelle
+- bekannte Feldwerte und Twin-Kandidaten werden ausgeschlossen
+- Duftnoten und Akkorde werden zentral normalisiert
 
 ## Datenbankstand
 
-Das explizite DGD-Migrationsschema bleibt bei `0011`. Die Tabellen der verwalteten Recherchequellen und Scanläufe werden idempotent über die registrierten SQLAlchemy-Modelle angelegt. Bestehende Recherchetabellen werden beim Start um die Adapterfelder ergänzt.
-
-Die neueren Gemini-, Deduplizierungs-, Grounding- und Bereinigungsfunktionen verwenden die vorhandenen Recherche-, Prüf- und Twin-Tabellen. Die Twin-Vorschlagsstruktur unterstützt zusätzlich getrennte Angaben für Marke und Duftname sowie eine ausführlichere Vergleichsbegründung.
+Das explizite DGD-Migrationsschema bleibt bei `0011`. Recherche-, Scanner-, Gemini- und Verlaufsstrukturen werden idempotent über registrierte SQLAlchemy-Modelle und abgesicherte SQL-Anweisungen angelegt.
 
 ## Qualitätssicherung
 
-Die zentrale GitHub-CI unter `.github/workflows/ci.yml` prüft bei Pull Requests und Änderungen auf `main`:
+Die GitHub-CI prüft:
 
 ```bash
 python -m compileall -q backend/app
@@ -72,19 +71,11 @@ npm install
 npm run build
 ```
 
+Das Paket gilt erst nach erfolgreichem Test in der separaten Dev-Umgebung als praktisch abgenommen.
+
 ## Nächstes größeres Paket
 
-**Scanner-Betrieb & automatische Fälligkeit 1.0**
-
-Geplante Schwerpunkte:
-
-- eigener Scanner-Dienst beziehungsweise Worker im Dev-Compose
-- regelmäßiger Aufruf nur fälliger aktiver Quellen
-- Sperre gegen parallele Doppelläufe
-- Laufzeit-, Fehler- und Erfolgskennzahlen
-- klarer Ein-/Ausschalter für automatische Scans
-- keine automatische Freigabe von Warteschlangen-Treffern
-- dokumentierte Betriebs-, Neustart- und Backup-Regeln
+**Suche, Filter & Navigation 2.0**
 
 ## Dokumentationsregel
 
@@ -94,6 +85,6 @@ Nach jedem größeren Paket werden mindestens geprüft:
 - `docs/PROJECT_CONTEXT.md`
 - `docs/ROADMAP.md`
 - die jeweilige technische Fachdatei
-- `docs/DEV_WORKFLOW.md`, falls sich Arbeitsweise oder Tests ändern
+- `docs/DEV_WORKFLOW.md`, falls sich Arbeitsweise, Container oder Tests ändern
 
 Der Chat ist nicht das Projektgedächtnis. Maßgeblich sind Repository und Dokumentation.
