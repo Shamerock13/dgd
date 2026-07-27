@@ -19,26 +19,26 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 11. Gemini-Recherche & Datenqualität 1.0
 12. Gemini-Rechercheverlauf & Tokenkontrolle 1.0
 13. Scanner-Betrieb & automatische Fälligkeit 1.0
+14. Suche, Filter & Navigation 2.0
 
-## Paket 14 in Arbeit
+## Paket 14 abgeschlossen
 
-**Suche, Filter & Navigation 2.0** besitzt jetzt:
+**Suche, Filter & Navigation 2.0** umfasst:
 
 - den paginierten Backend-Endpunkt `GET /api/catalog/fragrances`,
 - gewichtete Suche und serverseitige Filter,
 - den Katalog 2.0 als öffentliche Hauptansicht unter `/`,
 - das bestehende Admin-Center getrennt unter `/admin.html`,
-- 24 Ergebnisse pro Seite,
+- 24 Ergebnisse pro Katalogseite,
 - URL-basierte Filter, Sortierung und Seitennummer,
-- verlinkbare Duftdetails,
-- Browser-Historie für Ergebnis- und Detailnavigation,
-- verzögerte Texteingabe und Schutz gegen verspätete Antworten.
+- dauerhaft verlinkbare Duftdetails,
+- Browser-Historie für Ergebnis-, Detail- und Profilnavigation,
+- verzögerte Texteingabe und Schutz gegen verspätete Antworten,
+- Suche und Pagination in den Admin-Listen für Düfte und Marken,
+- dauerhaft verlinkbare Markenprofile mit Stammdaten und Duftliste,
+- dauerhaft verlinkbare Parfümeurprofile mit exakter Zuordnung ihrer Kreationen.
 
-Die praktische Dev-Abnahme des öffentlichen Katalogs ist erfolgreich. Suche, Filter, Pagination, Direktlinks, schmale Darstellung und Browser-Zurück-Navigation wurden bestätigt. Die Umschaltung auf die Hauptansicht sieht in Dev ebenfalls korrekt aus.
-
-Auch die großen Admin-Listen sind praktisch abgenommen. Duft- und Markenlisten zeigen 20 Einträge pro Seite, lassen sich durchsuchen und behalten Suchtext, Seite sowie den Rücksprung zum bearbeiteten Datensatz innerhalb der Sitzung bei.
-
-Verlinkbare Marken- und Parfümeurprofile sind jetzt vorbereitet. Markennamen in Karten und Details öffnen ein Profil mit Stammdaten und paginierter Duftliste. Hinterlegte Parfümeurprofile sind aus der Duftdetailansicht erreichbar und verwenden einen exakten Katalogfilter. Die praktische Dev-Abnahme steht noch aus.
+Die praktische Dev-Abnahme ist vollständig erfolgreich. Bestätigt wurden Suche, Filter, Pagination, Direktlinks, responsive Darstellung, Browser-Zurück, Admin-Suche, Rücksprung zum bearbeiteten Datensatz sowie Marken- und Parfümeurprofile einschließlich direkt aufrufbarer Profil-URLs.
 
 ## Scanner-Betrieb
 
@@ -95,7 +95,7 @@ Neue Pakete gelten erst nach erfolgreichem Test in der separaten Dev-Umgebung al
 
 ## Nächster Schritt
 
-**Marken- und Parfümeurprofile in Dev abnehmen und danach Paket 14 abschließen.**
+**Paket 15 – Datenvalidierung & Importqualität 2.0 beginnen.**
 
 ## Dokumentationsregel
 
