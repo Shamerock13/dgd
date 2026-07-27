@@ -24,7 +24,7 @@ Diese Roadmap zeigt den aktuellen Entwicklungsstand und die Reihenfolge der näc
 
 14. 🚧 Suche, Filter & Navigation 2.0
 
-Bereits umgesetzt:
+Bereits umgesetzt und in Dev bestätigt:
 
 - paginierter Katalogendpunkt `GET /api/catalog/fragrances`
 - gewichtete Suche nach Duftname, Marke, strukturierter Duftnote, Akkorden, Parfümeur und Beschreibung
@@ -36,11 +36,11 @@ Bereits umgesetzt:
 - URL-basierte Filter, Sortierung und Seitennummer
 - verlinkbare Duftdetails und Browser-Historie
 - verzögerte Suche und Schutz gegen verspätete Antworten
+- erfolgreiche praktische Dev-Abnahme von Suche, Filtern, Pagination, Direktlinks, Browser-Zurück und responsiver Darstellung
 
 Noch offen:
 
-- praktische Dev-Abnahme des neuen Katalogs
-- Entscheidung über Ablösung oder Integration der bisherigen öffentlichen Ansicht
+- Katalog 2.0 als öffentliche Hauptansicht integrieren
 - dauerhaft verlinkbare Marken- und Parfümeuransichten
 - stabilere Admin-Suche
 
