@@ -6,12 +6,14 @@ from sqlalchemy.orm import Session
 
 from .catalog_routes import router as catalog_router
 from .database import get_db
+from .import_quality_routes import router as import_quality_router
 from .models import Brand, Fragrance, MasterSource, TwinMatch
 from .source_schemas import SourceCreate, SourceOut, SourceUpdate
 
 
 router = APIRouter(prefix="/api", tags=["sources"])
 router.include_router(catalog_router)
+router.include_router(import_quality_router)
 
 
 def _source_id() -> str:

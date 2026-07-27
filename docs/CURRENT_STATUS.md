@@ -21,56 +21,37 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 13. Scanner-Betrieb & automatische Fälligkeit 1.0
 14. Suche, Filter & Navigation 2.0
 
+## Paket 15 in Arbeit
+
+**Datenvalidierung & Importqualität 2.0** besitzt als ersten Baustein einen getrennten, nur lesenden Qualitätsprüfpfad:
+
+```text
+POST /api/import/quality/preview
+```
+
+Die Vorschau:
+
+- normalisiert Marken- und Duftidentitäten konservativ,
+- erkennt exakte und sicher normalisierte Dubletten,
+- meldet ähnliche Schreibweisen ausschließlich als manuellen Prüfhinweis,
+- blockiert unvollständige oder widersprüchliche Zeilen,
+- liefert pro Zeile Entscheidung, Begründung, Fehler und Kandidaten,
+- verändert den bisherigen Import und die Datenbank noch nicht.
+
+Die praktische Dev-Abnahme dieses Backend-Bausteins steht noch aus. Danach wird die Qualitätsvorschau in das Admin-Center integriert.
+
 ## Paket 14 abgeschlossen
 
-**Suche, Filter & Navigation 2.0** umfasst:
-
-- den paginierten Backend-Endpunkt `GET /api/catalog/fragrances`,
-- gewichtete Suche und serverseitige Filter,
-- den Katalog 2.0 als öffentliche Hauptansicht unter `/`,
-- das bestehende Admin-Center getrennt unter `/admin.html`,
-- 24 Ergebnisse pro Katalogseite,
-- URL-basierte Filter, Sortierung und Seitennummer,
-- dauerhaft verlinkbare Duftdetails,
-- Browser-Historie für Ergebnis-, Detail- und Profilnavigation,
-- verzögerte Texteingabe und Schutz gegen verspätete Antworten,
-- Suche und Pagination in den Admin-Listen für Düfte und Marken,
-- dauerhaft verlinkbare Markenprofile mit Stammdaten und Duftliste,
-- dauerhaft verlinkbare Parfümeurprofile mit exakter Zuordnung ihrer Kreationen.
-
-Die praktische Dev-Abnahme ist vollständig erfolgreich. Bestätigt wurden Suche, Filter, Pagination, Direktlinks, responsive Darstellung, Browser-Zurück, Admin-Suche, Rücksprung zum bearbeiteten Datensatz sowie Marken- und Parfümeurprofile einschließlich direkt aufrufbarer Profil-URLs.
+Der öffentliche Katalog ist serverseitig paginiert und unterstützt gewichtete Suche, Filter, Sortierung sowie dauerhaft verlinkbare Zustände für Suchergebnisse, Duftdetails, Markenprofile und Parfümeurprofile. Die Admin-Listen für Düfte und Marken besitzen Suche und Pagination. Alle Bestandteile wurden praktisch in Dev bestätigt.
 
 ## Scanner-Betrieb
 
-Die Dev-Umgebung besitzt den getrennten Container `DGD-Dev-Scanner`. Der Worker:
-
-- läuft unabhängig von Frontend und API,
-- prüft ausschließlich aktive und fällige Recherchequellen,
-- verwendet PostgreSQL-Advisory-Locks gegen parallele Doppelläufe derselben Quelle,
-- speichert Heartbeat, letzten Zyklusstatus und Fehler,
-- kann im Bereich **Recherche & Anreicherung** ein- oder ausgeschaltet werden,
-- zeigt pro Quelle den nächsten geplanten Lauf,
-- legt Treffer weiterhin ausschließlich in der Import-Warteschlange ab.
-
-API-Endpunkte:
-
-```text
-GET /api/research/scanner/status
-PUT /api/research/scanner/status
-```
-
-Der Worker wird über folgenden Moduleinstieg gestartet:
-
-```text
-python -m app.scanner_worker
-```
+Die Dev-Umgebung besitzt den getrennten Container `DGD-Dev-Scanner`. Der Worker verarbeitet ausschließlich aktive und fällige Recherchequellen, verhindert parallele Doppelläufe und veröffentlicht keine Treffer automatisch.
 
 ## Recherche- und Sicherheitsregeln
 
 - nur öffentliche HTTP- und HTTPS-Ziele
 - interne, private, reservierte und lokale Netzwerkziele bleiben blockiert
-- `SINGLE`- und `LIST`-Adapter
-- höchstens 100 Produktseiten pro Mehrseitenlauf
 - keine automatische Veröffentlichung
 - Dublettenprüfung vor Freigabe
 - Gemini-Twins nur mit konkreter Grounding-Quelle
@@ -79,7 +60,7 @@ python -m app.scanner_worker
 
 ## Datenbankstand
 
-Das explizite DGD-Migrationsschema bleibt bei `0011`. Recherche-, Scanner-, Gemini- und Verlaufsstrukturen werden idempotent über registrierte SQLAlchemy-Modelle und abgesicherte SQL-Anweisungen angelegt.
+Das explizite DGD-Migrationsschema bleibt bei `0011`. Für den ersten Baustein von Paket 15 ist keine Datenbankänderung erforderlich.
 
 ## Qualitätssicherung
 
@@ -95,16 +76,10 @@ Neue Pakete gelten erst nach erfolgreichem Test in der separaten Dev-Umgebung al
 
 ## Nächster Schritt
 
-**Paket 15 – Datenvalidierung & Importqualität 2.0 beginnen.**
+**Den Qualitätsprüfpfad in Dev testen und anschließend die Vorschau in das Admin-Center integrieren.**
 
 ## Dokumentationsregel
 
-Nach jedem größeren Paket werden mindestens geprüft:
-
-- `docs/CURRENT_STATUS.md`
-- `docs/PROJECT_CONTEXT.md`
-- `docs/ROADMAP.md`
-- die jeweilige technische Fachdatei
-- `docs/DEV_WORKFLOW.md`, falls sich Arbeitsweise, Container oder Tests ändern
+Nach jedem größeren Paket werden mindestens `CURRENT_STATUS`, `PROJECT_CONTEXT`, `ROADMAP`, die Fachdatei und bei Workflowänderungen `DEV_WORKFLOW` geprüft.
 
 Der Chat ist nicht das Projektgedächtnis. Maßgeblich sind Repository und Dokumentation.
