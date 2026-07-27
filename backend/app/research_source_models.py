@@ -54,7 +54,12 @@ class ScannerControl(Base):
     last_cycle_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_cycle_status: Mapped[str | None] = mapped_column(String(30), nullable=True)
     last_cycle_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=datetime.utcnow,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
 
 
 @event.listens_for(Base.metadata, "after_create")
@@ -83,7 +88,8 @@ def ensure_research_adapter_columns(target, connection, **kwargs):
         "ALTER TABLE research_scan_runs ALTER COLUMN pages_scanned SET NOT NULL",
         "ALTER TABLE research_scan_runs ALTER COLUMN links_discovered SET DEFAULT 0",
         "ALTER TABLE research_scan_runs ALTER COLUMN links_discovered SET NOT NULL",
-        "INSERT INTO scanner_control(id,enabled,poll_seconds) VALUES(1,FALSE,300) ON CONFLICT(id) DO NOTHING",
+        "ALTER TABLE scanner_control ALTER COLUMN updated_at SET DEFAULT CURRENT_TIMESTAMP",
+        "INSERT INTO scanner_control(id,enabled,poll_seconds,updated_at) VALUES(1,FALSE,300,CURRENT_TIMESTAMP) ON CONFLICT(id) DO NOTHING",
     )
     for statement in statements:
         connection.execute(text(statement))
