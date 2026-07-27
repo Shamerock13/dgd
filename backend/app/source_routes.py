@@ -4,12 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import String, func, select
 from sqlalchemy.orm import Session
 
+from .catalog_routes import router as catalog_router
 from .database import get_db
 from .models import Brand, Fragrance, MasterSource, TwinMatch
 from .source_schemas import SourceCreate, SourceOut, SourceUpdate
 
 
 router = APIRouter(prefix="/api", tags=["sources"])
+router.include_router(catalog_router)
 
 
 def _source_id() -> str:
