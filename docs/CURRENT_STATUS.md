@@ -38,7 +38,7 @@ Die praktische Dev-Abnahme des öffentlichen Katalogs ist erfolgreich. Suche, Fi
 
 Auch die großen Admin-Listen sind praktisch abgenommen. Duft- und Markenlisten zeigen 20 Einträge pro Seite, lassen sich durchsuchen und behalten Suchtext, Seite sowie den Rücksprung zum bearbeiteten Datensatz innerhalb der Sitzung bei.
 
-Noch offen sind dauerhaft verlinkbare Marken- und Parfümeuransichten.
+Verlinkbare Marken- und Parfümeurprofile sind jetzt vorbereitet. Markennamen in Karten und Details öffnen ein Profil mit Stammdaten und paginierter Duftliste. Hinterlegte Parfümeurprofile sind aus der Duftdetailansicht erreichbar und verwenden einen exakten Katalogfilter. Die praktische Dev-Abnahme steht noch aus.
 
 ## Scanner-Betrieb
 
@@ -95,7 +95,7 @@ Neue Pakete gelten erst nach erfolgreichem Test in der separaten Dev-Umgebung al
 
 ## Nächster Schritt
 
-**Dauerhaft verlinkbare Marken- und Parfümeuransichten umsetzen und danach Paket 14 abschließen.**
+**Marken- und Parfümeurprofile in Dev abnehmen und danach Paket 14 abschließen.**
 
 ## Dokumentationsregel
 

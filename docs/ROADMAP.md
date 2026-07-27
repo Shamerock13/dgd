@@ -44,9 +44,11 @@ Bereits umgesetzt und in Dev bestätigt:
 - Rücksprung zum bearbeiteten Datensatz nach dem Speichern
 - erfolgreiche praktische Dev-Abnahme der Admin-Listen
 
-Noch offen:
+Vorbereitet, Dev-Abnahme offen:
 
-- dauerhaft verlinkbare Marken- und Parfümeuransichten
+- dauerhaft verlinkbare Markenprofile mit Stammdaten und Duftliste
+- dauerhaft verlinkbare Parfümeurprofile mit exakter Zuordnung der Kreationen
+- Browser-Historie zwischen Suche, Duftdetail und Profilen
 
 Für später vorgemerkt:
 

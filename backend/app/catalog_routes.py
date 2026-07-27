@@ -54,6 +54,7 @@ def _note_filter(note: str):
 def catalog_fragrances(
     q: str | None = Query(default=None, max_length=120),
     brand_id: UUID | None = None,
+    perfumer: str | None = Query(default=None, max_length=255),
     gender: str | None = Query(default=None, max_length=40),
     concentration: str | None = Query(default=None, max_length=100),
     note: str | None = Query(default=None, max_length=120),
@@ -74,6 +75,8 @@ def catalog_fragrances(
         stmt = stmt.where(score > 0)
     if brand_id:
         stmt = stmt.where(Fragrance.brand_id == brand_id)
+    if perfumer and perfumer.strip():
+        stmt = stmt.where(func.lower(Fragrance.perfumer) == perfumer.strip().lower())
     if gender:
         stmt = stmt.where(Fragrance.gender == gender)
     if concentration:

@@ -58,6 +58,8 @@ Paket 14 **Suche, Filter & Navigation 2.0** ist in Arbeit. Der paginierte Katalo
 
 Die Admin-Listen für Düfte und Marken besitzen eine getrennte, DOM-basierte Such- und Pagination-Schicht. Sie verändert weder React-Formulare noch Verwaltungsendpunkte. Suchtext und Seite bleiben in `sessionStorage`; nach dem Bearbeiten wird zum vorherigen Listeneintrag zurückgesprungen. Diese Funktionen wurden praktisch in Dev bestätigt.
 
+Marken- und Parfümeurprofile sind als weitere URL-Zustände der öffentlichen Katalogansicht vorbereitet. Profil-URLs verwenden `profile` und `profile_id`. Marken werden über `brand_id`, Parfümeure über den neuen exakten Katalogfilter `perfumer` geladen. Browser-Historie verbindet Suchergebnis, Duftdetail und Profilansichten. Die praktische Dev-Abnahme steht noch aus.
+
 Der Scanner-Worker läuft getrennt von API und Frontend. Er prüft ausschließlich aktive und fällige Quellen, meldet einen Heartbeat, speichert den letzten Zyklusstatus und verhindert parallele Doppelläufe derselben Quelle über PostgreSQL-Advisory-Locks.
 
 Die Automatik wird im Bereich **Recherche & Anreicherung** gesteuert. Der Worker veröffentlicht keine Treffer automatisch; neue Produkte bleiben in der Import-Warteschlange.
@@ -103,11 +105,11 @@ cd /mnt/user/appdata/dgd-github
 GIT_SSH_COMMAND='ssh -i /root/.ssh/dgd_github -o IdentitiesOnly=yes -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no' \
 git pull origin main
 
-docker restart DGD-Dev-Frontend
+docker restart DGD-Dev-Backend DGD-Dev-Frontend
 ```
 
 ## Nächster Schritt
 
-**Dauerhaft verlinkbare Marken- und Parfümeuransichten umsetzen und danach Paket 14 abschließen.**
+**Marken- und Parfümeurprofile unter `/` in Dev abnehmen und danach Paket 14 abschließen.**
 
 Produktion wird erst nach erfolgreicher Dev-Abnahme in einem eigenen, ausdrücklich freigegebenen Schritt vorbereitet.
