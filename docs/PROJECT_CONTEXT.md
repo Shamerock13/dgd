@@ -41,15 +41,18 @@ Lokale Medien:
 
 - Backend: FastAPI, SQLAlchemy, PostgreSQL
 - Frontend: React, Vite
+- Vite baut während Paket 14 zwei HTML-Einstiege: `index.html` und `catalog.html`
 - Datenbankzugriff über `DATABASE_URL`
 - explizites DGD-Migrationsschema aktuell bis `0011`
 - zusätzliche Recherche-, Scanner-, Gemini- und Verlaufsstrukturen werden idempotent angelegt
 
 ## Aktueller Funktionsstand
 
-Umgesetzt sind alle Pakete bis einschließlich:
+Abgeschlossen sind alle Pakete bis einschließlich:
 
 13. **Scanner-Betrieb & automatische Fälligkeit 1.0**
+
+Paket 14 **Suche, Filter & Navigation 2.0** ist in Arbeit. Der paginierte Katalogendpunkt und ein eigenständiger Dev-Katalog unter `/catalog.html` sind umgesetzt. Der neue Katalog hält Suche, Filter, Sortierung, Seite und Duftdetail in der URL und wird vor der Ablösung der bisherigen Ansicht separat getestet.
 
 Der Scanner-Worker läuft getrennt von API und Frontend. Er prüft ausschließlich aktive und fällige Quellen, meldet einen Heartbeat, speichert den letzten Zyklusstatus und verhindert parallele Doppelläufe derselben Quelle über PostgreSQL-Advisory-Locks.
 
@@ -58,6 +61,7 @@ Die Automatik wird im Bereich **Recherche & Anreicherung** gesteuert. Der Worker
 Wichtige Endpunkte:
 
 ```text
+GET /api/catalog/fragrances
 GET /api/research/sources
 POST /api/research/sources/{source_id}/scan
 POST /api/research/sources/scan-active
@@ -95,11 +99,11 @@ cd /mnt/user/appdata/dgd-github
 GIT_SSH_COMMAND='ssh -i /root/.ssh/dgd_github -o IdentitiesOnly=yes -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no' \
 git pull origin main
 
-docker compose -f docker-compose.dev.yml up -d --build backend scanner-worker frontend
+docker restart DGD-Dev-Backend DGD-Dev-Frontend
 ```
 
-## Nächstes größeres Paket
+## Nächster Schritt
 
-**Suche, Filter & Navigation 2.0**
+**Katalog 2.0 unter `/catalog.html` in Dev abnehmen und anschließend in die öffentliche Hauptansicht integrieren.**
 
 Produktion wird erst nach erfolgreicher Dev-Abnahme in einem eigenen, ausdrücklich freigegebenen Schritt vorbereitet.
