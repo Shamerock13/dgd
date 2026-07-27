@@ -1,0 +1,90 @@
+.admin-list-tools {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 12px 0 14px;
+  padding: 12px;
+  border: 1px solid var(--line, rgba(255,255,255,.12));
+  border-radius: 14px;
+  background: rgba(255,255,255,.025);
+}
+
+.admin-list-search {
+  display: grid;
+  gap: 6px;
+  flex: 1;
+}
+
+.admin-list-search span,
+.admin-list-count {
+  font-size: 12px;
+  color: var(--muted, #9f9a94);
+}
+
+.admin-list-search input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line, rgba(255,255,255,.14));
+  border-radius: 10px;
+  background: var(--panel, #181614);
+  color: inherit;
+  font: inherit;
+}
+
+.admin-list-count {
+  white-space: nowrap;
+  padding-bottom: 11px;
+  font-weight: 700;
+}
+
+.admin-list-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 16px;
+}
+
+.admin-list-pagination:empty {
+  display: none;
+}
+
+.admin-list-pagination button {
+  min-width: 38px;
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid var(--line, rgba(255,255,255,.14));
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.admin-list-pagination button.current {
+  background: var(--accent, #d9a96c);
+  color: #17120e;
+  border-color: transparent;
+  font-weight: 800;
+}
+
+.admin-list-pagination button:disabled {
+  opacity: .42;
+  cursor: default;
+}
+
+.admin-row[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 700px) {
+  .admin-list-tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-list-count {
+    padding-bottom: 0;
+  }
+}
