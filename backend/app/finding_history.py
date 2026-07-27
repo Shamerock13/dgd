@@ -18,7 +18,7 @@ def known_finding_values(db: Session, fragrance_id, fields: set[str]) -> dict[st
         SELECT field_name, proposed_value
         FROM enrichment_findings
         WHERE fragrance_id=:fragrance_id
-          AND field_name = ANY(:fields)
+          AND field_name = ANY(CAST(:fields AS text[]))
           AND status IN ('PENDING','APPROVED','REJECTED','CONFLICT')
         ORDER BY updated_at DESC
         LIMIT 200
