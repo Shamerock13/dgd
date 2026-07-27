@@ -28,6 +28,7 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 ```text
 POST /api/import/quality/preview
 POST /api/import/quality/commit
+GET  /api/import/quality/runs
 ```
 
 Die Qualitätslogik:
@@ -39,9 +40,18 @@ Die Qualitätslogik:
 - liefert pro Zeile Entscheidung, Begründung, Fehler und Kandidaten,
 - führt niemals allein aufgrund eines ähnlichen Namens Datensätze zusammen.
 
-Backend-Prüfpfad und Admin-Anzeige wurden praktisch in Dev bestätigt. Im Admin-Bereich **Datenimport** zeigt **Qualität & Dubletten prüfen** die Entscheidungen `CREATE`, `DUPLICATE`, `REVIEW` und `BLOCK` samt Kandidaten und Fehlern.
+Backend-Prüfpfad, Admin-Anzeige und geschützter Commit wurden praktisch in Dev bestätigt. Konfliktfreie Dateien werden geschrieben; `BLOCK` stoppt den gesamten Import ohne Teilschreibvorgang.
 
-Der nächste Baustein schützt den Schreibvorgang: Das Admin-Center verwendet `/api/import/quality/commit`, prüft die Datei unmittelbar vor dem Schreiben erneut und stoppt den gesamten Import bei `REVIEW` oder `BLOCK`. Sichere Dubletten folgen weiterhin dem Modus `skip` oder `update`. Die praktische Dev-Abnahme dieses Commit-Schutzes steht noch aus.
+Der nächste Baustein ergänzt die bewusste Auflösung von `REVIEW`-Zeilen:
+
+- Duft als neuen Datensatz akzeptieren,
+- einen aktuell angebotenen vorhandenen Kandidaten verwenden,
+- Zeile ausdrücklich ausschließen,
+- bei Duftzwillingen Original und Alternative bewusst zuordnen,
+- jede Entscheidung direkt vor dem Schreiben serverseitig erneut prüfen,
+- erfolgreiche, blockierte und fehlgeschlagene Importversuche dauerhaft als Bericht speichern.
+
+Die praktische Dev-Abnahme dieses Entscheidungs- und Berichtsablaufs steht noch aus.
 
 ## Paket 14 abgeschlossen
 
@@ -63,7 +73,7 @@ Die Dev-Umgebung besitzt den getrennten Container `DGD-Dev-Scanner`. Der Worker 
 
 ## Datenbankstand
 
-Das explizite DGD-Migrationsschema bleibt bei `0011`. Für die bisherigen Bausteine von Paket 15 ist keine Datenbankänderung erforderlich.
+Das explizite DGD-Migrationsschema bleibt bei `0011`. Die neue Tabelle `import_quality_runs` wird idempotent über die registrierten SQLAlchemy-Modelle angelegt und speichert die Berichte der abgesicherten Importversuche.
 
 ## Qualitätssicherung
 
@@ -79,7 +89,7 @@ Neue Pakete gelten erst nach erfolgreichem Test in der separaten Dev-Umgebung al
 
 ## Nächster Schritt
 
-**Den abgesicherten Import-Commit in Dev mit einer konfliktfreien und einer gesperrten Datei testen.**
+**Manuelle REVIEW-Entscheidungen und gespeicherte Importberichte in Dev prüfen.**
 
 ## Dokumentationsregel
 
