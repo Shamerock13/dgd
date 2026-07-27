@@ -6,7 +6,7 @@ Stand: 27. Juli 2026
 
 Importe sollen nicht nur technisch lesbar sein, sondern vor dem Schreiben nachvollziehbar zwischen neuen Datensätzen, sicheren Dubletten, Prüfhinweisen und blockierenden Fehlern unterscheiden.
 
-## Neuer Prüfendpunkt
+## Prüfendpunkt
 
 ```text
 POST /api/import/quality/preview
@@ -17,7 +17,7 @@ Multipart-Felder:
 - `file`: CSV oder XLSX
 - `import_type`: `fragrances` oder `twins`
 
-Der bestehende Import bleibt zunächst unverändert. Der neue Endpunkt ist ein reiner Prüfpfad und schreibt keine Daten.
+Der Endpunkt ist ein reiner Prüfpfad und schreibt keine Daten. Die praktische Backend-Abnahme in Dev war erfolgreich.
 
 ## Identitätsnormalisierung
 
@@ -40,17 +40,20 @@ Abkürzungen und fehlende Wörter werden bewusst nicht automatisch gleichgesetzt
 
 Ähnliche Treffer werden niemals automatisch zusammengeführt.
 
-## Rückgabe
+## Admin-Integration
 
-Die Vorschau enthält:
+Im Bereich **Datenimport** steht zusätzlich die Schaltfläche **Qualität & Dubletten prüfen** bereit. Sie verwendet dieselbe gewählte Datei und Importart wie der bestehende Import, zeigt aber eine getrennte, nur lesende Qualitätsauswertung.
 
-- Anzahl pro Entscheidung
-- `safe_to_commit`
-- normalisierte Identitäten
-- konkrete Fehler pro Zeile
-- Kandidaten mit Trefferart und Ähnlichkeitswert
-- Grund für die jeweilige Entscheidung
+Angezeigt werden:
+
+- Anzahl für `CREATE`, `DUPLICATE`, `REVIEW` und `BLOCK`
+- Gesamtstatus `safe_to_commit`
+- Entscheidung und Begründung pro Zeile
+- konkrete Fehler
+- gefundene Kandidaten samt Ähnlichkeitswert und Trefferart
+
+Die bestehende Importvorschau und der Commit-Pfad bleiben unverändert. Die neue Ansicht entscheidet noch nicht automatisch, welche Zeilen geschrieben oder zusammengeführt werden.
 
 ## Nächster Schritt
 
-Die neue Qualitätsvorschau wird im Admin-Center sichtbar gemacht. Erst nach praktischer Dev-Abnahme wird entschieden, wie sie den bisherigen Import-Commit absichert.
+Nach praktischer Dev-Abnahme der Admin-Anzeige wird festgelegt, wie bestätigte `REVIEW`-Entscheidungen gespeichert werden und wie der Import-Commit bei ungelösten Konflikten abgesichert wird.
