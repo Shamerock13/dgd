@@ -90,6 +90,7 @@ services:
 
 networks:
   dgd-dev:
+    external: true
     name: dgd-dev
 
 volumes:
