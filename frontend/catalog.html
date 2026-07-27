@@ -4,7 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#11100f" />
-    <title>DGD – Katalog 2.0</title>
+    <title>DGD – Weiterleitung</title>
+    <script>
+      const target = '/' + window.location.search + window.location.hash;
+      window.location.replace(target);
+    </script>
   </head>
-  <body><div id="root"></div><script type="module" src="/src/catalog-main.jsx"></script></body>
+  <body></body>
 </html>
