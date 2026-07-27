@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from html import unescape
 
@@ -17,6 +18,12 @@ FIELD_LIMITS = {
     "url": 2000,
     "note": 80,
 }
+
+
+LIST_PREFIX_RE = re.compile(
+    r"^\s*(?:kopf(?:note|noten)?|top\s*notes?|herz(?:note|noten)?|middle\s*notes?|heart\s*notes?|basis(?:note|noten)?|base\s*notes?|akkorde?|accords?|main\s*accords?)\s*[:\-–]\s*",
+    re.I,
+)
 
 
 def compact_text(value, limit: int, *, sentence_boundary: bool = True) -> str:
@@ -40,19 +47,40 @@ def compact_name(value, field: str) -> str:
     return compact_text(value, FIELD_LIMITS[field], sentence_boundary=False)
 
 
-def compact_list(value, *, max_items: int, item_limit: int = 80) -> list[str]:
+def _list_values(value) -> list[object]:
     if value in (None, ""):
         return []
-    if isinstance(value, str):
-        values = re.split(r"[,;|\n]+", value)
-    elif isinstance(value, (list, tuple, set)):
-        values = value
-    else:
-        values = [value]
+    if isinstance(value, (list, tuple, set)):
+        result: list[object] = []
+        for item in value:
+            result.extend(_list_values(item))
+        return result
+    if not isinstance(value, str):
+        return [value]
+
+    text_value = unescape(value).strip()
+    text_value = LIST_PREFIX_RE.sub("", text_value)
+    if text_value[:1] in "[{" and text_value[-1:] in "]}":
+        try:
+            parsed = json.loads(text_value.replace("'", '"'))
+            if parsed != value:
+                return _list_values(parsed)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            pass
+
+    text_value = re.sub(r"[\[\]{}()]", " ", text_value)
+    text_value = text_value.replace("\u201c", '"').replace("\u201d", '"').replace("\u201e", '"')
+    return re.split(r"[,;|\n]+", text_value)
+
+
+def compact_list(value, *, max_items: int, item_limit: int = 80) -> list[str]:
     result: list[str] = []
     seen: set[str] = set()
-    for item in values:
+    for item in _list_values(value):
         cleaned = compact_text(item, item_limit, sentence_boundary=False)
+        cleaned = LIST_PREFIX_RE.sub("", cleaned)
+        cleaned = cleaned.strip("{}[]() \t\r\n\"'`").strip(" ,;:|-")
+        cleaned = re.sub(r"^(?:and|und)\s+", "", cleaned, flags=re.I)
         fingerprint = cleaned.casefold()
         if cleaned and fingerprint not in seen:
             seen.add(fingerprint)

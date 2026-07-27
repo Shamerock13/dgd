@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {AlertTriangle, Check, ExternalLink, Pencil, Plus, RefreshCw, Save, ShieldCheck, Sparkles, Trash2, X} from 'lucide-react';
+import {AlertTriangle, Check, Eraser, ExternalLink, Pencil, Plus, RefreshCw, Save, ShieldCheck, Sparkles, Trash2, X} from 'lucide-react';
 import './verification.css';
 
 const emptySource={name:'',object_type:'FRAGRANCE',object_id:'',source_type:'OFFICIAL',file_or_url:'',source_date:'',usage_status:'OPEN',trust_status:'OPEN',note:''};
@@ -19,6 +19,8 @@ export default function VerificationAdmin({api,flash,brands=[],items=[],twins=[]
   const [researchingTask,setResearchingTask]=useState(null);
   const [brandId,setBrandId]=useState('');
   const [researchingBrand,setResearchingBrand]=useState(false);
+  const [cleanup,setCleanup]=useState(null);
+  const [cleaning,setCleaning]=useState(false);
   const load=async()=>{
     setLoading(true);
     try{
@@ -58,6 +60,16 @@ export default function VerificationAdmin({api,flash,brands=[],items=[],twins=[]
       await load();
     }catch(e){flash(e.message)}finally{setResearchingBrand(false)}
   };
+  const runCleanup=async apply=>{
+    if(apply&&!confirm(`${cleanup?.total_changes||0} Bereinigungen jetzt dauerhaft anwenden?`))return;
+    setCleaning(true);
+    try{
+      const result=await api(`/api/enrichment/cleanup-existing-values?dry_run=${apply?'false':'true'}`,{method:'POST'});
+      setCleanup(result);
+      flash(apply?`${result.total_changes||0} Bereinigungen angewendet.`:`${result.total_changes||0} mögliche Bereinigungen gefunden.`);
+      if(apply)await load();
+    }catch(e){flash(e.message)}finally{setCleaning(false)}
+  };
   const decideFinding=async(id,action)=>{try{await api(`/api/enrichment/findings/${id}/${action}`,{method:'POST',body:JSON.stringify({note:null})});flash(action==='approve'?'Gefundenen Wert übernommen.':action==='conflict'?'Als Konflikt markiert.':'Fund abgelehnt.');await load()}catch(e){flash(e.message)}};
   const save=async e=>{e.preventDefault();const payload={...form,object_id:form.object_id||null,source_type:form.source_type||null,file_or_url:form.file_or_url||null,source_date:form.source_date?`${form.source_date}T00:00:00`:null,note:form.note||null};try{await api(editing?`/api/sources/${editing.id}`:'/api/sources',{method:editing?'PUT':'POST',body:JSON.stringify(payload)});flash(editing?'Quelle aktualisiert.':'Quelle angelegt.');setEditing(null);setForm(emptySource);await load()}catch(e){flash(e.message)}};
   const remove=async source=>{if(!confirm(`Quelle „${source.name}“ wirklich löschen?`))return;try{await api(`/api/sources/${source.id}`,{method:'DELETE'});flash('Quelle gelöscht.');await load()}catch(e){flash(e.message)}};
@@ -65,6 +77,8 @@ export default function VerificationAdmin({api,flash,brands=[],items=[],twins=[]
     <section className="verification-summary"><article><strong>{summary?.sources??'–'}</strong><span>Quellen</span></article><article className="trusted"><strong>{summary?.trusted??'–'}</strong><span>Vertrauenswürdig</span></article><article><strong>{findings.length}</strong><span>Datenfunde in Prüfung</span></article><article><strong>{tasks.length}</strong><span>Düfte mit Datenlücken</span></article></section>
 
     {!!findings.length&&<section className="verification-review-block"><div className="verification-section-head"><div><span className="kicker">Feldvergleich</span><h3>Gefundene Ergänzungen prüfen</h3><p>Bestehender Wert, gefundener Wert und Quelle direkt nebeneinander.</p></div><button type="button" onClick={load} disabled={loading}><RefreshCw size={15}/> Aktualisieren</button></div><div className="verification-finding-list">{findings.map(row=><article key={row.id}><header><div><small>{row.brand_name} · {row.fragrance_name}</small><h4>{fieldLabels[row.field_name]||row.field_name}</h4></div><strong>{Math.round(row.confidence||0)}%</strong></header><div className="finding-compare"><div><span>Aktuell</span><b>{displayValue(row.current_value)}</b></div><div><span>Gefunden</span><b>{displayValue(row.proposed_value)}</b></div></div><p>{row.source_excerpt||'Kein Textausschnitt gespeichert.'}</p><a href={row.source_url} target="_blank" rel="noreferrer">{row.source_name} öffnen <ExternalLink size={13}/></a><footer><button type="button" className="approve" onClick={()=>decideFinding(row.id,'approve')}><Check size={15}/> Übernehmen</button><button type="button" onClick={()=>decideFinding(row.id,'conflict')}><AlertTriangle size={15}/> Konflikt</button><button type="button" className="danger" onClick={()=>decideFinding(row.id,'reject')}><Trash2 size={15}/> Ablehnen</button></footer></article>)}</div></section>}
+
+    <section className="verification-review-block"><div className="verification-section-head"><div><span className="kicker">Datenpflege</span><h3>Duftnoten und Akkorde bereinigen</h3><p>Entfernt Klammern, Anführungszeichen, JSON-Reste, Feldbezeichnungen und doppelte Einträge. Der Prüflauf verändert noch nichts.</p></div><div><button type="button" onClick={()=>runCleanup(false)} disabled={cleaning}><Eraser size={15}/>{cleaning?'Prüfung läuft …':'Prüflauf starten'}</button>{cleanup?.total_changes>0&&<button type="button" className="approve" onClick={()=>runCleanup(true)} disabled={cleaning}><Check size={15}/> {cleanup.total_changes} Änderungen anwenden</button>}</div></div>{cleanup&&<div className="verification-gap-list"><article><div><b>{cleanup.total_changes||0} Änderungen gefunden</b><span>{cleanup.fragrances?.checked||0} Düfte, {cleanup.findings?.checked||0} Recherchefunde und {cleanup.notes?.checked||0} Duftnoten geprüft</span></div><strong>{cleanup.applied?'Angewendet':'Nur Vorschau'}</strong></article>{(cleanup.sample_changes||[]).slice(0,12).map((change,index)=><article key={`${change.storage}-${change.id}-${change.field}-${index}`}><div><b>{change.fragrance||change.storage} · {fieldLabels[change.field]||change.field}</b><span>{displayValue(change.before)} → {displayValue(change.after)}</span></div><strong>{change.action==='merge'?'Zusammenführen':'Bereinigen'}</strong></article>)}</div>}</section>
 
     <section className="verification-review-block"><div className="verification-section-head"><div><span className="kicker">Recherche-Regeln</span><h3>Quellenprofile</h3><p>Diese Profile steuern, welche Webquellen bevorzugt, eingeschränkt oder gar nicht automatisiert verwendet werden.</p></div><div><button type="button" onClick={installProfiles}>Empfohlene Quellen hinzufügen</button><button type="button" onClick={load} disabled={loading}><RefreshCw size={15}/> Aktualisieren</button></div></div><div className="verification-profile-list">{profiles.map(profile=><article key={profile.id} className={profile.blocked?'blocked':''}><div><b>{profile.name}</b><span>{profile.domain}</span></div><strong>{profile.blocked?'Gesperrt':`Priorität ${profile.priority}`}</strong><small>{profile.category}</small><p>{profile.note}</p></article>)}</div></section>
 
