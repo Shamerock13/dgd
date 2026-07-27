@@ -31,14 +31,26 @@ Bereits umgesetzt:
 - serverseitige Filter für Marke, Zielgruppe, Konzentration, Duftnote, Jahr, Preis und Haltbarkeit
 - definierte Sortierungen und begrenzte Seitengröße
 - Facetten für Konzentrationen und Jahresbereich
+- eigener Dev-Katalog unter `/catalog.html`
+- echte Pagination mit 24 Ergebnissen pro Seite
+- URL-basierte Filter, Sortierung und Seitennummer
+- verlinkbare Duftdetails und Browser-Historie
+- verzögerte Suche und Schutz gegen verspätete Antworten
 
 Noch offen:
 
-- Frontend an die serverseitige Suche und Pagination anbinden
-- Filterzustand in der URL speichern
-- dauerhaft verlinkbare Detailseiten
-- zuverlässige Browser-Zurück-Navigation
+- praktische Dev-Abnahme des neuen Katalogs
+- Entscheidung über Ablösung oder Integration der bisherigen öffentlichen Ansicht
+- dauerhaft verlinkbare Marken- und Parfümeuransichten
 - stabilere Admin-Suche
+
+Für später vorgemerkt:
+
+- Tippfehler-Toleranz mit `pg_trgm`
+- Autovervollständigung und Suchvorschläge
+- Filterfacetten mit Trefferzahlen
+- Mehrfachauswahl von Duftnoten mit UND-/ODER-Logik
+- lesbare Slugs zusätzlich zu UUID-Links
 
 ## Danach vorgesehen
 
