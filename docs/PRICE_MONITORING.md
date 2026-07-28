@@ -14,6 +14,19 @@ Für jeden Duft sollen aktuelle Händlerangebote getrennt von den redaktionellen
 
 Ein Angebot ist durch Händler und Produkt-URL eindeutig. Jede neue Prüfung aktualisiert den aktuellen Angebotszustand und schreibt zusätzlich eine Beobachtung.
 
+## Standardhändler
+
+Beim Backend-Start werden idempotent sechs aktive Händler angelegt, sofern sie noch nicht existieren:
+
+- Douglas
+- Flaconi
+- Notino
+- Parfumdreams
+- easycosmetic
+- Sephora
+
+Bestehende Händler werden dabei weder überschrieben noch doppelt angelegt.
+
 ## Endpunkte
 
 ```text
@@ -30,6 +43,17 @@ Der Duft-Endpunkt liefert:
 - Preis pro 100 ml, sofern eine Größe bekannt ist
 - historischen niedrigsten Gesamtpreis
 - Preisverlauf für 1 bis 1095 Tage
+
+## Admin-Oberfläche
+
+Im Admin-Center steht der Bereich **Preise & Händler** bereit. Dort können:
+
+- die automatisch angelegten Händler geprüft werden,
+- weitere Händler ergänzt werden,
+- manuelle Testangebote einem Duft zugeordnet werden,
+- Größe, Produktart, Preis, Versand und Lieferbarkeit gespeichert werden.
+
+Jede manuelle Speicherung erzeugt ebenfalls eine unveränderliche Preisbeobachtung.
 
 ## Produktarten
 
@@ -50,8 +74,8 @@ Damit werden Flakons, Tester, Geschenksets, Proben und Nachfüllungen nicht vers
 - Dieselbe Händler-URL darf nicht mehreren Düften zugeordnet werden.
 - Preise und Versandkosten werden getrennt gespeichert; verglichen wird der Gesamtpreis.
 - Ausverkaufte Angebote bleiben für Verlauf und Nachvollziehbarkeit erhalten, zählen aber nicht als günstigstes aktuelles Angebot.
-- Die neue Preislogik greift nicht auf externe Seiten zu. Händleradapter und tägliche Scannerläufe folgen getrennt.
+- Die neue Preislogik greift noch nicht automatisch auf externe Seiten zu. Händleradapter und tägliche Scannerläufe folgen getrennt.
 
 ## Nächster Baustein
 
-Admin-Oberfläche für Händler und manuelle Testangebote, danach Händleradapter und tägliche Preisprüfung über den getrennten Scanner-Worker.
+Erste Händleradapter und tägliche Preisprüfung über den getrennten Scanner-Worker. Danach Anzeige des günstigsten Angebots und des Preisverlaufs in der Duftdetailansicht.
