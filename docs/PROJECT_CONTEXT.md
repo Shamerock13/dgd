@@ -1,6 +1,6 @@
 # DGD – Projektkontext
 
-Stand: 27. Juli 2026
+Stand: 28. Juli 2026
 
 Wir arbeiten am Repository `Shamerock13/dgd`. Ergänzend gelten `docs/CURRENT_STATUS.md`, `docs/ROADMAP.md` und `docs/DEV_WORKFLOW.md`.
 
@@ -40,41 +40,35 @@ Lokale Medien: `/mnt/user/appdata/dgd-dev-media`
 
 ## Aktueller Funktionsstand
 
-Abgeschlossen sind alle Pakete bis einschließlich:
+Abgeschlossen sind alle Pakete bis einschließlich Paket 14 **Suche, Filter & Navigation 2.0**.
 
-14. **Suche, Filter & Navigation 2.0**
+Paket 15 **Datenvalidierung & Importqualität 2.0** besitzt Qualitätsvorschau, geschützten Commit, manuelle `REVIEW`-Entscheidungen und gespeicherte Importberichte. Diese Abläufe wurden praktisch in Dev bestätigt. Der Master-Import muss noch mit denselben Regeln abgesichert werden.
 
-Paket 15 **Datenvalidierung & Importqualität 2.0** ist in Arbeit. Die Qualitätsprüfung und der geschützte Commit wurden in Dev bestätigt. Relevante Endpunkte:
+Paket 18 **Preisbeobachtung & Händlervergleich 1.0** wurde auf Nutzerpriorität vorgezogen. Der erste Backend-Baustein trennt Händler, aktuelle Angebote und unveränderliche Preisbeobachtungen. Angebote speichern Warenpreis, Versand, Größe, Produktart, Verfügbarkeit und Prüfzeitpunkt. Der Preis-Endpunkt berechnet günstigstes verfügbares Angebot, Preis pro 100 ml, historischen Bestpreis und Verlauf.
 
-```text
-POST /api/import/quality/preview
-POST /api/import/quality/commit
-GET  /api/import/quality/runs
-```
+Die Preislogik führt noch keine externen Abrufe aus. Händleradapter und tägliche Preisprüfungen werden später an den getrennten Scanner-Worker angebunden.
 
-Die Qualitätslogik verwendet die vorhandenen CSV-/XLSX-Parser und Zeilenvalidatoren, ergänzt jedoch eine konservative Identitätsnormalisierung und Kandidatensuche. Exakte sowie sicher normalisierte Treffer werden als Dubletten erkannt. Ähnliche Treffer bleiben zunächst `REVIEW` und werden niemals automatisch zusammengeführt.
-
-Der aktuelle Baustein erlaubt für `REVIEW`-Zeilen bewusste Entscheidungen: neuen Duft anlegen, einen angebotenen vorhandenen Kandidaten verwenden oder die Zeile ausschließen. Bei Duftzwillingen werden Original und Alternative ausdrücklich gewählt. Der Server analysiert dieselbe Datei direkt vor dem Schreiben erneut und akzeptiert ausschließlich Kandidaten, die weiterhin zur aktuellen Prüfung gehören.
-
-Importversuche und Entscheidungen werden in `import_quality_runs` als JSON-Bericht gespeichert. Die Tabelle wird idempotent über die registrierten SQLAlchemy-Modelle angelegt.
-
-Der öffentliche Katalog unterstützt serverseitige Suche, Filter, Pagination und dauerhaft verlinkbare Duft-, Marken- und Parfümeuransichten. Die Admin-Listen für Düfte und Marken besitzen Suche und Pagination. Paket 14 wurde vollständig in Dev bestätigt.
+Der öffentliche Katalog unterstützt serverseitige Suche, Filter, Pagination und dauerhaft verlinkbare Duft-, Marken- und Parfümeuransichten. Die Admin-Listen für Düfte und Marken besitzen Suche und Pagination.
 
 Der Scanner-Worker läuft getrennt von API und Frontend. Er prüft ausschließlich aktive und fällige Quellen und veröffentlicht keine Treffer automatisch.
 
 ## Wichtige Endpunkte
 
 ```text
-GET /api/catalog/fragrances
+GET  /api/catalog/fragrances
 POST /api/import/quality/preview
 POST /api/import/quality/commit
-GET /api/import/quality/runs
-GET /api/research/sources
+GET  /api/import/quality/runs
+GET  /api/prices/retailers
+POST /api/prices/retailers
+POST /api/prices/offers/check
+GET  /api/prices/fragrances/{fragrance_id}
+GET  /api/research/sources
 POST /api/research/sources/{source_id}/scan
 POST /api/research/sources/scan-active
-GET /api/research/scan-runs
-GET /api/research/scanner/status
-PUT /api/research/scanner/status
+GET  /api/research/scan-runs
+GET  /api/research/scanner/status
+PUT  /api/research/scanner/status
 ```
 
 ## Recherche- und Prüfprinzipien
@@ -83,11 +77,12 @@ PUT /api/research/scanner/status
 - private, lokale, reservierte und Link-Local-Ziele bleiben blockiert
 - keine automatische Veröffentlichung
 - ähnliche Importkandidaten niemals automatisch zusammenführen
-- manuelle Importentscheidungen nur gegen die unmittelbar neu berechneten Kandidaten akzeptieren
+- manuelle Importentscheidungen nur gegen unmittelbar neu berechnete Kandidaten akzeptieren
 - blockierte Zeilen können nicht manuell freigegeben werden
-- Feldvorschläge und Produkte landen zunächst in Prüf- beziehungsweise Import-Warteschlangen
-- Gemini-Twins benötigen eine konkrete brauchbare Grounding-Quelle
-- Duftnoten und Akkorde werden zentral normalisiert
+- Preis und Versand getrennt speichern; Gesamtpreis vergleichen
+- ausverkaufte Angebote nicht als günstigsten aktuellen Preis anzeigen
+- Händlerseiten später nur über kontrollierte Adapter abrufen
+- Duftnoten und Akkorde zentral normalisieren
 
 ## Arbeitsweise
 
@@ -112,6 +107,6 @@ docker restart DGD-Dev-Backend DGD-Dev-Frontend
 
 ## Nächster Schritt
 
-**Manuelle REVIEW-Entscheidungen und gespeicherte Importberichte in Dev testen.**
+**Preis-Backend in Dev mit Händler und mehreren Preisbeobachtungen testen; anschließend Admin-Oberfläche ergänzen.**
 
 Produktion wird erst nach erfolgreicher Dev-Abnahme in einem eigenen, ausdrücklich freizugebenden Schritt vorbereitet.
