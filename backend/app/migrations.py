@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Iterable
 
 from sqlalchemy import Engine, text
-
 
 logger = logging.getLogger("dgd.migrations")
 
@@ -22,11 +20,8 @@ MIGRATIONS: tuple[Migration, ...] = (
         version="0001",
         description="Bestehende DGD-Tabellen auf das Anwendungsschema 0.8 bringen",
         statements=(
-            # Marken
             "ALTER TABLE brands ADD COLUMN IF NOT EXISTS country VARCHAR(100)",
             "ALTER TABLE brands ADD COLUMN IF NOT EXISTS description TEXT",
-
-            # Düfte: alle aktuell von SQLAlchemy erwarteten Felder ergänzen.
             "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS year INTEGER",
             "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS gender VARCHAR(40)",
             "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS concentration VARCHAR(80)",
@@ -43,29 +38,21 @@ MIGRATIONS: tuple[Migration, ...] = (
             "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS sweetness DOUBLE PRECISION",
             "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS freshness DOUBLE PRECISION",
             "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS created_at TIMESTAMP",
-
-            # Sichere Standardwerte für bereits vorhandene Datensätze.
             "UPDATE fragrances SET gender = 'Unisex' WHERE gender IS NULL OR btrim(gender) = ''",
             "ALTER TABLE fragrances ALTER COLUMN gender SET DEFAULT 'Unisex'",
             "ALTER TABLE fragrances ALTER COLUMN gender SET NOT NULL",
             "UPDATE fragrances SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL",
             "ALTER TABLE fragrances ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP",
             "ALTER TABLE fragrances ALTER COLUMN created_at SET NOT NULL",
-
-            # Duftzwillinge
             "ALTER TABLE twin_matches ADD COLUMN IF NOT EXISTS differences TEXT",
             "ALTER TABLE twin_matches ADD COLUMN IF NOT EXISTS commonalities TEXT",
             "ALTER TABLE twin_matches ADD COLUMN IF NOT EXISTS source_note TEXT",
-
-            # Duftnoten-Tabellen können aus 0.6/0.7 bereits vorhanden sein.
             "ALTER TABLE notes ADD COLUMN IF NOT EXISTS category VARCHAR(80)",
             "ALTER TABLE notes ADD COLUMN IF NOT EXISTS description TEXT",
             "ALTER TABLE fragrance_notes ADD COLUMN IF NOT EXISTS position INTEGER",
             "UPDATE fragrance_notes SET position = 0 WHERE position IS NULL",
             "ALTER TABLE fragrance_notes ALTER COLUMN position SET DEFAULT 0",
             "ALTER TABLE fragrance_notes ALTER COLUMN position SET NOT NULL",
-
-            # Indizes – idempotent und ohne Verlust vorhandener Daten.
             "CREATE INDEX IF NOT EXISTS ix_fragrances_name ON fragrances (name)",
             "CREATE INDEX IF NOT EXISTS ix_fragrances_brand_id ON fragrances (brand_id)",
             "CREATE INDEX IF NOT EXISTS ix_twin_matches_original_id ON twin_matches (original_id)",
@@ -77,42 +64,32 @@ MIGRATIONS: tuple[Migration, ...] = (
             "CREATE INDEX IF NOT EXISTS ix_fragrance_notes_pyramid ON fragrance_notes (pyramid)",
         ),
     ),
-
-Migration(
-    version="0002",
-    description="Legacy-Spalten dgd_id für neue Datensätze optional machen",
-    statements=(
-        """
-        DO $$
-        DECLARE
-            current_table TEXT;
-        BEGIN
-            FOREACH current_table IN ARRAY ARRAY[
-                'brands',
-                'fragrances',
-                'notes',
-                'twin_matches',
-                'fragrance_notes'
-            ]
-            LOOP
-                IF EXISTS (
-                    SELECT 1
-                    FROM information_schema.columns AS cols
-                    WHERE cols.table_schema = 'public'
-                      AND cols.table_name = current_table
-                      AND cols.column_name = 'dgd_id'
-                ) THEN
-                    EXECUTE format(
-                        'ALTER TABLE %I ALTER COLUMN dgd_id DROP NOT NULL',
-                        current_table
-                    );
-                END IF;
-            END LOOP;
-        END
-        $$;
-        """,
+    Migration(
+        version="0002",
+        description="Legacy-Spalten dgd_id für neue Datensätze optional machen",
+        statements=(
+            """
+            DO $$
+            DECLARE current_table TEXT;
+            BEGIN
+                FOREACH current_table IN ARRAY ARRAY[
+                    'brands', 'fragrances', 'notes', 'twin_matches', 'fragrance_notes'
+                ]
+                LOOP
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns AS cols
+                        WHERE cols.table_schema = 'public'
+                          AND cols.table_name = current_table
+                          AND cols.column_name = 'dgd_id'
+                    ) THEN
+                        EXECUTE format('ALTER TABLE %I ALTER COLUMN dgd_id DROP NOT NULL', current_table);
+                    END IF;
+                END LOOP;
+            END
+            $$;
+            """,
+        ),
     ),
-),
     Migration(
         version="0003",
         description="Master-Datenbank v2 direkt in DGD importierbar machen",
@@ -126,31 +103,17 @@ Migration(
             "CREATE UNIQUE INDEX IF NOT EXISTS uq_brands_dgd_id ON brands (dgd_id) WHERE dgd_id IS NOT NULL",
             "CREATE UNIQUE INDEX IF NOT EXISTS uq_fragrances_dgd_id ON fragrances (dgd_id) WHERE dgd_id IS NOT NULL",
             "CREATE UNIQUE INDEX IF NOT EXISTS uq_twin_matches_dgd_id ON twin_matches (dgd_id) WHERE dgd_id IS NOT NULL",
-            """
-            CREATE TABLE IF NOT EXISTS master_sources (
-                id VARCHAR(32) PRIMARY KEY,
-                name VARCHAR(500) NOT NULL,
-                object_type VARCHAR(160),
-                object_id VARCHAR(255),
-                source_type VARCHAR(255),
-                file_or_url TEXT,
-                source_date TIMESTAMP,
-                usage_status VARCHAR(255),
-                trust_status VARCHAR(160),
-                note TEXT,
-                master_data JSONB
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS master_import_runs (
-                id UUID PRIMARY KEY,
-                filename VARCHAR(500) NOT NULL,
-                file_version VARCHAR(50),
-                status VARCHAR(30) NOT NULL,
-                report JSONB,
-                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )
-            """,
+            """CREATE TABLE IF NOT EXISTS master_sources (
+                id VARCHAR(32) PRIMARY KEY, name VARCHAR(500) NOT NULL,
+                object_type VARCHAR(160), object_id VARCHAR(255), source_type VARCHAR(255),
+                file_or_url TEXT, source_date TIMESTAMP, usage_status VARCHAR(255),
+                trust_status VARCHAR(160), note TEXT, master_data JSONB
+            )""",
+            """CREATE TABLE IF NOT EXISTS master_import_runs (
+                id UUID PRIMARY KEY, filename VARCHAR(500) NOT NULL,
+                file_version VARCHAR(50), status VARCHAR(30) NOT NULL,
+                report JSONB, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )""",
         ),
     ),
     Migration(
@@ -167,7 +130,6 @@ Migration(
         version="0005",
         description="Legacy-Pflichtfelder für Master-Import vollständig absichern",
         statements=(
-            # Felder bei komplett neuen Datenbanken zuerst anlegen.
             "ALTER TABLE brands ADD COLUMN IF NOT EXISTS verification_status VARCHAR(40)",
             "ALTER TABLE brands ADD COLUMN IF NOT EXISTS created_at TIMESTAMP",
             "ALTER TABLE brands ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
@@ -176,17 +138,12 @@ Migration(
             "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS verification_status VARCHAR(40)",
             "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS created_at TIMESTAMP",
             "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
-
-            # Marken aus dem ursprünglichen DGD-Core-Schema.
             "UPDATE brands SET verification_status = 'OPEN' WHERE verification_status IS NULL",
             "ALTER TABLE brands ALTER COLUMN verification_status SET DEFAULT 'OPEN'",
             "UPDATE brands SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL",
             "ALTER TABLE brands ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP",
             "UPDATE brands SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL",
             "ALTER TABLE brands ALTER COLUMN updated_at SET DEFAULT CURRENT_TIMESTAMP",
-
-            # Düfte besitzen im ursprünglichen Schema weitere NOT-NULL-Felder,
-            # die der Master-Importer nicht explizit schreiben muss.
             "UPDATE fragrances SET status = 'UNKNOWN' WHERE status IS NULL",
             "ALTER TABLE fragrances ALTER COLUMN status SET DEFAULT 'UNKNOWN'",
             "UPDATE fragrances SET heritage = FALSE WHERE heritage IS NULL",
@@ -203,21 +160,12 @@ Migration(
         version="0006",
         description="Parfümeure und Importhistorie für Master Database v2 vervollständigen",
         statements=(
-            """
-            CREATE TABLE IF NOT EXISTS master_perfumers (
-                id VARCHAR(32) PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                birth_year INTEGER,
-                nationality VARCHAR(160),
-                profile TEXT,
-                style TEXT,
-                notable_works TEXT,
-                article_status VARCHAR(160),
-                primary_source TEXT,
-                note TEXT,
-                master_data JSONB
-            )
-            """,
+            """CREATE TABLE IF NOT EXISTS master_perfumers (
+                id VARCHAR(32) PRIMARY KEY, name VARCHAR(255) NOT NULL,
+                birth_year INTEGER, nationality VARCHAR(160), profile TEXT, style TEXT,
+                notable_works TEXT, article_status VARCHAR(160), primary_source TEXT,
+                note TEXT, master_data JSONB
+            )""",
             "CREATE INDEX IF NOT EXISTS ix_master_perfumers_name ON master_perfumers (name)",
             "CREATE INDEX IF NOT EXISTS ix_master_import_runs_created_at ON master_import_runs (created_at DESC)",
         ),
@@ -262,7 +210,6 @@ Migration(
             "CREATE INDEX IF NOT EXISTS ix_master_sources_usage_status ON master_sources (usage_status)",
         ),
     ),
-
     Migration(
         version="0010",
         description="Parfümeurprofile und Artikelstatus absichern",
@@ -271,7 +218,6 @@ Migration(
             "CREATE INDEX IF NOT EXISTS ix_master_perfumers_article_status ON master_perfumers (article_status)",
         ),
     ),
-
     Migration(
         version="0011",
         description="Recherche- und Import-Warteschlange anlegen",
@@ -291,7 +237,37 @@ Migration(
             "CREATE INDEX IF NOT EXISTS ix_research_candidates_created_at ON research_candidates(created_at DESC)",
         ),
     ),
-
+    Migration(
+        version="0012",
+        description="Vergleichbare Duft-Performance und persönliche Bewertungen ergänzen",
+        statements=(
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS longevity_min_hours DOUBLE PRECISION",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS longevity_max_hours DOUBLE PRECISION",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS longevity_score DOUBLE PRECISION",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS sillage DOUBLE PRECISION",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS performance_score DOUBLE PRECISION",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS projection_first_hour DOUBLE PRECISION",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS projection_after_three_hours DOUBLE PRECISION",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS drydown_strength DOUBLE PRECISION",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS performance_source_count INTEGER",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS performance_confidence DOUBLE PRECISION",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS performance_disagreement DOUBLE PRECISION",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS performance_status VARCHAR(30)",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS performance_researched_at TIMESTAMP",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS performance_version VARCHAR(120)",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS performance_production_period VARCHAR(120)",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS personal_longevity_hours DOUBLE PRECISION",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS personal_projection DOUBLE PRECISION",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS personal_sillage DOUBLE PRECISION",
+            "ALTER TABLE fragrances ADD COLUMN IF NOT EXISTS personal_performance_score DOUBLE PRECISION",
+            "UPDATE fragrances SET performance_status = 'OPEN' WHERE performance_status IS NULL OR btrim(performance_status) = ''",
+            "ALTER TABLE fragrances ALTER COLUMN performance_status SET DEFAULT 'OPEN'",
+            "ALTER TABLE fragrances ALTER COLUMN performance_status SET NOT NULL",
+            "CREATE INDEX IF NOT EXISTS ix_fragrances_performance_status ON fragrances (performance_status)",
+            "CREATE INDEX IF NOT EXISTS ix_fragrances_performance_score ON fragrances (performance_score)",
+            "CREATE INDEX IF NOT EXISTS ix_fragrances_longevity_hours ON fragrances (longevity_min_hours, longevity_max_hours)",
+        ),
+    ),
 )
 
 
@@ -310,12 +286,10 @@ def run_migrations(engine: Engine) -> list[str]:
     applied_now: list[str] = []
 
     with engine.begin() as connection:
-        # Prevent two app instances from migrating the same database simultaneously.
         connection.execute(
             text("SELECT pg_advisory_xact_lock(hashtext('dgd-schema-migrations'))")
         )
         _ensure_migration_table(connection)
-
         applied = set(
             connection.execute(
                 text("SELECT version FROM dgd_schema_migrations")
@@ -344,10 +318,7 @@ def run_migrations(engine: Engine) -> list[str]:
                     INSERT INTO dgd_schema_migrations (version, description)
                     VALUES (:version, :description)
                 """),
-                {
-                    "version": migration.version,
-                    "description": migration.description,
-                },
+                {"version": migration.version, "description": migration.description},
             )
             applied_now.append(migration.version)
 
