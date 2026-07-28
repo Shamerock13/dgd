@@ -1,6 +1,6 @@
 # DGD 2.0 – Roadmap
 
-Stand: 27. Juli 2026
+Stand: 28. Juli 2026
 
 Diese Roadmap zeigt den aktuellen Entwicklungsstand. Maßgeblich für den tatsächlich auf `main` vorhandenen Funktionsstand bleibt zusätzlich `docs/CURRENT_STATUS.md`.
 
@@ -25,36 +25,46 @@ Diese Roadmap zeigt den aktuellen Entwicklungsstand. Maßgeblich für den tatsä
 
 15. 🚧 Datenvalidierung & Importqualität 2.0
 
-Bereits praktisch in Dev bestätigt:
+Praktisch in Dev bestätigt:
 
-- Qualitätsvorschau `POST /api/import/quality/preview`
-- konservative Normalisierung von Marken- und Duftnamen
-- sichere Erkennung exakter und normalisierter Dubletten
-- ähnliche Treffer nur als manuelle Prüfhinweise
+- Qualitätsvorschau und konservative Dublettenerkennung
 - Entscheidungen `CREATE`, `DUPLICATE`, `REVIEW` und `BLOCK`
 - Qualitätsanzeige im Admin-Center
-- geschützter Commit über `POST /api/import/quality/commit`
-- vollständiger Importstopp bei ungelösten oder blockierten Zeilen
-- kein Teilschreibvorgang beim Abbruch
-
-Aktueller Baustein, Dev-Abnahme offen:
-
+- geschützter Commit ohne Teilschreibvorgang
 - bewusste Auflösung von `REVIEW`-Zeilen
 - neuer Duft, vorhandenen Kandidaten verwenden oder Zeile ausschließen
-- bewusste Original-/Alternativzuordnung bei Duftzwillingen
-- erneute serverseitige Prüfung aller Entscheidungen
-- dauerhafte Importberichte über `GET /api/import/quality/runs`
+- gespeicherte Importberichte
+
+Noch offen:
+
+- Master-Import mit denselben Regeln absichern
+- Paket 15 vollständig abschließen
+
+18. 🚧 Preisbeobachtung & Händlervergleich 1.0
+
+Erster Backend-Baustein:
+
+- Händlerstammdaten
+- aktuelle Angebote pro Duft, Händler und Produkt-URL
+- getrennte Speicherung von Warenpreis und Versand
+- Größen und Produktarten wie Flakon, Tester, Set, Probe und Refill
+- unveränderliche Preisbeobachtungen für den Verlauf
+- günstigster verfügbarer Gesamtpreis
+- Preis pro 100 ml
+- historischer Bestpreis und Verlauf für bis zu 1095 Tage
 
 Danach:
 
-- Master-Import mit denselben Regeln absichern
-- Paket 15 vollständig dokumentieren und abschließen
+- Admin-Oberfläche für Händler und Testangebote
+- Händleradapter
+- tägliche automatische Preisprüfung im Scanner-Worker
+- Preisbox und Verlauf in der Duftdetailansicht
+- Preisalarm
 
 ## Danach vorgesehen
 
 16. ⬜ Admin-Bereich 2.0
 17. ⬜ Vergleich & Bewertung 2.0
-18. ⬜ Preisbeobachtung & Händlervergleich 1.0
 19. ⬜ Spätere Benutzerfunktionen
 
 ## Für später vorgemerkt
