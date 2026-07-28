@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import json
 import re
 from html import unescape
 from html.parser import HTMLParser
-from urllib.parse import quote_plus, urljoin, urlparse
+from urllib.parse import parse_qs, quote_plus, unquote, urljoin, urlparse
 
 import httpx
 from sqlalchemy import select
@@ -20,6 +21,13 @@ SEARCH_URLS = {
     "parfumdreams.de": "https://www.parfumdreams.de/Suche?query={query}",
     "easycosmetic.de": "https://www.easycosmetic.de/search.aspx?q={query}",
     "sephora.de": "https://www.sephora.de/search?q={query}",
+}
+
+REQUEST_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    "Accept-Language": "de-DE,de;q=0.9,en;q=0.5",
+    "Accept": "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
 }
 
 
@@ -61,13 +69,16 @@ def _score(title: str, brand: str, fragrance: str) -> int:
     score = sum(18 for token in brand_tokens if token in haystack)
     score += sum(14 for token in fragrance_tokens if token in haystack)
     normalized = " ".join(_tokens(title))
-    if " ".join(brand_tokens) in normalized:
+    if brand_tokens and " ".join(brand_tokens) in normalized:
         score += 20
-    if " ".join(fragrance_tokens) in normalized:
+    if fragrance_tokens and " ".join(fragrance_tokens) in normalized:
         score += 25
-    for penalty in ("set", "geschenkset", "sample", "probe", "refill", "duschgel", "deodorant", "bodylotion"):
+    for penalty in (
+        "set", "geschenkset", "sample", "probe", "refill", "nachfüllung",
+        "duschgel", "deodorant", "bodylotion", "aftershave", "rasiergel",
+    ):
         if penalty in haystack:
-            score -= 8
+            score -= 10
     return max(0, min(score, 100))
 
 
@@ -75,30 +86,72 @@ def _retailer_host(retailer: Retailer) -> str:
     return (urlparse(retailer.base_url or "").hostname or "").casefold().removeprefix("www.")
 
 
+def _normalize_candidate_url(raw_url: str, base_url: str, expected_host: str) -> str | None:
+    raw_url = unescape(raw_url).replace("\\/", "/").strip('"\' ')
+    if raw_url.startswith("//"):
+        raw_url = f"https:{raw_url}"
+    url = urljoin(base_url, raw_url)
+    parsed = urlparse(url)
+    if parsed.hostname and parsed.hostname.endswith("duckduckgo.com"):
+        redirected = parse_qs(parsed.query).get("uddg")
+        if redirected:
+            url = unquote(redirected[0])
+            parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        return None
+    if not _host_matches(parsed.hostname, expected_host):
+        return None
+    return parsed._replace(fragment="").geturl()
+
+
+def _looks_like_product_url(url: str) -> bool:
+    path = urlparse(url).path.casefold()
+    blocked = ("/search", "/suche", "/login", "/cart", "/warenkorb", "/category", "/marken/")
+    if any(part in path for part in blocked):
+        return False
+    useful = ("/p/", "/parfum/", "/produkt", "/product", ".html", ".htm")
+    return any(part in path for part in useful) or len([part for part in path.split("/") if part]) >= 3
+
+
 def _candidate_links(html: str, base_url: str, brand: str, fragrance: str) -> list[dict]:
+    expected_host = (urlparse(base_url).hostname or "").casefold().removeprefix("www.")
     parser = _LinkParser()
-    parser.feed(html[:4_000_000])
-    host = (urlparse(base_url).hostname or "").casefold().removeprefix("www.")
+    parser.feed(html[:5_000_000])
+    raw_entries = list(parser.links)
+
+    # Modern shops often keep product links only in embedded JSON/state data.
+    patterns = (
+        r'"(?:url|href|canonicalUrl|productUrl)"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"',
+        r'https?:\\?/\\?/[^"\'<>\s]+',
+        r'href=["\']([^"\']+)["\']',
+    )
+    for pattern in patterns:
+        for match in re.findall(pattern, html[:5_000_000], re.I):
+            value = match if isinstance(match, str) else match[0]
+            raw_entries.append({"href": value, "text": ""})
+
     seen: set[str] = set()
     rows: list[dict] = []
-    for entry in parser.links:
-        title = entry["text"].strip()
-        if len(title) < 4:
+    for entry in raw_entries:
+        clean_url = _normalize_candidate_url(entry["href"], base_url, expected_host)
+        if not clean_url or clean_url in seen or not _looks_like_product_url(clean_url):
             continue
-        url = urljoin(base_url, entry["href"])
-        parsed = urlparse(url)
-        if parsed.scheme not in {"http", "https"} or not parsed.hostname or not _host_matches(parsed.hostname, host):
-            continue
-        clean_url = parsed._replace(fragment="").geturl()
-        if clean_url in seen:
-            continue
+        url_label = unquote(urlparse(clean_url).path.replace("-", " ").replace("_", " "))
+        title = " ".join(part for part in (entry.get("text", "").strip(), url_label) if part)
         score = _score(title, brand, fragrance)
-        if score < 35:
+        if score < 28:
             continue
         seen.add(clean_url)
-        rows.append({"product_url": clean_url, "title": title[:500], "score": score})
+        rows.append({"product_url": clean_url, "title": (entry.get("text") or url_label)[:500], "score": score})
     rows.sort(key=lambda row: (-row["score"], len(row["title"])))
     return rows[:8]
+
+
+async def _domain_search_candidates(client: httpx.AsyncClient, host: str, brand: str, fragrance: str) -> list[dict]:
+    query = quote_plus(f'site:{host} "{brand}" "{fragrance}" parfum')
+    response = await client.get(f"https://html.duckduckgo.com/html/?q={query}")
+    response.raise_for_status()
+    return _candidate_links(response.text, f"https://{host}/", brand, fragrance)
 
 
 async def discover_products(fragrance: Fragrance, retailer: Retailer) -> dict:
@@ -108,20 +161,24 @@ async def discover_products(fragrance: Fragrance, retailer: Retailer) -> dict:
         return {"retailer_id": str(retailer.id), "retailer": retailer.name, "status": "UNSUPPORTED", "candidates": []}
     query = quote_plus(f"{fragrance.brand.name} {fragrance.name}")
     search_url = template.format(query=query)
-    headers = {
-        "User-Agent": "Mozilla/5.0 (compatible; DGD-PriceDiscovery/1.0; +private-catalog)",
-        "Accept-Language": "de-DE,de;q=0.9,en;q=0.5",
-    }
+    attempts: list[str] = []
     try:
-        async with httpx.AsyncClient(follow_redirects=True, timeout=20, headers=headers) as client:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=25, headers=REQUEST_HEADERS) as client:
             response = await client.get(search_url)
             response.raise_for_status()
+            attempts.append("retailer_search")
             candidates = _candidate_links(response.text, str(response.url), fragrance.brand.name, fragrance.name)
+            if not candidates:
+                attempts.append("domain_fallback")
+                candidates = await _domain_search_candidates(
+                    client, host, fragrance.brand.name, fragrance.name
+                )
         return {
             "retailer_id": str(retailer.id),
             "retailer": retailer.name,
-            "status": "SUCCESS",
+            "status": "SUCCESS" if candidates else "NO_MATCH",
             "search_url": search_url,
+            "strategy": attempts[-1] if attempts else None,
             "candidates": candidates,
         }
     except Exception as exc:
@@ -130,16 +187,13 @@ async def discover_products(fragrance: Fragrance, retailer: Retailer) -> dict:
             "retailer": retailer.name,
             "status": "FAILED",
             "error": f"{type(exc).__name__}: {exc}"[:500],
+            "strategy": attempts[-1] if attempts else None,
             "candidates": [],
         }
 
 
 async def verify_candidate(url: str) -> dict:
-    headers = {
-        "User-Agent": "Mozilla/5.0 (compatible; DGD-PriceDiscovery/1.0; +private-catalog)",
-        "Accept-Language": "de-DE,de;q=0.9,en;q=0.5",
-    }
-    async with httpx.AsyncClient(follow_redirects=True, timeout=20, headers=headers) as client:
+    async with httpx.AsyncClient(follow_redirects=True, timeout=25, headers=REQUEST_HEADERS) as client:
         response = await client.get(url)
         response.raise_for_status()
         parsed = parse_product_json_ld(response.text[:3_000_000])
