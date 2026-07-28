@@ -34,6 +34,8 @@ GET  /api/prices/retailers
 POST /api/prices/retailers
 POST /api/prices/offers/check
 GET  /api/prices/fragrances/{fragrance_id}?days=90
+GET  /api/prices/scanner/status
+POST /api/prices/scanner/run-due?interval_hours=24&limit=100
 ```
 
 Der Duft-Endpunkt liefert:
@@ -55,6 +57,19 @@ Im Admin-Center steht der Bereich **Preise & Händler** bereit. Dort können:
 
 Jede manuelle Speicherung erzeugt ebenfalls eine unveränderliche Preisbeobachtung.
 
+## Automatischer Preis-Scanner
+
+Der getrennte Container `DGD-Dev-Scanner` prüft vorhandene Händlerangebote automatisch erneut. Standardmäßig gilt:
+
+```text
+PRICE_SCANNER_ENABLED=true
+PRICE_SCAN_INTERVAL_HOURS=24
+```
+
+Ein Angebot wird fällig, sobald seine letzte Prüfung mindestens 24 Stunden zurückliegt. Pro Worker-Zyklus werden höchstens 100 fällige Angebote verarbeitet. Fehler eines einzelnen Händlers oder Angebots werden protokolliert und stoppen weder weitere Angebote noch den Worker.
+
+Die erste Adapterstufe liest strukturierte Produktdaten im Format JSON-LD aus. Freigegeben sind derzeit Produktseiten der sechs Standardhändler. Das bedeutet noch keine automatische Produktsuche: Eine konkrete Produkt-URL wird zunächst im Admin-Bereich einem Duft zugeordnet und anschließend täglich selbstständig aktualisiert.
+
 ## Produktarten
 
 Unterstützt werden zunächst:
@@ -70,12 +85,15 @@ Damit werden Flakons, Tester, Geschenksets, Proben und Nachfüllungen nicht vers
 ## Sicherheits- und Qualitätsregeln
 
 - Händler- und Produkt-URLs müssen vollständige HTTP- oder HTTPS-Adressen sein.
+- Automatische Prüfungen akzeptieren ausschließlich öffentliche Netzwerkziele.
+- Die Produkt-Domain muss zur gespeicherten Händler-Domain gehören.
+- Nur ausdrücklich freigegebene Händler-Domains werden automatisch abgerufen.
 - Angebote werden immer einem vorhandenen Duft und einem aktiven Händler zugeordnet.
 - Dieselbe Händler-URL darf nicht mehreren Düften zugeordnet werden.
 - Preise und Versandkosten werden getrennt gespeichert; verglichen wird der Gesamtpreis.
 - Ausverkaufte Angebote bleiben für Verlauf und Nachvollziehbarkeit erhalten, zählen aber nicht als günstigstes aktuelles Angebot.
-- Die neue Preislogik greift noch nicht automatisch auf externe Seiten zu. Händleradapter und tägliche Scannerläufe folgen getrennt.
+- Jeder erfolgreiche automatische Abruf erzeugt eine unveränderliche Preisbeobachtung.
 
 ## Nächster Baustein
 
-Erste Händleradapter und tägliche Preisprüfung über den getrennten Scanner-Worker. Danach Anzeige des günstigsten Angebots und des Preisverlaufs in der Duftdetailansicht.
+Automatische Produktsuche nach Marke und Duftname, danach Anzeige des günstigsten Angebots und des Preisverlaufs in der Duftdetailansicht.
