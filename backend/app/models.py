@@ -92,6 +92,18 @@ class Fragrance(Base):
     personal_sillage: Mapped[float | None] = mapped_column(Float, nullable=True)
     personal_performance_score: Mapped[float | None] = mapped_column(Float, nullable=True)
 
+    # Duft-DNA bleibt strukturiert und wird nicht aus Legacy-Feldern zurückgerechnet.
+    fragrance_dna: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    fragrance_dna_source: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    fragrance_dna_status: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="OPEN", server_default="OPEN"
+    )
+    fragrance_dna_source_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    fragrance_dna_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fragrance_dna_disagreement: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fragrance_dna_researched_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    personal_fragrance_dna: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     master_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
