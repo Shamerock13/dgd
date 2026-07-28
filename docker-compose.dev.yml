@@ -57,6 +57,8 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       AUTO_SEED: "false"
+      PRICE_SCANNER_ENABLED: "true"
+      PRICE_SCAN_INTERVAL_HOURS: "24"
       MEDIA_ROOT: /app/media
       MAX_IMAGE_BYTES: 8388608
       UPDATER_URL: http://127.0.0.1:65535
