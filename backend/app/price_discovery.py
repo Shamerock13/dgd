@@ -30,6 +30,18 @@ REQUEST_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
 }
 
+MEDIA_EXTENSIONS = {
+    ".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".avif", ".ico",
+    ".bmp", ".tif", ".tiff", ".mp4", ".webm", ".pdf", ".css", ".js",
+    ".woff", ".woff2", ".ttf", ".eot", ".xml", ".json",
+}
+
+MEDIA_PATH_PARTS = (
+    "/images/", "/image/", "/img/", "/media/", "/assets/", "/static/",
+    "/cdn/", "/icons/", "/icon/", "/logos/", "/logo/", "/thumbnails/",
+    "/thumbnail/", "/banners/", "/banner/", "/fonts/", "/sprites/",
+)
+
 
 class _LinkParser(HTMLParser):
     def __init__(self) -> None:
@@ -105,10 +117,27 @@ def _normalize_candidate_url(raw_url: str, base_url: str, expected_host: str) ->
 
 
 def _looks_like_product_url(url: str) -> bool:
-    path = urlparse(url).path.casefold()
-    blocked = ("/search", "/suche", "/login", "/cart", "/warenkorb", "/category", "/marken/")
+    parsed = urlparse(url)
+    path = unquote(parsed.path).casefold()
+    filename = path.rsplit("/", 1)[-1]
+
+    if any(filename.endswith(extension) for extension in MEDIA_EXTENSIONS):
+        return False
+    if any(part in path for part in MEDIA_PATH_PARTS):
+        return False
+
+    blocked = (
+        "/search", "/suche", "/login", "/cart", "/warenkorb", "/category",
+        "/marken/", "/brand/", "/account", "/checkout", "/wishlist",
+        "/service/", "/hilfe/", "/privacy", "/datenschutz", "/impressum",
+    )
     if any(part in path for part in blocked):
         return False
+
+    query_keys = {key.casefold() for key in parse_qs(parsed.query)}
+    if query_keys.intersection({"width", "height", "format", "quality", "crop", "fit", "w", "h"}):
+        return False
+
     useful = ("/p/", "/parfum/", "/produkt", "/product", ".html", ".htm")
     return any(part in path for part in useful) or len([part for part in path.split("/") if part]) >= 3
 
@@ -196,6 +225,11 @@ async def verify_candidate(url: str) -> dict:
     async with httpx.AsyncClient(follow_redirects=True, timeout=25, headers=REQUEST_HEADERS) as client:
         response = await client.get(url)
         response.raise_for_status()
+        content_type = response.headers.get("content-type", "").casefold()
+        if "text/html" not in content_type and "application/xhtml+xml" not in content_type:
+            raise ValueError("Der Treffer ist keine HTML-Produktseite")
+        if not _looks_like_product_url(str(response.url)):
+            raise ValueError("Der Treffer ist keine gültige Produktseite")
         parsed = parse_product_json_ld(response.text[:3_000_000])
     return {**parsed, "product_url": str(response.url)}
 
