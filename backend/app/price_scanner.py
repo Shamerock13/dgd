@@ -51,11 +51,13 @@ def _validate_offer_url(offer: FragranceOffer) -> str:
 def _numbers(value) -> list[float]:
     if value is None:
         return []
+    if isinstance(value, bool):
+        return []
     if isinstance(value, (int, float)):
         return [float(value)]
     if isinstance(value, dict):
         values = []
-        for key in ("price", "lowPrice", "highPrice"):
+        for key in ("price", "lowPrice", "highPrice", "salePrice", "currentPrice", "value", "amount"):
             values.extend(_numbers(value.get(key)))
         return values
     if isinstance(value, list):
@@ -63,24 +65,29 @@ def _numbers(value) -> list[float]:
         for item in value:
             values.extend(_numbers(item))
         return values
-    text = str(value).strip().replace("€", "").replace(" ", "")
+    text = unescape(str(value)).strip().replace("\xa0", " ")
+    match = re.search(r"-?\d{1,3}(?:[.\s]\d{3})*(?:,\d{1,2})|-?\d+(?:[.,]\d{1,2})?", text)
+    if not match:
+        return []
+    text = match.group(0).replace(" ", "")
     if "," in text and "." in text:
         text = text.replace(".", "").replace(",", ".")
-    else:
+    elif "," in text:
         text = text.replace(",", ".")
     try:
-        return [float(text)]
+        number = float(text)
     except ValueError:
         return []
+    return [number] if 0 < number < 100000 else []
 
 
 def _availability(value) -> bool | None:
     if value is None:
         return None
     text = str(value).casefold()
-    if any(word in text for word in ("instock", "in_stock", "lieferbar", "available", "preorder")):
+    if any(word in text for word in ("instock", "in_stock", "lieferbar", "available", "preorder", "auf lager")):
         return True
-    if any(word in text for word in ("outofstock", "out_of_stock", "ausverkauft", "unavailable", "soldout")):
+    if any(word in text for word in ("outofstock", "out_of_stock", "ausverkauft", "unavailable", "soldout", "nicht lieferbar")):
         return False
     return None
 
@@ -100,13 +107,56 @@ def _product_entries(payload):
             yield entry
 
 
+def _candidate(price, source: str, product_name=None, availability=None) -> dict | None:
+    prices = _numbers(price)
+    if not prices:
+        return None
+    return {
+        "price_eur": min(prices),
+        "in_stock": _availability(availability),
+        "product_name": str(product_name or "").strip() or None,
+        "source": source,
+    }
+
+
+def _meta_value(html: str, keys: tuple[str, ...]) -> str | None:
+    for key in keys:
+        patterns = (
+            rf'<meta[^>]+(?:property|name|itemprop)=["\']{re.escape(key)}["\'][^>]+content=["\']([^"\']+)',
+            rf'<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name|itemprop)=["\']{re.escape(key)}["\']',
+        )
+        for pattern in patterns:
+            match = re.search(pattern, html, re.I)
+            if match:
+                return unescape(match.group(1)).strip()
+    return None
+
+
+def _embedded_price_candidates(html: str) -> list[dict]:
+    candidates: list[dict] = []
+    patterns = (
+        r'["\'](?:salePrice|currentPrice|finalPrice|offerPrice|unitPrice|priceValue|price)["\']\s*:\s*["\']?([0-9]{1,5}(?:[.,][0-9]{1,2})?)',
+        r'data-(?:price|product-price|sale-price)=["\']([^"\']+)',
+        r'(?:Jetzt|Preis|Angebotspreis)\s*(?:ab\s*)?([0-9]{1,5}(?:[.,][0-9]{2})?)\s*€',
+        r'([0-9]{1,5}(?:[.,][0-9]{2})?)\s*€',
+    )
+    for pattern in patterns:
+        for match in re.finditer(pattern, html, re.I):
+            candidate = _candidate(match.group(1), "embedded")
+            if candidate:
+                candidates.append(candidate)
+            if len(candidates) >= 40:
+                return candidates
+    return candidates
+
+
 def parse_product_json_ld(html: str) -> dict:
+    candidates: list[dict] = []
     blocks = re.findall(
         r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
         html,
         re.I | re.S,
     )
-    candidates = []
     for block in blocks:
         try:
             payload = json.loads(unescape(block.strip()))
@@ -118,20 +168,38 @@ def parse_product_json_ld(html: str) -> dict:
             for offer in offer_list:
                 if not isinstance(offer, dict):
                     continue
-                prices = _numbers(offer)
                 currency = str(offer.get("priceCurrency") or "EUR").upper()
-                if prices and currency == "EUR":
-                    candidates.append({
-                        "price_eur": min(prices),
-                        "in_stock": _availability(offer.get("availability")),
-                        "product_name": str(product.get("name") or "").strip() or None,
-                    })
+                if currency != "EUR":
+                    continue
+                candidate = _candidate(
+                    offer,
+                    "json-ld",
+                    product.get("name"),
+                    offer.get("availability"),
+                )
+                if candidate:
+                    candidates.append(candidate)
+
+    meta_price = _meta_value(html, ("product:price:amount", "og:price:amount", "price", "product-price"))
+    meta_currency = _meta_value(html, ("product:price:currency", "og:price:currency", "priceCurrency"))
+    meta_name = _meta_value(html, ("og:title", "twitter:title"))
+    if meta_price and (not meta_currency or meta_currency.upper() == "EUR"):
+        candidate = _candidate(meta_price, "meta", meta_name)
+        if candidate:
+            candidates.append(candidate)
+
+    candidates.extend(_embedded_price_candidates(html))
     if not candidates:
         raise ValueError("Auf der Produktseite wurde kein verwertbarer EUR-Preis gefunden")
-    candidates.sort(key=lambda row: row["price_eur"])
+
+    # Prefer explicit product data over broad text matches. Within one source, use the lowest
+    # positive price because variant pages commonly expose several sizes at once.
+    priority = {"json-ld": 0, "meta": 1, "embedded": 2}
+    candidates.sort(key=lambda row: (priority.get(row.get("source"), 9), row["price_eur"]))
     result = candidates[0]
     if result["in_stock"] is None:
-        result["in_stock"] = True
+        page_availability = _availability(html[:500_000])
+        result["in_stock"] = True if page_availability is None else page_availability
     return result
 
 
@@ -147,7 +215,7 @@ async def refresh_offer(offer: FragranceOffer, db: Session) -> dict:
         content_type = response.headers.get("content-type", "")
         if "text/html" not in content_type:
             raise ValueError("Händlerseite liefert kein HTML")
-        parsed = parse_product_json_ld(response.text[:3_000_000])
+        parsed = parse_product_json_ld(response.text[:5_000_000])
 
     checked_at = datetime.utcnow()
     offer.price_eur = parsed["price_eur"]
