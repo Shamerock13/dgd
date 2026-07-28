@@ -1,6 +1,6 @@
 # DGD – Aktueller Projektstand
 
-Stand: 27. Juli 2026
+Stand: 28. Juli 2026
 
 Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf `main` vorhandenen Funktionsstand. Detailentscheidungen stehen zusätzlich in den jeweiligen Fachdateien unter `docs/`.
 
@@ -23,7 +23,7 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 
 ## Paket 15 in Arbeit
 
-**Datenvalidierung & Importqualität 2.0** besitzt folgende Prüf- und Sicherheitsendpunkte:
+**Datenvalidierung & Importqualität 2.0** besitzt:
 
 ```text
 POST /api/import/quality/preview
@@ -31,27 +31,24 @@ POST /api/import/quality/commit
 GET  /api/import/quality/runs
 ```
 
-Die Qualitätslogik:
+Qualitätsvorschau, geschützter Commit, manuelle `REVIEW`-Entscheidungen und gespeicherte Importberichte wurden praktisch in Dev bestätigt. Offen bleibt die Absicherung des Master-Imports mit denselben Regeln.
 
-- normalisiert Marken- und Duftidentitäten konservativ,
-- erkennt exakte und sicher normalisierte Dubletten,
-- meldet ähnliche Schreibweisen ausschließlich als manuellen Prüfhinweis,
-- blockiert unvollständige oder widersprüchliche Zeilen,
-- liefert pro Zeile Entscheidung, Begründung, Fehler und Kandidaten,
-- führt niemals allein aufgrund eines ähnlichen Namens Datensätze zusammen.
+## Paket 18 gestartet
 
-Backend-Prüfpfad, Admin-Anzeige und geschützter Commit wurden praktisch in Dev bestätigt. Konfliktfreie Dateien werden geschrieben; `BLOCK` stoppt den gesamten Import ohne Teilschreibvorgang.
+**Preisbeobachtung & Händlervergleich 1.0** besitzt im ersten Backend-Baustein:
 
-Der nächste Baustein ergänzt die bewusste Auflösung von `REVIEW`-Zeilen:
+```text
+GET  /api/prices/retailers
+POST /api/prices/retailers
+POST /api/prices/offers/check
+GET  /api/prices/fragrances/{fragrance_id}?days=90
+```
 
-- Duft als neuen Datensatz akzeptieren,
-- einen aktuell angebotenen vorhandenen Kandidaten verwenden,
-- Zeile ausdrücklich ausschließen,
-- bei Duftzwillingen Original und Alternative bewusst zuordnen,
-- jede Entscheidung direkt vor dem Schreiben serverseitig erneut prüfen,
-- erfolgreiche, blockierte und fehlgeschlagene Importversuche dauerhaft als Bericht speichern.
+Neu sind getrennte Datenmodelle für Händler, aktuelle Angebote und unveränderliche Preisbeobachtungen. Der Duft-Endpunkt berechnet den günstigsten verfügbaren Gesamtpreis inklusive Versand, den Preis pro 100 ml, den historischen Bestpreis und den Verlauf für bis zu 1095 Tage.
 
-Die praktische Dev-Abnahme dieses Entscheidungs- und Berichtsablaufs steht noch aus.
+Produktarten werden als Flakon, Tester, Set, Probe oder Refill getrennt gekennzeichnet. Ausverkaufte Angebote bleiben nachvollziehbar, zählen aber nicht zum aktuell günstigsten Preis.
+
+Der erste Baustein liest noch keine Händlerseiten automatisch aus. Admin-Oberfläche, Händleradapter und tägliche Scannerläufe folgen getrennt.
 
 ## Paket 14 abgeschlossen
 
@@ -67,13 +64,14 @@ Die Dev-Umgebung besitzt den getrennten Container `DGD-Dev-Scanner`. Der Worker 
 - interne, private, reservierte und lokale Netzwerkziele bleiben blockiert
 - keine automatische Veröffentlichung
 - Dublettenprüfung vor Freigabe
-- Gemini-Twins nur mit konkreter Grounding-Quelle
-- bekannte Feldwerte und Twin-Kandidaten werden ausgeschlossen
-- Duftnoten und Akkorde werden zentral normalisiert
+- ähnliche Importkandidaten niemals automatisch zusammenführen
+- Preise und Versand getrennt speichern und als Gesamtpreis vergleichen
+- ausverkaufte Angebote nicht als günstigsten Preis anzeigen
+- Duftnoten und Akkorde zentral normalisieren
 
 ## Datenbankstand
 
-Das explizite DGD-Migrationsschema bleibt bei `0011`. Die neue Tabelle `import_quality_runs` wird idempotent über die registrierten SQLAlchemy-Modelle angelegt und speichert die Berichte der abgesicherten Importversuche.
+Das explizite DGD-Migrationsschema bleibt bei `0011`. Neue Tabellen für Importberichte und Preisbeobachtung werden idempotent über die registrierten SQLAlchemy-Modelle angelegt.
 
 ## Qualitätssicherung
 
@@ -89,7 +87,7 @@ Neue Pakete gelten erst nach erfolgreichem Test in der separaten Dev-Umgebung al
 
 ## Nächster Schritt
 
-**Manuelle REVIEW-Entscheidungen und gespeicherte Importberichte in Dev prüfen.**
+**Preis-Backend in Dev mit einem Händler und mehreren Beobachtungen testen; anschließend Admin-Oberfläche ergänzen.**
 
 ## Dokumentationsregel
 
