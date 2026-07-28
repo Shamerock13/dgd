@@ -36,11 +36,17 @@ Lokale Medien: `/mnt/user/appdata/dgd-dev-media`
 - `/` ist die öffentliche Katalogansicht
 - `/admin.html` enthält das bestehende Admin-Center
 - Datenbankzugriff über `DATABASE_URL`
-- explizites DGD-Migrationsschema aktuell bis `0011`
+- explizites DGD-Migrationsschema aktuell bis `0012`
 
 ## Aktueller Funktionsstand
 
-Abgeschlossen sind alle Pakete bis einschließlich Paket 14 **Suche, Filter & Navigation 2.0**.
+Abgeschlossen sind alle Pakete bis einschließlich Paket 14 **Suche, Filter & Navigation 2.0** sowie die Performance-Pakete 16.1 und 16.2.
+
+Paket 16.1 ergänzt ein strukturiertes Performance-Datenmodell für Haltbarkeit, Projektion, Sillage, Drydown, Gesamtleistung, Quellenqualität, Versionen und persönliche Bewertungen. Migration `0012`, API-Ausgabe und Tests wurden in Dev bestätigt.
+
+Paket 16.2 zeigt diese Werte in einer eigenständigen Performance-Karte im öffentlichen Duftprofil. Fehlende Werte bleiben sichtbar offen und werden nicht aus Legacy-Feldern geschätzt.
+
+Paket 16.3 **Zeitlicher Duftverlauf** wird im Branch `feature/performance-timeline` entwickelt. Die Timeline visualisiert ausschließlich `projection_first_hour`, `projection_after_three_hours` und `drydown_strength`. Zusätzliche Messpunkte werden nicht erfunden.
 
 Paket 15 **Datenvalidierung & Importqualität 2.0** besitzt Qualitätsvorschau, geschützten Commit, manuelle `REVIEW`-Entscheidungen und gespeicherte Importberichte. Diese Abläufe wurden praktisch in Dev bestätigt. Der Master-Import muss noch mit denselben Regeln abgesichert werden.
 
@@ -56,6 +62,7 @@ Der Scanner-Worker läuft getrennt von API und Frontend. Er prüft ausschließli
 
 ```text
 GET  /api/catalog/fragrances
+GET  /api/fragrances/{fragrance_id}
 POST /api/import/quality/preview
 POST /api/import/quality/commit
 GET  /api/import/quality/runs
@@ -79,6 +86,8 @@ PUT  /api/research/scanner/status
 - ähnliche Importkandidaten niemals automatisch zusammenführen
 - manuelle Importentscheidungen nur gegen unmittelbar neu berechnete Kandidaten akzeptieren
 - blockierte Zeilen können nicht manuell freigegeben werden
+- Performance-Werte nur strukturiert und mit sichtbarem Prüfstatus darstellen
+- zeitliche Performance-Texte nur aus vorhandenen Phasenwerten ableiten
 - Preis und Versand getrennt speichern; Gesamtpreis vergleichen
 - ausverkaufte Angebote nicht als günstigsten aktuellen Preis anzeigen
 - Händlerseiten später nur über kontrollierte Adapter abrufen
@@ -99,14 +108,15 @@ PUT  /api/research/scanner/status
 
 ```bash
 cd /mnt/user/appdata/dgd-github
-GIT_SSH_COMMAND='ssh -i /root/.ssh/dgd_github -o IdentitiesOnly=yes -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no' \
-git pull origin main
-
-docker restart DGD-Dev-Backend DGD-Dev-Frontend
+git fetch origin
+git switch <feature-branch>
+git pull --ff-only origin <feature-branch>
 ```
+
+Geänderte Dienste anschließend gezielt bauen und ersetzen. Bei einem festen Docker-Containernamen muss der bestehende Dev-Container gegebenenfalls vorher gestoppt und entfernt werden. Datenbankvolumes und Produktion bleiben dabei unberührt.
 
 ## Nächster Schritt
 
-**Preis-Backend in Dev mit Händler und mehreren Preisbeobachtungen testen; anschließend Admin-Oberfläche ergänzen.**
+**Paket 16.3 im Dev-Frontend bauen und den zeitlichen Duftverlauf mit leeren sowie befüllten Performance-Werten visuell prüfen.**
 
 Produktion wird erst nach erfolgreicher Dev-Abnahme in einem eigenen, ausdrücklich freizugebenden Schritt vorbereitet.
