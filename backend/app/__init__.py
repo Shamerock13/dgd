@@ -12,6 +12,7 @@ from .targeted_research_routes import router as targeted_research_router
 from .brand_research_routes import router as brand_research_router
 from .price_routes import router as price_router
 from .price_seed_routes import router as price_seed_router
+from .price_scanner_routes import router as price_scanner_router
 
 research_router.include_router(research_source_router)
 research_router.include_router(price_seed_router)
@@ -25,3 +26,4 @@ research_router.routes.extend(enrichment_router.routes)
 research_router.routes.extend(enrichment_finding_router.routes)
 research_router.routes.extend(research_enrichment_router.routes)
 research_router.routes.extend(price_router.routes)
+research_router.routes.extend(price_scanner_router.routes)
