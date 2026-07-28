@@ -20,6 +20,7 @@ Diese Roadmap zeigt den aktuellen Entwicklungsstand. Maßgeblich für den tatsä
 12. ✅ Gemini-Rechercheverlauf & Tokenkontrolle 1.0
 13. ✅ Scanner-Betrieb & automatische Fälligkeit 1.0
 14. ✅ Suche, Filter & Navigation 2.0
+16.1 ✅ Strukturiertes Performance-Datenmodell
 
 ## In Arbeit
 
@@ -39,6 +40,26 @@ Noch offen:
 
 - Master-Import mit denselben Regeln absichern
 - Paket 15 vollständig abschließen
+
+16.2 🚧 Performance-Karte im Duftprofil
+
+Im Branch `feature/performance-card` und Draft-PR #75 umgesetzt:
+
+- Haltbarkeitsbereich und normalisierter Score
+- Gesamtperformance, Projektion, Sillage und Drydown
+- Projektion in der ersten Stunde und nach drei Stunden
+- Vertrauen, Quellenanzahl, Quellenabweichung und Prüfstatus
+- Version, Produktionszeitraum und Recherchedatum
+- persönliche Bewertung getrennt von Community-Daten
+- responsive Darstellung
+- sichtbare Platzhalter für noch nicht recherchierte Werte
+- Fach- und Projektdokumentation
+
+Noch offen:
+
+- visuelle Abnahme in Dev
+- gegebenenfalls kleinere UI-Korrekturen
+- PR #75 zusammenführen
 
 18. 🚧 Preisbeobachtung & Händlervergleich 1.0
 
@@ -61,7 +82,17 @@ Danach:
 - Preisbox und Verlauf in der Duftdetailansicht
 - Preisalarm
 
-## Danach vorgesehen
+## Als Nächstes vorgesehen
+
+16.3 ⬜ Zeitlicher Duftverlauf
+
+Geplant ist eine verständliche Phasendarstellung für den Duftverlauf, zum Beispiel:
+
+- Opening beziehungsweise erste 30 Minuten
+- Herzphase bis ungefähr drei Stunden
+- Drydown ab drei Stunden
+- Stärke und Entwicklung der Projektion über die Zeit
+- Quellen- und Vertrauensbezug statt erfundener Zwischenwerte
 
 16. ⬜ Admin-Bereich 2.0
 17. ⬜ Vergleich & Bewertung 2.0

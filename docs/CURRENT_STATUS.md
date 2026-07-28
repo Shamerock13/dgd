@@ -2,7 +2,7 @@
 
 Stand: 28. Juli 2026
 
-Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf `main` vorhandenen Funktionsstand. Detailentscheidungen stehen zusätzlich in den jeweiligen Fachdateien unter `docs/`.
+Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf `main` vorhandenen Funktionsstand. Änderungen in offenen Feature-Branches werden ausdrücklich als in Arbeit gekennzeichnet. Detailentscheidungen stehen zusätzlich in den jeweiligen Fachdateien unter `docs/`.
 
 ## Umgesetzte Pakete
 
@@ -20,6 +20,35 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 12. Gemini-Rechercheverlauf & Tokenkontrolle 1.0
 13. Scanner-Betrieb & automatische Fälligkeit 1.0
 14. Suche, Filter & Navigation 2.0
+16.1 Strukturiertes Performance-Datenmodell
+
+## Paket 16.1 abgeschlossen
+
+Das Datenmodell für Duftleistung ist auf `main` vorhanden. Erfasst werden unter anderem:
+
+- Haltbarkeit als Stundenbereich und normalisierter Score
+- Projektion, Sillage, Drydown und Gesamtperformance
+- Projektion in der ersten Stunde und nach drei Stunden
+- Quellenanzahl, Vertrauensgrad und Quellenabweichung
+- Prüfstatus, Recherchedatum, Version und Produktionszeitraum
+- persönliche Bewertung getrennt von Community-Daten
+
+Das explizite DGD-Migrationsschema steht bei `0012`. Migration, Backendstart, API-Ausgabe und automatisierte Tests wurden in der Dev-Umgebung bestätigt. Ergebnis: `11 passed`, eine nicht blockierende FastAPI-Abschreibungswarnung.
+
+## Paket 16.2 in Arbeit
+
+**Performance-Karte im Duftprofil** liegt im Branch `feature/performance-card` und in Draft-PR #75.
+
+Die öffentliche Duftdetailansicht erhält eine eigenständige Performance-Karte mit:
+
+- Haltbarkeitsbereich und Score
+- Gesamtleistung, Projektion, Sillage und Drydown
+- zeitbezogenen Projektionswerten
+- Vertrauen, Quellenanzahl, Abweichung und Prüfstatus
+- Version, Produktionszeitraum und Recherchedatum
+- klar getrennten persönlichen Bewertungen
+
+Fehlende Werte werden als „Noch offen“ beziehungsweise „–“ dargestellt. Es werden keine Werte aus Legacy-Feldern hochgerechnet oder erfunden. Die Darstellung wurde in der separaten Dev-Umgebung geladen; die abschließende visuelle Abnahme und der Merge stehen noch aus.
 
 ## Paket 15 in Arbeit
 
@@ -71,7 +100,7 @@ Die Dev-Umgebung besitzt den getrennten Container `DGD-Dev-Scanner`. Der Worker 
 
 ## Datenbankstand
 
-Das explizite DGD-Migrationsschema bleibt bei `0011`. Neue Tabellen für Importberichte und Preisbeobachtung werden idempotent über die registrierten SQLAlchemy-Modelle angelegt.
+Das explizite DGD-Migrationsschema steht bei `0012`. Neue Tabellen für Importberichte und Preisbeobachtung werden idempotent über die registrierten SQLAlchemy-Modelle angelegt.
 
 ## Qualitätssicherung
 
@@ -83,11 +112,18 @@ npm install
 npm run build
 ```
 
+Backendtests können in der aktuellen Dev-Image-Konfiguration ausgeführt werden, nachdem `backend/tests` in den Container kopiert wurde, da `backend/Dockerfile.dev` derzeit nur `app` übernimmt:
+
+```bash
+docker cp backend/tests DGD-Dev-Backend:/app/tests
+docker exec -it DGD-Dev-Backend python -m pytest -q /app/tests
+```
+
 Neue Pakete gelten erst nach erfolgreichem Test in der separaten Dev-Umgebung als praktisch abgenommen.
 
 ## Nächster Schritt
 
-**Preis-Backend in Dev mit einem Händler und mehreren Beobachtungen testen; anschließend Admin-Oberfläche ergänzen.**
+**Paket 16.2 visuell abnehmen, PR #75 zusammenführen und danach Paket 16.3 „Zeitlicher Duftverlauf“ umsetzen. Parallel bleiben Paket 15 und Paket 18 als eigene Arbeitsstränge offen.**
 
 ## Dokumentationsregel
 
