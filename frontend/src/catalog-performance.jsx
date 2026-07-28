@@ -23,6 +23,25 @@ const hoursText = fragrance => {
   return `${(min ?? max).toFixed(1)} Std.`;
 };
 
+function strengthLabel(value) {
+  const numeric = number(value);
+  if (numeric == null) return 'Noch offen';
+  if (numeric >= 8) return 'Sehr stark';
+  if (numeric >= 6) return 'Stark';
+  if (numeric >= 4) return 'Mittel';
+  if (numeric >= 2) return 'Hautnah';
+  return 'Sehr dezent';
+}
+
+function performanceBadge(value) {
+  const numeric = number(value);
+  if (numeric == null) return {label:'Noch offen', className:'open'};
+  if (numeric >= 8) return {label:'Sehr stark', className:'very-strong'};
+  if (numeric >= 6) return {label:'Stark', className:'strong'};
+  if (numeric >= 4) return {label:'Durchschnittlich', className:'average'};
+  return {label:'Eher dezent', className:'soft'};
+}
+
 function metric(label, value, hint) {
   const numeric = number(value);
   return `<article class="performance-metric">
@@ -30,6 +49,34 @@ function metric(label, value, hint) {
     <div class="performance-track" aria-hidden="true"><i style="width:${numeric == null ? 0 : Math.max(0, Math.min(100, numeric * 10))}%"></i></div>
     ${hint ? `<small>${hint}</small>` : ''}
   </article>`;
+}
+
+function timelinePhase(label, time, value, copy) {
+  const numeric = number(value);
+  const width = numeric == null ? 0 : Math.max(4, Math.min(100, numeric * 10));
+  return `<article class="performance-phase ${numeric == null ? 'is-empty' : ''}">
+    <div class="performance-phase-head"><div><span>${time}</span><h3>${label}</h3></div><strong>${strengthLabel(value)}</strong></div>
+    <div class="performance-phase-track" aria-hidden="true"><i style="width:${width}%"></i></div>
+    <div class="performance-phase-foot"><small>${copy}</small><b>${scoreText(value)}</b></div>
+  </article>`;
+}
+
+function timelineSummary(fragrance) {
+  const first = number(fragrance.projection_first_hour);
+  const later = number(fragrance.projection_after_three_hours);
+  const drydown = number(fragrance.drydown_strength);
+  if ([first, later, drydown].every(value => value == null)) {
+    return 'Für den zeitlichen Verlauf sind noch keine Werte hinterlegt.';
+  }
+  const parts = [];
+  if (first != null) parts.push(`Der Start ist ${strengthLabel(first).toLowerCase()}`);
+  if (first != null && later != null) {
+    if (later <= first - 2) parts.push('nach drei Stunden wird der Duft deutlich ruhiger');
+    else if (later >= first + 1) parts.push('nach drei Stunden gewinnt die Ausstrahlung noch an Stärke');
+    else parts.push('nach drei Stunden bleibt die Ausstrahlung vergleichsweise stabil');
+  } else if (later != null) parts.push(`nach drei Stunden wirkt er ${strengthLabel(later).toLowerCase()}`);
+  if (drydown != null) parts.push(`der Drydown ist ${strengthLabel(drydown).toLowerCase()}`);
+  return `${parts.join(', ')}.`.replace(/^./, char => char.toUpperCase());
 }
 
 function renderCard(fragrance) {
@@ -40,11 +87,12 @@ function renderCard(fragrance) {
     : 'Noch nicht recherchiert';
   const version = [fragrance.performance_version, fragrance.performance_production_period].filter(Boolean).join(' · ') || 'Keine Version angegeben';
   const personalAvailable = [fragrance.personal_longevity_hours, fragrance.personal_projection, fragrance.personal_sillage, fragrance.personal_performance_score].some(value => number(value) != null);
+  const badge = performanceBadge(fragrance.performance_score);
 
   return `<section class="performance-card" data-performance-fragrance="${fragrance.id}">
     <div class="performance-head">
       <div><span class="performance-kicker">Performance</span><h2>So stark tritt der Duft auf</h2><p>Community-Werte und persönliche Eindrücke bleiben bewusst getrennt.</p></div>
-      <span class="performance-status performance-status-${status.toLowerCase().replaceAll('_','-')}">${STATUS_LABELS[status] || status}</span>
+      <div class="performance-badges"><span class="performance-strength performance-strength-${badge.className}">${badge.label}</span><span class="performance-status performance-status-${status.toLowerCase().replaceAll('_','-')}">${STATUS_LABELS[status] || status}</span></div>
     </div>
 
     <div class="performance-summary">
@@ -52,6 +100,16 @@ function renderCard(fragrance) {
       <article><span>Gesamtleistung</span><strong>${scoreText(fragrance.performance_score)}</strong><small>normalisierter Vergleichswert</small></article>
       <article><span>Vertrauen</span><strong>${percentText(fragrance.performance_confidence)}</strong><small>${sourceCount == null ? 'Quellen offen' : `${sourceCount} ${sourceCount === 1 ? 'Quelle' : 'Quellen'}`}</small></article>
     </div>
+
+    <section class="performance-timeline">
+      <div class="performance-timeline-head"><div><span>Zeitlicher Duftverlauf</span><h3>Von der ersten Stunde bis zum Drydown</h3></div><small>${hoursText(fragrance)} Haltbarkeit</small></div>
+      <div class="performance-phase-grid">
+        ${timelinePhase('Opening', '0–1 Stunde', fragrance.projection_first_hour, 'Ausstrahlung direkt nach dem Auftragen')}
+        ${timelinePhase('Herzphase', 'nach 3 Stunden', fragrance.projection_after_three_hours, 'Ausstrahlung während der späteren Entwicklung')}
+        ${timelinePhase('Drydown', 'Basisphase', fragrance.drydown_strength, 'Stärke der verbleibenden Basisnoten')}
+      </div>
+      <p class="performance-timeline-summary">${timelineSummary(fragrance)}</p>
+    </section>
 
     <div class="performance-grid">
       ${metric('Projektion', fragrance.projection, 'allgemeiner Eindruck')}

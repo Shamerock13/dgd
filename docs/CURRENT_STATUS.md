@@ -21,6 +21,7 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 13. Scanner-Betrieb & automatische Fälligkeit 1.0
 14. Suche, Filter & Navigation 2.0
 16.1 Strukturiertes Performance-Datenmodell
+16.2 Performance-Karte im Duftprofil
 
 ## Paket 16.1 abgeschlossen
 
@@ -35,20 +36,33 @@ Das Datenmodell für Duftleistung ist auf `main` vorhanden. Erfasst werden unter
 
 Das explizite DGD-Migrationsschema steht bei `0012`. Migration, Backendstart, API-Ausgabe und automatisierte Tests wurden in der Dev-Umgebung bestätigt. Ergebnis: `11 passed`, eine nicht blockierende FastAPI-Abschreibungswarnung.
 
-## Paket 16.2 in Arbeit
+## Paket 16.2 abgeschlossen
 
-**Performance-Karte im Duftprofil** liegt im Branch `feature/performance-card` und in Draft-PR #75.
-
-Die öffentliche Duftdetailansicht erhält eine eigenständige Performance-Karte mit:
+Die Performance-Karte wurde über PR #75 nach `main` übernommen. Die öffentliche Duftdetailansicht zeigt:
 
 - Haltbarkeitsbereich und Score
 - Gesamtleistung, Projektion, Sillage und Drydown
-- zeitbezogenen Projektionswerten
+- zeitbezogene Projektionswerte
 - Vertrauen, Quellenanzahl, Abweichung und Prüfstatus
 - Version, Produktionszeitraum und Recherchedatum
-- klar getrennten persönlichen Bewertungen
+- klar getrennte persönliche Bewertungen
 
-Fehlende Werte werden als „Noch offen“ beziehungsweise „–“ dargestellt. Es werden keine Werte aus Legacy-Feldern hochgerechnet oder erfunden. Die Darstellung wurde in der separaten Dev-Umgebung geladen; die abschließende visuelle Abnahme und der Merge stehen noch aus.
+Fehlende Werte werden als „Noch offen“ beziehungsweise „–“ dargestellt. Es werden keine Werte aus Legacy-Feldern hochgerechnet oder erfunden.
+
+## Paket 16.3 in Arbeit
+
+**Zeitlicher Duftverlauf** liegt im Branch `feature/performance-timeline`.
+
+Die bestehende Performance-Karte wird ergänzt um:
+
+- eine responsive Timeline für Opening, Herzphase und Drydown
+- sichtbare Phasenwerte für erste Stunde, nach drei Stunden und Basisphase
+- feste verbale Einordnungen von „sehr dezent“ bis „sehr stark“
+- ein Stärke-Badge aus dem vorhandenen Gesamtperformance-Wert
+- eine deterministische Kurzbeschreibung der Entwicklung
+- saubere Platzhalter, wenn einzelne oder alle Phasenwerte fehlen
+
+Die Timeline verwendet ausschließlich vorhandene Felder aus Migration `0012`. Sie erzeugt keine zusätzlichen Zwischenwerte und führt keine KI-Recherche aus. Dev-Abnahme und Merge stehen noch aus.
 
 ## Paket 15 in Arbeit
 
@@ -78,10 +92,6 @@ Neu sind getrennte Datenmodelle für Händler, aktuelle Angebote und unveränder
 Produktarten werden als Flakon, Tester, Set, Probe oder Refill getrennt gekennzeichnet. Ausverkaufte Angebote bleiben nachvollziehbar, zählen aber nicht zum aktuell günstigsten Preis.
 
 Der erste Baustein liest noch keine Händlerseiten automatisch aus. Admin-Oberfläche, Händleradapter und tägliche Scannerläufe folgen getrennt.
-
-## Paket 14 abgeschlossen
-
-Der öffentliche Katalog ist serverseitig paginiert und unterstützt gewichtete Suche, Filter, Sortierung sowie dauerhaft verlinkbare Zustände für Suchergebnisse, Duftdetails, Markenprofile und Parfümeurprofile. Die Admin-Listen für Düfte und Marken besitzen Suche und Pagination. Alle Bestandteile wurden praktisch in Dev bestätigt.
 
 ## Scanner-Betrieb
 
@@ -123,7 +133,7 @@ Neue Pakete gelten erst nach erfolgreichem Test in der separaten Dev-Umgebung al
 
 ## Nächster Schritt
 
-**Paket 16.2 visuell abnehmen, PR #75 zusammenführen und danach Paket 16.3 „Zeitlicher Duftverlauf“ umsetzen. Parallel bleiben Paket 15 und Paket 18 als eigene Arbeitsstränge offen.**
+**Paket 16.3 im Dev-Frontend bauen und visuell mit einem leeren sowie einem befüllten Performance-Datensatz prüfen. Danach PR zusammenführen. Parallel bleiben Paket 15 und Paket 18 als eigene Arbeitsstränge offen.**
 
 ## Dokumentationsregel
 
