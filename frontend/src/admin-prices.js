@@ -56,12 +56,13 @@ function discoveryHtml() {
 
 function render() {
   if (!panel) return;
+  const selectedFragranceId = discovery?.fragrance_id || '';
   panel.innerHTML = `
     <section class="price-admin-head"><div><span>Preisbeobachtung 1.1</span><h2>Händler, Suche & Angebote</h2><p>DGD kann Händlerseiten nach passenden Produkten durchsuchen. Treffer werden erst nach deiner Bestätigung übernommen.</p></div><button type="button" class="price-refresh">Aktualisieren</button></section>
     <section class="price-card price-discovery-card">
       <h3>Händler automatisch durchsuchen</h3>
       <form class="price-discovery-form">
-        ${field('Duft', `<select name="fragrance_id" required><option value="">Bitte wählen</option>${fragrances.map(row => `<option value="${row.id}">${esc(row.brand?.name)} – ${esc(row.name)}</option>`).join('')}</select>`)}
+        ${field('Duft', `<select name="fragrance_id" required><option value="">Bitte wählen</option>${fragrances.map(row => `<option value="${row.id}"${row.id === selectedFragranceId ? ' selected' : ''}>${esc(row.brand?.name)} – ${esc(row.name)}</option>`).join('')}</select>`)}
         <button class="primary" type="submit">Bei allen Händlern suchen</button>
       </form>
       <div class="price-discovery-results">${discoveryHtml()}</div>
@@ -97,7 +98,11 @@ async function runDiscovery(event) {
 async function acceptCandidate(event) {
   const rows = discovery.results.flatMap(group => group.candidates.map(candidate => ({...candidate, retailer_id:group.retailer_id})));
   const row = rows[Number(event.currentTarget.dataset.index)];
-  const fragrance_id = panel.querySelector('.price-discovery-form [name="fragrance_id"]').value;
+  const fragrance_id = discovery?.fragrance_id;
+  if (!fragrance_id) {
+    alert('Der ausgewählte Duft konnte nicht mehr zugeordnet werden. Bitte die Händlersuche erneut starten.');
+    return;
+  }
   const size = prompt('Größe in ml (optional):', '100');
   if (size === null) return;
   const sizeMl = size.trim() ? Number(size.replace(',', '.')) : null;
