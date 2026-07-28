@@ -96,8 +96,9 @@ async function runDiscovery(event) {
 }
 
 async function acceptCandidate(event) {
+  const button = event.currentTarget;
   const rows = discovery.results.flatMap(group => group.candidates.map(candidate => ({...candidate, retailer_id:group.retailer_id})));
-  const row = rows[Number(event.currentTarget.dataset.index)];
+  const row = rows[Number(button.dataset.index)];
   const fragrance_id = discovery?.fragrance_id;
   if (!fragrance_id) {
     alert('Der ausgewählte Duft konnte nicht mehr zugeordnet werden. Bitte die Händlersuche erneut starten.');
@@ -110,13 +111,13 @@ async function acceptCandidate(event) {
     alert('Bitte eine gültige Größe zwischen 0,1 und 5000 ml eingeben.');
     return;
   }
-  event.currentTarget.disabled = true;
-  event.currentTarget.textContent = 'Prüfe …';
+  button.disabled = true;
+  button.textContent = 'Prüfe …';
   try {
     const result = await request('/api/prices/discovery/accept', {method:'POST', body:JSON.stringify({fragrance_id, retailer_id:row.retailer_id, product_url:row.product_url, size_ml:sizeMl, product_type:'bottle', shipping_eur:0})});
     alert(`${result.retailer}: ${euro.format(result.total_eur)} wurde übernommen.`);
-    event.currentTarget.textContent = 'Übernommen';
-  } catch(error) { alert(error.message); event.currentTarget.disabled = false; event.currentTarget.textContent = 'Übernehmen'; }
+    button.textContent = 'Übernommen';
+  } catch(error) { alert(error.message); button.disabled = false; button.textContent = 'Übernehmen'; }
 }
 
 async function createRetailer(event) {
