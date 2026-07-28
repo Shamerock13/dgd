@@ -1,5 +1,6 @@
 import './catalog-main.jsx';
 import './catalog-live-prices.js';
+import './catalog-performance.jsx';
 
 function syncPublicNavigation() {
   const nav = document.querySelector('.catalog-header nav');
