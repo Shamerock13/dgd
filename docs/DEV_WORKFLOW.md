@@ -58,23 +58,82 @@ Netzwerk: `dgd-dev`
 
 ## Änderungen auf Unraid holen
 
+HTTPS ist für die Dev-Installation der bevorzugte Remote-Zugriff:
+
 ```bash
 cd /mnt/user/appdata/dgd-github
-GIT_SSH_COMMAND='ssh -i /root/.ssh/dgd_github -o IdentitiesOnly=yes -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no' \
-git pull origin main
+git remote set-url origin https://github.com/Shamerock13/dgd.git
+git fetch origin
+git switch <feature-branch>
+git pull --ff-only origin <feature-branch>
 ```
 
-Bei Änderungen am Scanner-Worker oder Compose:
+Für `main` entsprechend:
 
 ```bash
-docker compose -f docker-compose.dev.yml up -d --build backend scanner-worker frontend
+cd /mnt/user/appdata/dgd-github
+git switch main
+git pull --ff-only origin main
 ```
 
-Nur bei reinen Backend-/Frontend-Änderungen ohne Compose-Anpassung genügt anschließend gegebenenfalls:
+## Container gezielt neu bauen
+
+Nur die betroffene Komponente neu bauen und die übrigen Dev-Dienste unangetastet lassen.
+
+Backend:
 
 ```bash
-docker restart DGD-Dev-Backend DGD-Dev-Frontend
+docker compose -f docker-compose.dev.yml build backend
+docker compose -f docker-compose.dev.yml up -d --no-deps --force-recreate backend
 ```
+
+Frontend:
+
+```bash
+docker compose -f docker-compose.dev.yml build frontend
+docker compose -f docker-compose.dev.yml up -d --no-deps --force-recreate frontend
+```
+
+Scanner-Worker:
+
+```bash
+docker compose -f docker-compose.dev.yml build scanner-worker
+docker compose -f docker-compose.dev.yml up -d --no-deps --force-recreate scanner-worker
+```
+
+## Docker-Namenskonflikte
+
+Falls Compose meldet, dass ein Dev-Containername bereits verwendet wird, ausschließlich den betroffenen Dev-Container entfernen und anschließend neu erstellen. Beispiel Frontend:
+
+```bash
+docker stop DGD-Dev-Frontend
+docker rm DGD-Dev-Frontend
+docker compose -f docker-compose.dev.yml up -d --no-deps --force-recreate frontend
+```
+
+Beispiel Backend:
+
+```bash
+docker stop DGD-Dev-Backend
+docker rm DGD-Dev-Backend
+docker compose -f docker-compose.dev.yml up -d --no-deps --force-recreate backend
+```
+
+PostgreSQL darf bei reinen Frontend- oder Backend-Tests nicht neu erstellt oder entfernt werden.
+
+## Backendtests im Dev-Container
+
+`backend/Dockerfile.dev` kopiert derzeit nur `backend/app` nach `/app/app`. Deshalb ist `/app/tests` im gebauten Container nicht automatisch vorhanden.
+
+Tests vorübergehend in den laufenden Dev-Backend-Container kopieren:
+
+```bash
+cd /mnt/user/appdata/dgd-github
+docker cp backend/tests DGD-Dev-Backend:/app/tests
+docker exec -it DGD-Dev-Backend python -m pytest -q /app/tests
+```
+
+Erst ein späteres eigenes Workflow-Paket soll entscheiden, ob Tests dauerhaft ins Dev-Image aufgenommen werden. Produktionsimages sollen dadurch nicht unnötig vergrößert werden.
 
 ## Dev-Abnahme
 
@@ -86,7 +145,9 @@ Mindestens prüfen:
 4. Browser-Konsole zeigt keine neuen Fehler.
 5. Betroffene Funktion arbeitet wie erwartet.
 6. Bei Datenbankänderungen Start mit bestehender und frischer Dev-Datenbank prüfen.
-7. Produktion bleibt unberührt.
+7. Relevante Tests ausführen und Ergebnis dokumentieren.
+8. Dokumentation, Projektstatus und Roadmap prüfen.
+9. Produktion bleibt unberührt.
 
 ## Scanner-Worker testen
 
@@ -119,6 +180,8 @@ Nach jedem größeren Paket mindestens prüfen und gegebenenfalls aktualisieren:
 - `docs/ROADMAP.md`
 - technische Fachdatei
 - `docs/DEV_WORKFLOW.md`, wenn sich Container, Tests oder Deployment ändern
+
+Ein Paket ist dokumentarisch erst vollständig, wenn Projektstatus und Roadmap den tatsächlichen Stand von `main` beziehungsweise eines ausdrücklich genannten offenen Feature-Branches korrekt unterscheiden.
 
 ## Produktionsschutz
 
