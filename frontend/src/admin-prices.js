@@ -8,11 +8,34 @@ function esc(value) {
   return String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
 }
 
+function errorMessage(detail, fallback) {
+  if (typeof detail === 'string' && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail.map(item => {
+      if (typeof item === 'string') return item;
+      if (item && typeof item === 'object') {
+        const location = Array.isArray(item.loc) ? item.loc.filter(part => part !== 'body').join(' → ') : '';
+        const message = item.msg || item.message || JSON.stringify(item);
+        return location ? `${location}: ${message}` : message;
+      }
+      return String(item);
+    }).filter(Boolean);
+    if (messages.length) return messages.join('\n');
+  }
+  if (detail && typeof detail === 'object') {
+    return detail.message || detail.msg || JSON.stringify(detail, null, 2);
+  }
+  return fallback;
+}
+
 async function request(url, options = {}) {
   const response = await fetch(url, {headers: {'Content-Type': 'application/json', ...(options.headers || {})}, ...options});
   if (!response.ok) {
     let message = `Fehler ${response.status}`;
-    try { const body = await response.json(); message = body.detail || message; } catch {}
+    try {
+      const body = await response.json();
+      message = errorMessage(body.detail ?? body, message);
+    } catch {}
     throw new Error(message);
   }
   return response.status === 204 ? null : response.json();
@@ -77,10 +100,15 @@ async function acceptCandidate(event) {
   const fragrance_id = panel.querySelector('.price-discovery-form [name="fragrance_id"]').value;
   const size = prompt('Größe in ml (optional):', '100');
   if (size === null) return;
+  const sizeMl = size.trim() ? Number(size.replace(',', '.')) : null;
+  if (sizeMl !== null && (!Number.isFinite(sizeMl) || sizeMl <= 0 || sizeMl > 5000)) {
+    alert('Bitte eine gültige Größe zwischen 0,1 und 5000 ml eingeben.');
+    return;
+  }
   event.currentTarget.disabled = true;
   event.currentTarget.textContent = 'Prüfe …';
   try {
-    const result = await request('/api/prices/discovery/accept', {method:'POST', body:JSON.stringify({fragrance_id, retailer_id:row.retailer_id, product_url:row.product_url, size_ml:size?Number(size):null, product_type:'bottle', shipping_eur:0})});
+    const result = await request('/api/prices/discovery/accept', {method:'POST', body:JSON.stringify({fragrance_id, retailer_id:row.retailer_id, product_url:row.product_url, size_ml:sizeMl, product_type:'bottle', shipping_eur:0})});
     alert(`${result.retailer}: ${euro.format(result.total_eur)} wurde übernommen.`);
     event.currentTarget.textContent = 'Übernommen';
   } catch(error) { alert(error.message); event.currentTarget.disabled = false; event.currentTarget.textContent = 'Übernehmen'; }
