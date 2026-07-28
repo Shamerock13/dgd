@@ -59,10 +59,39 @@ class Fragrance(Base):
     base_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     accords: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Legacy-Scores bleiben kompatibel. Neue Recherche schreibt zusätzlich die
+    # strukturierten Felder darunter und überschreibt manuelle Werte nicht blind.
     longevity: Mapped[float | None] = mapped_column(Float, nullable=True)
     projection: Mapped[float | None] = mapped_column(Float, nullable=True)
     sweetness: Mapped[float | None] = mapped_column(Float, nullable=True)
     freshness: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    longevity_min_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longevity_max_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longevity_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    sillage: Mapped[float | None] = mapped_column(Float, nullable=True)
+    performance_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    projection_first_hour: Mapped[float | None] = mapped_column(Float, nullable=True)
+    projection_after_three_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+    drydown_strength: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    performance_source_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    performance_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    performance_disagreement: Mapped[float | None] = mapped_column(Float, nullable=True)
+    performance_status: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="OPEN", server_default="OPEN"
+    )
+    performance_researched_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    performance_version: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    performance_production_period: Mapped[str | None] = mapped_column(String(120), nullable=True)
+
+    # Persönliche Bewertung strikt getrennt von aggregierten Community-Werten.
+    personal_longevity_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+    personal_projection: Mapped[float | None] = mapped_column(Float, nullable=True)
+    personal_sillage: Mapped[float | None] = mapped_column(Float, nullable=True)
+    personal_performance_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     master_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
