@@ -1,6 +1,6 @@
 # DGD – Projektkontext
 
-Stand: 28. Juli 2026
+Stand: 29. Juli 2026
 
 Wir arbeiten am Repository `Shamerock13/dgd`. Ergänzend gelten `docs/CURRENT_STATUS.md`, `docs/ROADMAP.md` und `docs/DEV_WORKFLOW.md`.
 
@@ -36,33 +36,32 @@ Lokale Medien: `/mnt/user/appdata/dgd-dev-media`
 - `/` ist die öffentliche Katalogansicht
 - `/admin.html` enthält das bestehende Admin-Center
 - Datenbankzugriff über `DATABASE_URL`
-- explizites DGD-Migrationsschema aktuell bis `0012`
+- explizites DGD-Migrationsschema aktuell bis `0013`
 
 ## Aktueller Funktionsstand
 
-Abgeschlossen sind alle Pakete bis einschließlich Paket 14 **Suche, Filter & Navigation 2.0** sowie die Performance-Pakete 16.1 und 16.2.
+Abgeschlossen sind alle Pakete bis einschließlich Paket 14 **Suche, Filter & Navigation 2.0**, die Performance-Pakete 16.1 bis 16.3 sowie Paket 16.4.1 **Duft-DNA-Datenmodell und API**.
 
-Paket 16.1 ergänzt ein strukturiertes Performance-Datenmodell für Haltbarkeit, Projektion, Sillage, Drydown, Gesamtleistung, Quellenqualität, Versionen und persönliche Bewertungen. Migration `0012`, API-Ausgabe und Tests wurden in Dev bestätigt.
+Paket 16.1 ergänzt strukturierte Performance-Daten. Paket 16.2 zeigt diese Werte in einer eigenständigen Performance-Karte. Paket 16.3 ergänzt den zeitlichen Verlauf für Opening, Herzphase und Drydown, ohne zusätzliche Messpunkte zu erfinden.
 
-Paket 16.2 zeigt diese Werte in einer eigenständigen Performance-Karte im öffentlichen Duftprofil. Fehlende Werte bleiben sichtbar offen und werden nicht aus Legacy-Feldern geschätzt.
+Paket 16.4.1 ergänzt 16 optionale Duft-DNA-Dimensionen, Herkunft, Prüfstatus, Quellenqualität und getrennte persönliche Werte. Migration `0013`, Backendstart, Endpunkte und `17 passed, 1 warning` wurden in Dev bestätigt.
 
-Paket 16.3 **Zeitlicher Duftverlauf** wird im Branch `feature/performance-timeline` entwickelt. Die Timeline visualisiert ausschließlich `projection_first_hour`, `projection_after_three_hours` und `drydown_strength`. Zusätzliche Messpunkte werden nicht erfunden.
+Paket 16.4.2 **Duft-DNA-Karte** wird im Branch `feature/fragrance-dna-card` entwickelt. Die Karte liest den eigenen DNA-Endpunkt, sortiert vorhandene Dimensionen nach Stärke und zeigt persönliche Wahrnehmung getrennt. Fehlende Werte bleiben leer.
 
-Paket 15 **Datenvalidierung & Importqualität 2.0** besitzt Qualitätsvorschau, geschützten Commit, manuelle `REVIEW`-Entscheidungen und gespeicherte Importberichte. Diese Abläufe wurden praktisch in Dev bestätigt. Der Master-Import muss noch mit denselben Regeln abgesichert werden.
+Paket 15 **Datenvalidierung & Importqualität 2.0** besitzt Qualitätsvorschau, geschützten Commit, manuelle `REVIEW`-Entscheidungen und gespeicherte Importberichte. Der Master-Import muss noch mit denselben Regeln abgesichert werden.
 
-Paket 18 **Preisbeobachtung & Händlervergleich 1.0** wurde auf Nutzerpriorität vorgezogen. Der erste Backend-Baustein trennt Händler, aktuelle Angebote und unveränderliche Preisbeobachtungen. Angebote speichern Warenpreis, Versand, Größe, Produktart, Verfügbarkeit und Prüfzeitpunkt. Der Preis-Endpunkt berechnet günstigstes verfügbares Angebot, Preis pro 100 ml, historischen Bestpreis und Verlauf.
-
-Die Preislogik führt noch keine externen Abrufe aus. Händleradapter und tägliche Preisprüfungen werden später an den getrennten Scanner-Worker angebunden.
+Paket 18 **Preisbeobachtung & Händlervergleich 1.0** trennt Händler, aktuelle Angebote und unveränderliche Preisbeobachtungen. Händleradapter und tägliche Preisprüfungen folgen später am getrennten Scanner-Worker.
 
 Der öffentliche Katalog unterstützt serverseitige Suche, Filter, Pagination und dauerhaft verlinkbare Duft-, Marken- und Parfümeuransichten. Die Admin-Listen für Düfte und Marken besitzen Suche und Pagination.
-
-Der Scanner-Worker läuft getrennt von API und Frontend. Er prüft ausschließlich aktive und fällige Quellen und veröffentlicht keine Treffer automatisch.
 
 ## Wichtige Endpunkte
 
 ```text
 GET  /api/catalog/fragrances
 GET  /api/fragrances/{fragrance_id}
+GET  /api/fragrances/{fragrance_id}/dna
+PUT  /api/fragrances/{fragrance_id}/dna
+PUT  /api/fragrances/{fragrance_id}/dna/personal
 POST /api/import/quality/preview
 POST /api/import/quality/commit
 GET  /api/import/quality/runs
@@ -88,6 +87,9 @@ PUT  /api/research/scanner/status
 - blockierte Zeilen können nicht manuell freigegeben werden
 - Performance-Werte nur strukturiert und mit sichtbarem Prüfstatus darstellen
 - zeitliche Performance-Texte nur aus vorhandenen Phasenwerten ableiten
+- Duft-DNA nur aus strukturierten Feldern darstellen
+- fehlende DNA-Werte nicht als `0` behandeln
+- persönliche DNA niemals mit aggregierter Recherche-DNA vermischen
 - Preis und Versand getrennt speichern; Gesamtpreis vergleichen
 - ausverkaufte Angebote nicht als günstigsten aktuellen Preis anzeigen
 - Händlerseiten später nur über kontrollierte Adapter abrufen
@@ -117,6 +119,6 @@ Geänderte Dienste anschließend gezielt bauen und ersetzen. Bei einem festen Do
 
 ## Nächster Schritt
 
-**Paket 16.3 im Dev-Frontend bauen und den zeitlichen Duftverlauf mit leeren sowie befüllten Performance-Werten visuell prüfen.**
+**Paket 16.4.2 im Dev-Frontend bauen und die Duft-DNA-Karte mit leerem, partiellem und persönlichem Profil visuell prüfen.**
 
 Produktion wird erst nach erfolgreicher Dev-Abnahme in einem eigenen, ausdrücklich freizugebenden Schritt vorbereitet.
