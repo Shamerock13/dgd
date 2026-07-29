@@ -1,6 +1,6 @@
 # DGD – Aktueller Projektstand
 
-Stand: 28. Juli 2026
+Stand: 29. Juli 2026
 
 Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf `main` vorhandenen Funktionsstand. Änderungen in offenen Feature-Branches werden ausdrücklich als in Arbeit gekennzeichnet. Detailentscheidungen stehen zusätzlich in den jeweiligen Fachdateien unter `docs/`.
 
@@ -22,76 +22,50 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 14. Suche, Filter & Navigation 2.0
 16.1 Strukturiertes Performance-Datenmodell
 16.2 Performance-Karte im Duftprofil
+16.3 Zeitlicher Duftverlauf
+16.4.1 Duft-DNA-Datenmodell
 
-## Paket 16.1 abgeschlossen
+## Performance-Pakete 16.1 bis 16.3 abgeschlossen
 
-Das Datenmodell für Duftleistung ist auf `main` vorhanden. Erfasst werden unter anderem:
+Das strukturierte Performance-Modell, die öffentliche Performance-Karte und der zeitliche Duftverlauf für Opening, Herzphase und Drydown sind auf `main` vorhanden. Fehlende Werte bleiben sichtbar offen; zusätzliche Messpunkte werden nicht erfunden.
 
-- Haltbarkeit als Stundenbereich und normalisierter Score
-- Projektion, Sillage, Drydown und Gesamtperformance
-- Projektion in der ersten Stunde und nach drei Stunden
-- Quellenanzahl, Vertrauensgrad und Quellenabweichung
-- Prüfstatus, Recherchedatum, Version und Produktionszeitraum
-- persönliche Bewertung getrennt von Community-Daten
+Migration `0012`, API-Ausgabe und Backendtests wurden in Dev bestätigt.
 
-Das explizite DGD-Migrationsschema steht bei `0012`. Migration, Backendstart, API-Ausgabe und automatisierte Tests wurden in der Dev-Umgebung bestätigt. Ergebnis: `11 passed`, eine nicht blockierende FastAPI-Abschreibungswarnung.
+## Paket 16.4.1 abgeschlossen
 
-## Paket 16.2 abgeschlossen
+Das Duft-DNA-Datenmodell wurde über PR #78 nach `main` übernommen. Enthalten sind:
 
-Die Performance-Karte wurde über PR #75 nach `main` übernommen. Die öffentliche Duftdetailansicht zeigt:
+- 16 optionale Dimensionen von `0` bis `10`
+- aggregierte und persönliche DNA strikt getrennt
+- Herkunft, Prüfstatus, Quellenanzahl, Vertrauen, Quellenabweichung und Recherchedatum
+- Migration `0013`
+- Endpunkte zum Lesen und Speichern der DNA
+- keine automatische Übernahme aus Legacy-Feldern, Akkorden oder Duftnoten
 
-- Haltbarkeitsbereich und Score
-- Gesamtleistung, Projektion, Sillage und Drydown
-- zeitbezogene Projektionswerte
-- Vertrauen, Quellenanzahl, Abweichung und Prüfstatus
-- Version, Produktionszeitraum und Recherchedatum
-- klar getrennte persönliche Bewertungen
+Die Dev-Abnahme bestätigte Backendstart, Migration `0013`, sichtbare Endpunkte und `17 passed, 1 warning in 0.53s`.
 
-Fehlende Werte werden als „Noch offen“ beziehungsweise „–“ dargestellt. Es werden keine Werte aus Legacy-Feldern hochgerechnet oder erfunden.
+## Paket 16.4.2 in Arbeit
 
-## Paket 16.3 in Arbeit
+**Duft-DNA-Karte** liegt im Branch `feature/fragrance-dna-card`.
 
-**Zeitlicher Duftverlauf** liegt im Branch `feature/performance-timeline`.
+Die öffentliche Duftdetailansicht erhält:
 
-Die bestehende Performance-Karte wird ergänzt um:
+- responsive Balken für vorhandene DNA-Dimensionen
+- Sortierung nach Stärke
+- eine Signatur aus den drei stärksten vorhandenen Dimensionen
+- Herkunft, Prüfstatus und Datenqualität
+- persönliche DNA in einem getrennten Bereich
+- klare Leerzustände ohne erfundene Werte
 
-- eine responsive Timeline für Opening, Herzphase und Drydown
-- sichtbare Phasenwerte für erste Stunde, nach drei Stunden und Basisphase
-- feste verbale Einordnungen von „sehr dezent“ bis „sehr stark“
-- ein Stärke-Badge aus dem vorhandenen Gesamtperformance-Wert
-- eine deterministische Kurzbeschreibung der Entwicklung
-- saubere Platzhalter, wenn einzelne oder alle Phasenwerte fehlen
-
-Die Timeline verwendet ausschließlich vorhandene Felder aus Migration `0012`. Sie erzeugt keine zusätzlichen Zwischenwerte und führt keine KI-Recherche aus. Dev-Abnahme und Merge stehen noch aus.
+Frontend-Build und visuelle Dev-Abnahme stehen noch aus.
 
 ## Paket 15 in Arbeit
 
-**Datenvalidierung & Importqualität 2.0** besitzt:
-
-```text
-POST /api/import/quality/preview
-POST /api/import/quality/commit
-GET  /api/import/quality/runs
-```
-
-Qualitätsvorschau, geschützter Commit, manuelle `REVIEW`-Entscheidungen und gespeicherte Importberichte wurden praktisch in Dev bestätigt. Offen bleibt die Absicherung des Master-Imports mit denselben Regeln.
+**Datenvalidierung & Importqualität 2.0** besitzt Qualitätsvorschau, geschützten Commit, manuelle `REVIEW`-Entscheidungen und gespeicherte Importberichte. Offen bleibt die Absicherung des Master-Imports mit denselben Regeln.
 
 ## Paket 18 gestartet
 
-**Preisbeobachtung & Händlervergleich 1.0** besitzt im ersten Backend-Baustein:
-
-```text
-GET  /api/prices/retailers
-POST /api/prices/retailers
-POST /api/prices/offers/check
-GET  /api/prices/fragrances/{fragrance_id}?days=90
-```
-
-Neu sind getrennte Datenmodelle für Händler, aktuelle Angebote und unveränderliche Preisbeobachtungen. Der Duft-Endpunkt berechnet den günstigsten verfügbaren Gesamtpreis inklusive Versand, den Preis pro 100 ml, den historischen Bestpreis und den Verlauf für bis zu 1095 Tage.
-
-Produktarten werden als Flakon, Tester, Set, Probe oder Refill getrennt gekennzeichnet. Ausverkaufte Angebote bleiben nachvollziehbar, zählen aber nicht zum aktuell günstigsten Preis.
-
-Der erste Baustein liest noch keine Händlerseiten automatisch aus. Admin-Oberfläche, Händleradapter und tägliche Scannerläufe folgen getrennt.
+**Preisbeobachtung & Händlervergleich 1.0** besitzt Händlerstammdaten, aktuelle Angebote, unveränderliche Preisbeobachtungen und einen Duft-Endpunkt für günstigsten Gesamtpreis, Preis pro 100 ml, historischen Bestpreis und Verlauf. Händleradapter und tägliche automatische Preisprüfungen folgen getrennt.
 
 ## Scanner-Betrieb
 
@@ -107,10 +81,12 @@ Die Dev-Umgebung besitzt den getrennten Container `DGD-Dev-Scanner`. Der Worker 
 - Preise und Versand getrennt speichern und als Gesamtpreis vergleichen
 - ausverkaufte Angebote nicht als günstigsten Preis anzeigen
 - Duftnoten und Akkorde zentral normalisieren
+- Duft-DNA nur aus strukturierten Werten darstellen
+- fehlende DNA-Dimensionen niemals als `0` interpretieren
 
 ## Datenbankstand
 
-Das explizite DGD-Migrationsschema steht bei `0012`. Neue Tabellen für Importberichte und Preisbeobachtung werden idempotent über die registrierten SQLAlchemy-Modelle angelegt.
+Das explizite DGD-Migrationsschema steht bei `0013`.
 
 ## Qualitätssicherung
 
@@ -122,7 +98,7 @@ npm install
 npm run build
 ```
 
-Backendtests können in der aktuellen Dev-Image-Konfiguration ausgeführt werden, nachdem `backend/tests` in den Container kopiert wurde, da `backend/Dockerfile.dev` derzeit nur `app` übernimmt:
+Backendtests in Dev:
 
 ```bash
 docker cp backend/tests DGD-Dev-Backend:/app/tests
@@ -133,7 +109,7 @@ Neue Pakete gelten erst nach erfolgreichem Test in der separaten Dev-Umgebung al
 
 ## Nächster Schritt
 
-**Paket 16.3 im Dev-Frontend bauen und visuell mit einem leeren sowie einem befüllten Performance-Datensatz prüfen. Danach PR zusammenführen. Parallel bleiben Paket 15 und Paket 18 als eigene Arbeitsstränge offen.**
+**Paket 16.4.2 im Dev-Frontend bauen und die Duft-DNA-Karte mit leerem, partiellem und persönlichem Profil prüfen. Danach PR zusammenführen.**
 
 ## Dokumentationsregel
 
