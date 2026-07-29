@@ -23,7 +23,8 @@ Diese Datei ist die kompakte, maßgebliche Übersicht über den tatsächlich auf
 16.1 Strukturiertes Performance-Datenmodell
 16.2 Performance-Karte im Duftprofil
 16.3 Zeitlicher Duftverlauf
-16.4.1 Duft-DNA-Datenmodell
+16.4.1 Duft-DNA-Datenmodell und API
+16.4.2 Duft-DNA-Karte im Duftprofil
 
 ## Performance-Pakete 16.1 bis 16.3 abgeschlossen
 
@@ -33,31 +34,34 @@ Migration `0012`, API-Ausgabe und Backendtests wurden in Dev bestätigt.
 
 ## Paket 16.4.1 abgeschlossen
 
-Das Duft-DNA-Datenmodell wurde über PR #78 nach `main` übernommen. Enthalten sind:
+Das Duft-DNA-Datenmodell wurde über PR #78 nach `main` übernommen. Enthalten sind 16 optionale Dimensionen von `0` bis `10`, getrennte aggregierte und persönliche Profile, Herkunft, Prüfstatus, Quellenanzahl, Vertrauen, Quellenabweichung und Recherchedatum. Migration `0013` sowie die Lese- und Speicherendpunkte wurden in Dev bestätigt. Testergebnis: `17 passed, 1 warning in 0.53s`.
 
-- 16 optionale Dimensionen von `0` bis `10`
-- aggregierte und persönliche DNA strikt getrennt
-- Herkunft, Prüfstatus, Quellenanzahl, Vertrauen, Quellenabweichung und Recherchedatum
-- Migration `0013`
-- Endpunkte zum Lesen und Speichern der DNA
-- keine automatische Übernahme aus Legacy-Feldern, Akkorden oder Duftnoten
+## Paket 16.4.2 abgeschlossen
 
-Die Dev-Abnahme bestätigte Backendstart, Migration `0013`, sichtbare Endpunkte und `17 passed, 1 warning in 0.53s`.
+Die öffentliche Duft-DNA-Karte wurde über PR #79 nach `main` übernommen und in Dev visuell bestätigt. Sie zeigt vorhandene Dimensionen sortiert nach Stärke, eine prägende Signatur, Herkunft, Prüfstatus, Datenqualität und persönliche Werte in einem getrennten Bereich. Fehlende Dimensionen bleiben leer.
 
-## Paket 16.4.2 in Arbeit
+## Paket 16.4.3 in Arbeit
 
-**Duft-DNA-Karte** liegt im Branch `feature/fragrance-dna-card`.
+**Pflege und Recherche der Duft-DNA** liegt im Branch `feature/fragrance-dna-admin` und im Draft-PR #81.
 
-Die öffentliche Duftdetailansicht erhält:
+Bereits umgesetzt:
 
-- responsive Balken für vorhandene DNA-Dimensionen
-- Sortierung nach Stärke
-- eine Signatur aus den drei stärksten vorhandenen Dimensionen
-- Herkunft, Prüfstatus und Datenqualität
-- persönliche DNA in einem getrennten Bereich
-- klare Leerzustände ohne erfundene Werte
+- Admin-Editor für alle 16 DNA-Dimensionen
+- Laden vorhandener aggregierter und persönlicher Werte
+- getrennte Speicheraktionen für aggregierte und persönliche DNA
+- Herkunft, Prüfstatus, Quellenanzahl, Vertrauen, Abweichung und Recherchedatum
+- einzelne Werte können ausdrücklich geleert werden
+- responsive Gestaltung
+- Einbindung in die bestehende Duftbearbeitung des Admin-Centers
 
-Frontend-Build und visuelle Dev-Abnahme stehen noch aus.
+Noch offen:
+
+- Frontend-Build in Dev
+- partielles Profil speichern und erneut laden
+- persönliche DNA getrennt speichern und erneut laden
+- Prüfung, dass geleerte Werte nicht als `0` zurückkehren
+- visuelle Abnahme und Merge
+- kontrollierte Recherchevorschläge und Freigabeworkflow als nachgelagerter Baustein
 
 ## Paket 15 in Arbeit
 
@@ -67,10 +71,6 @@ Frontend-Build und visuelle Dev-Abnahme stehen noch aus.
 
 **Preisbeobachtung & Händlervergleich 1.0** besitzt Händlerstammdaten, aktuelle Angebote, unveränderliche Preisbeobachtungen und einen Duft-Endpunkt für günstigsten Gesamtpreis, Preis pro 100 ml, historischen Bestpreis und Verlauf. Händleradapter und tägliche automatische Preisprüfungen folgen getrennt.
 
-## Scanner-Betrieb
-
-Die Dev-Umgebung besitzt den getrennten Container `DGD-Dev-Scanner`. Der Worker verarbeitet ausschließlich aktive und fällige Recherchequellen, verhindert parallele Doppelläufe und veröffentlicht keine Treffer automatisch.
-
 ## Recherche- und Sicherheitsregeln
 
 - nur öffentliche HTTP- und HTTPS-Ziele
@@ -79,10 +79,9 @@ Die Dev-Umgebung besitzt den getrennten Container `DGD-Dev-Scanner`. Der Worker 
 - Dublettenprüfung vor Freigabe
 - ähnliche Importkandidaten niemals automatisch zusammenführen
 - Preise und Versand getrennt speichern und als Gesamtpreis vergleichen
-- ausverkaufte Angebote nicht als günstigsten Preis anzeigen
-- Duftnoten und Akkorde zentral normalisieren
 - Duft-DNA nur aus strukturierten Werten darstellen
 - fehlende DNA-Dimensionen niemals als `0` interpretieren
+- ungeprüfte Recherche- oder KI-Vorschläge niemals automatisch veröffentlichen
 
 ## Datenbankstand
 
@@ -98,18 +97,11 @@ npm install
 npm run build
 ```
 
-Backendtests in Dev:
-
-```bash
-docker cp backend/tests DGD-Dev-Backend:/app/tests
-docker exec -it DGD-Dev-Backend python -m pytest -q /app/tests
-```
-
 Neue Pakete gelten erst nach erfolgreichem Test in der separaten Dev-Umgebung als praktisch abgenommen.
 
 ## Nächster Schritt
 
-**Paket 16.4.2 im Dev-Frontend bauen und die Duft-DNA-Karte mit leerem, partiellem und persönlichem Profil prüfen. Danach PR zusammenführen.**
+**Paket 16.4.3 im Dev-Frontend bauen und die manuelle DNA-Pflege mit partiellem, persönlichem und geleertem Profil prüfen.**
 
 ## Dokumentationsregel
 
