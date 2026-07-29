@@ -45,13 +45,11 @@ class FragranceBase(BaseModel):
     base_notes: str | None = None
     accords: str | None = None
 
-    # Bestehende Scores bleiben API-kompatibel.
     longevity: float | None = Field(default=None, ge=0, le=10)
     projection: float | None = Field(default=None, ge=0, le=10)
     sweetness: float | None = Field(default=None, ge=0, le=10)
     freshness: float | None = Field(default=None, ge=0, le=10)
 
-    # Strukturierte, quellenbasierte Performance-Werte.
     longevity_min_hours: float | None = Field(default=None, ge=0, le=72)
     longevity_max_hours: float | None = Field(default=None, ge=0, le=72)
     longevity_score: float | None = Field(default=None, ge=0, le=10)
@@ -63,19 +61,24 @@ class FragranceBase(BaseModel):
     performance_source_count: int | None = Field(default=None, ge=0)
     performance_confidence: float | None = Field(default=None, ge=0, le=100)
     performance_disagreement: float | None = Field(default=None, ge=0, le=100)
-    performance_status: str = Field(
-        default="OPEN",
-        pattern="^(OPEN|VERIFIED|REVIEW_REQUIRED)$",
-    )
+    performance_status: str = Field(default="OPEN", pattern="^(OPEN|VERIFIED|REVIEW_REQUIRED)$")
     performance_researched_at: datetime | None = None
     performance_version: str | None = Field(default=None, max_length=120)
     performance_production_period: str | None = Field(default=None, max_length=120)
 
-    # Eigene Wahrnehmung wird nicht mit Community-Daten vermischt.
     personal_longevity_hours: float | None = Field(default=None, ge=0, le=72)
     personal_projection: float | None = Field(default=None, ge=0, le=10)
     personal_sillage: float | None = Field(default=None, ge=0, le=10)
     personal_performance_score: float | None = Field(default=None, ge=0, le=10)
+
+    fragrance_dna: dict[str, float | None] | None = None
+    fragrance_dna_source: str | None = Field(default=None, pattern="^(MANUAL|RESEARCH|RULE_BASED)$")
+    fragrance_dna_status: str = Field(default="OPEN", pattern="^(OPEN|VERIFIED|REVIEW_REQUIRED)$")
+    fragrance_dna_source_count: int | None = Field(default=None, ge=0)
+    fragrance_dna_confidence: float | None = Field(default=None, ge=0, le=1)
+    fragrance_dna_disagreement: float | None = Field(default=None, ge=0, le=1)
+    fragrance_dna_researched_at: datetime | None = None
+    personal_fragrance_dna: dict[str, float | None] | None = None
 
     @model_validator(mode="after")
     def validate_performance_range(self):
@@ -84,9 +87,7 @@ class FragranceBase(BaseModel):
             and self.longevity_max_hours is not None
             and self.longevity_min_hours > self.longevity_max_hours
         ):
-            raise ValueError(
-                "longevity_min_hours darf nicht größer als longevity_max_hours sein"
-            )
+            raise ValueError("longevity_min_hours darf nicht größer als longevity_max_hours sein")
         return self
 
 
@@ -122,7 +123,6 @@ class FragranceOut(BaseModel):
     projection: float | None = None
     sweetness: float | None = None
     freshness: float | None = None
-
     longevity_min_hours: float | None = None
     longevity_max_hours: float | None = None
     longevity_score: float | None = None
@@ -142,6 +142,14 @@ class FragranceOut(BaseModel):
     personal_projection: float | None = None
     personal_sillage: float | None = None
     personal_performance_score: float | None = None
+    fragrance_dna: dict[str, float | None] | None = None
+    fragrance_dna_source: str | None = None
+    fragrance_dna_status: str = "OPEN"
+    fragrance_dna_source_count: int | None = None
+    fragrance_dna_confidence: float | None = None
+    fragrance_dna_disagreement: float | None = None
+    fragrance_dna_researched_at: datetime | None = None
+    personal_fragrance_dna: dict[str, float | None] | None = None
 
 
 class TwinCreate(BaseModel):
