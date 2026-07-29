@@ -29,32 +29,47 @@ Fehlende Dimensionen bleiben leer. Ein fehlender Wert ist nicht gleichbedeutend 
 
 ## Herkunft und Qualität
 
-Ein aggregiertes Profil erhält zusätzlich:
-
-- `dna_source_count` – Anzahl berücksichtigter Quellen
-- `dna_confidence` – Vertrauensgrad von `0` bis `1`
-- `dna_disagreement` – Quellenabweichung von `0` bis `1`
-- `dna_status` – `OPEN`, `REVIEW_REQUIRED` oder `VERIFIED`
-- `dna_origin` – `MANUAL`, `RESEARCH` oder `RULE_BASED`
-- `dna_researched_at` – Zeitpunkt der letzten Recherche
-
-Persönliche Bewertungen werden in einem getrennten Profil gespeichert und niemals mit aggregierten Werten vermischt.
+Ein aggregiertes Profil erhält zusätzlich Quellenanzahl, Vertrauensgrad, Quellenabweichung, Prüfstatus, Herkunft und Recherchedatum. Persönliche Bewertungen werden in einem getrennten Profil gespeichert und niemals mit aggregierten Werten vermischt.
 
 ## Keine automatische Legacy-Übernahme
 
-Die vorhandenen Felder `sweetness` und `freshness` werden nicht automatisch in die Duft-DNA übernommen. Ebenso werden aus `accords`, `top_notes`, `heart_notes` oder `base_notes` keine Werte ohne ausdrücklich dokumentierte und geprüfte Regel abgeleitet.
+Die vorhandenen Felder `sweetness` und `freshness` werden nicht automatisch übernommen. Ebenso werden aus Akkorden oder Duftnoten keine DNA-Werte ohne ausdrücklich dokumentierte und geprüfte Regel abgeleitet.
 
-## Darstellung
+## Paket 16.4.1 abgeschlossen
 
-Die erste UI-Version zeigt Balken für vorhandene Dimensionen, sortiert nach Stärke. Herkunft, Prüfstatus, Vertrauensgrad und Quellenanzahl bleiben sichtbar. Bei vollständig leeren Profilen erscheint ein klarer Leerzustand.
+Auf `main` vorhanden:
 
-Ein Radar-Diagramm ist eine spätere optionale Ergänzung und ersetzt nicht die barriereärmere Balkendarstellung.
+- Migration `0013`
+- 16 validierte Dimensionen von `0` bis `10`
+- aggregierte und persönliche DNA getrennt
+- Herkunft `MANUAL`, `RESEARCH` oder `RULE_BASED`
+- Status `OPEN`, `REVIEW_REQUIRED` oder `VERIFIED`
+- Endpunkte zum Lesen und Speichern
+- Dev-Abnahme mit erfolgreicher Migration und `17 passed, 1 warning`
 
-## Umsetzung
+## Paket 16.4.2 in Arbeit
 
-Paket 16.4 wird geteilt:
+Branch: `feature/fragrance-dna-card`
 
-1. **16.4.1 Datenmodell und API** – Migration, Validierung, Tests und Dokumentation
-2. **16.4.2 Duft-DNA-Karte** – responsive Darstellung im öffentlichen Duftprofil
+Die öffentliche Duftdetailansicht erhält eine responsive Balkenkarte mit:
 
-Produktion wird nicht verändert. Abnahme und Migration erfolgen ausschließlich in der separaten Dev-Umgebung.
+- vorhandenen Dimensionen, absteigend nach Stärke sortiert
+- prägender Signatur aus den drei stärksten vorhandenen Dimensionen
+- Herkunft und Prüfstatus
+- Vertrauen, Quellenanzahl, Quellenabweichung und Datenstand
+- klar getrenntem persönlichen DNA-Bereich
+- sichtbarem Leerzustand ohne erfundene Werte
+
+Die Karte liest ausschließlich `GET /api/fragrances/{fragrance_id}/dna`. Ein Radar-Diagramm bleibt eine spätere optionale Ergänzung und ersetzt nicht die barriereärmere Balkendarstellung.
+
+## Abnahme
+
+Vor dem Merge von 16.4.2:
+
+- Frontend-Build
+- Prüfung eines Duftes ohne DNA
+- Prüfung eines Duftes mit partiellem DNA-Profil
+- Prüfung persönlicher DNA
+- Desktop- und Mobilansicht
+
+Produktion wird nicht verändert. Abnahme erfolgt ausschließlich in der separaten Dev-Umgebung.

@@ -1,6 +1,6 @@
 # DGD 2.0 – Roadmap
 
-Stand: 28. Juli 2026
+Stand: 29. Juli 2026
 
 Diese Roadmap zeigt den aktuellen Entwicklungsstand. Maßgeblich für den tatsächlich auf `main` vorhandenen Funktionsstand bleibt zusätzlich `docs/CURRENT_STATUS.md`.
 
@@ -22,6 +22,8 @@ Diese Roadmap zeigt den aktuellen Entwicklungsstand. Maßgeblich für den tatsä
 14. ✅ Suche, Filter & Navigation 2.0
 16.1 ✅ Strukturiertes Performance-Datenmodell
 16.2 ✅ Performance-Karte im Duftprofil
+16.3 ✅ Zeitlicher Duftverlauf
+16.4.1 ✅ Duft-DNA-Datenmodell und API
 
 ## In Arbeit
 
@@ -34,7 +36,6 @@ Praktisch in Dev bestätigt:
 - Qualitätsanzeige im Admin-Center
 - geschützter Commit ohne Teilschreibvorgang
 - bewusste Auflösung von `REVIEW`-Zeilen
-- neuer Duft, vorhandenen Kandidaten verwenden oder Zeile ausschließen
 - gespeicherte Importberichte
 
 Noch offen:
@@ -42,24 +43,26 @@ Noch offen:
 - Master-Import mit denselben Regeln absichern
 - Paket 15 vollständig abschließen
 
-16.3 🚧 Zeitlicher Duftverlauf
+16.4.2 🚧 Duft-DNA-Karte
 
-Im Branch `feature/performance-timeline` umgesetzt:
+Im Branch `feature/fragrance-dna-card` umgesetzt:
 
-- drei sichtbare Phasen: Opening, Herzphase und Drydown
-- Nutzung der bestehenden Felder `projection_first_hour`, `projection_after_three_hours` und `drydown_strength`
-- responsive Balkendarstellung pro Phase
-- feste Stärke-Bezeichnungen statt freier oder erfundener Texte
-- Stärke-Badge aus dem vorhandenen Gesamtperformance-Score
-- deterministische Kurzbeschreibung der Entwicklung
-- sichtbare Leerzustände für fehlende Phasenwerte
-- aktualisierte Fach- und Projektdokumentation
+- responsive Balkendarstellung aller vorhandenen DNA-Dimensionen
+- stärkste Werte zuerst
+- Signatur aus den drei prägendsten vorhandenen Dimensionen
+- Herkunft und Prüfstatus sichtbar
+- Vertrauen, Quellenanzahl, Quellenabweichung und Datenstand
+- persönliche DNA optisch und fachlich getrennt
+- Leerzustände ohne erfundene Werte
+- Fachdatei, Projektstatus, Projektkontext und Roadmap aktualisiert
 
 Noch offen:
 
-- Frontend-Build und Browserprüfung in Dev
-- Prüfung mit leerem und befülltem Performance-Datensatz
-- visuelle Abnahme und Merge
+- Frontend-Build in Dev
+- Prüfung eines Duftes ohne DNA
+- Prüfung eines partiellen Profils und persönlicher DNA
+- Desktop- und Mobilabnahme
+- PR zusammenführen
 
 18. 🚧 Preisbeobachtung & Händlervergleich 1.0
 
@@ -84,17 +87,14 @@ Danach:
 
 ## Als Nächstes vorgesehen
 
-16.4 ⬜ Duft-DNA
+16.4.3 ⬜ Pflege und Recherche der Duft-DNA
 
-Geplant ist eine visuelle Charakterdarstellung, beispielsweise für:
+Nach der sichtbaren Karte folgen getrennt:
 
-- frisch und zitrisch
-- holzig und würzig
-- süß und gourmandig
-- rauchig und ledrig
-- grün, pudrig oder animalisch
-
-Vor der Umsetzung muss festgelegt werden, welche Dimensionen gespeichert, recherchiert und persönlich bewertet werden. Ein Radar- oder Balkendiagramm darf nur auf strukturierten Werten beruhen.
+- Admin-Eingabe für manuelle DNA-Werte
+- kontrollierte Recherchevorschläge
+- Prüf- und Freigabeworkflow
+- keine automatische Veröffentlichung ungeprüfter KI-Werte
 
 16. ⬜ Admin-Bereich 2.0
 17. ⬜ Vergleich & Bewertung 2.0
@@ -102,6 +102,7 @@ Vor der Umsetzung muss festgelegt werden, welche Dimensionen gespeichert, recher
 
 ## Für später vorgemerkt
 
+- optionales Radar-Diagramm zusätzlich zur Balkendarstellung
 - feinere Performance-Zeitpunkte mit eigenem Datenmodell
 - Tippfehler-Toleranz mit `pg_trgm`
 - Autovervollständigung und Suchvorschläge
