@@ -7,7 +7,6 @@ from .migrations import Migration
 def _register_fragrance_dna_migration() -> None:
     if any(item.version == "0013" for item in migrations.MIGRATIONS):
         return
-
     migrations.MIGRATIONS = (
         *migrations.MIGRATIONS,
         Migration(
@@ -31,6 +30,23 @@ def _register_fragrance_dna_migration() -> None:
     )
 
 
+def _register_fragrance_dna_proposal_migration() -> None:
+    if any(item.version == "0014" for item in migrations.MIGRATIONS):
+        return
+    migrations.MIGRATIONS = (
+        *migrations.MIGRATIONS,
+        Migration(
+            version="0014",
+            description="Kontrollierte Duft-DNA-Recherchevorschläge ergänzen",
+            statements=(
+                "CREATE TABLE IF NOT EXISTS fragrance_dna_proposals (id UUID PRIMARY KEY, fragrance_id UUID NOT NULL REFERENCES fragrances(id) ON DELETE CASCADE, values JSONB NOT NULL, source VARCHAR(30) NOT NULL, source_label VARCHAR(255), source_url TEXT, rationale TEXT, confidence DOUBLE PRECISION, status VARCHAR(30) NOT NULL DEFAULT 'OPEN', created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, reviewed_at TIMESTAMP, review_note TEXT)",
+                "CREATE INDEX IF NOT EXISTS ix_fragrance_dna_proposals_fragrance ON fragrance_dna_proposals (fragrance_id)",
+                "CREATE INDEX IF NOT EXISTS ix_fragrance_dna_proposals_status ON fragrance_dna_proposals (status)",
+            ),
+        ),
+    )
+
+
 def _move_spa_fallback_to_end() -> None:
     fallback_routes = [
         route for route in app.router.routes
@@ -44,9 +60,12 @@ def _move_spa_fallback_to_end() -> None:
 
 
 _register_fragrance_dna_migration()
+_register_fragrance_dna_proposal_migration()
 
 from .main import app  # noqa: E402
 from .fragrance_dna_routes import router as fragrance_dna_router  # noqa: E402
+from .fragrance_dna_proposal_routes import router as fragrance_dna_proposal_router  # noqa: E402
 
 app.include_router(fragrance_dna_router)
+app.include_router(fragrance_dna_proposal_router)
 _move_spa_fallback_to_end()
