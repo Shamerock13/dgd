@@ -31,9 +31,22 @@ def _register_fragrance_dna_migration() -> None:
     )
 
 
+def _move_spa_fallback_to_end() -> None:
+    fallback_routes = [
+        route for route in app.router.routes
+        if getattr(route, "path", None) == "/{full_path:path}"
+    ]
+    if not fallback_routes:
+        return
+    for route in fallback_routes:
+        app.router.routes.remove(route)
+        app.router.routes.append(route)
+
+
 _register_fragrance_dna_migration()
 
 from .main import app  # noqa: E402
 from .fragrance_dna_routes import router as fragrance_dna_router  # noqa: E402
 
 app.include_router(fragrance_dna_router)
+_move_spa_fallback_to_end()
