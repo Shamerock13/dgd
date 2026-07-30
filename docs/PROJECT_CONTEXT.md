@@ -27,39 +27,28 @@ Produktion und produktive Datenbank werden niemals direkt für Entwicklung oder 
 - Frontend: React, Vite plus bestehende Admin-Skripte
 - öffentlicher Katalog: `/`
 - Admin-Center: `/admin.html`
+- lokale Medien: `/media/fragrances`
 - explizites Migrationsschema bis `0015`
 
 ## Aktueller Funktionsstand
 
-Abgeschlossen sind die Pakete bis 14, Performance 16.1 bis 16.3, Duft-DNA 16.4, Admin 16.5.1 bis 16.5.3, Performance-Recherche 16.6.1 sowie KI-Export und sichere Rückimport-Vorschau 16.7.1 und 16.7.2.
+Abgeschlossen sind die Pakete bis 14, Performance 16.1 bis 16.3, Duft-DNA 16.4, Admin 16.5.1 bis 16.5.3, Performance-Recherche 16.6.1 sowie KI-Export und Rückimport 16.7.1 bis 16.7.3.
 
-Aktuell in Arbeit ist Paket 16.7.3 im Branch `feature/ai-research-import-apply` und Draft-PR #94. Es ergänzt die feldweise Freigabe und kontrollierte Datenbankübernahme für geprüfte Excel-Rückimporte.
+Paket 16.7.3 ergänzt die feldweise Freigabe und kontrollierte Datenbankübernahme für geprüfte Excel-Rückimporte. Die Dev-Abnahme einschließlich DNA-Validierung, lokalem Bild-Upload, Media-Auslieferung und normalem Duft-Speichern war erfolgreich.
 
 ## KI-Export und Rückimport
 
-### Export
-
 ```text
-GET /api/ai-research-export/xlsx
-```
-
-Der Export erzeugt eine KI-taugliche XLSX-Datei mit neun Tabellenblättern. Persönliche Performance- und DNA-Werte werden nicht exportiert. Technische Kennungen wie `export_id` und `fragrance_id` dürfen extern nicht verändert werden.
-
-### Vorschau
-
-```text
+GET  /api/ai-research-export/xlsx
 POST /api/ai-research-import/preview
-```
-
-Die Vorschau prüft Dateityp, Pflichtblätter, Schema, IDs, persönliche Felder und Zellwerte. Sie zeigt neue Werte und Konflikte im Alt/Neu-Vergleich, verändert aber keine Datenbankwerte.
-
-### Kontrollierte Übernahme
-
-```text
 POST /api/ai-research-import/apply
 ```
 
-Nur ausdrücklich ausgewählte Änderungen werden übernommen. Konflikte benötigen eine zusätzliche Bestätigung. Vor dem Speichern wird erneut geprüft, ob die Vorschau noch zum aktuellen Datenbankstand passt. Preisquellen und Scanner bleiben separat und werden nicht automatisch aktiviert.
+Der Export erzeugt eine KI-taugliche XLSX-Datei mit neun Tabellenblättern. Persönliche Performance- und DNA-Werte werden nicht exportiert. Die Vorschau zeigt neue Werte und Konflikte ohne Datenbankänderung. Nur ausdrücklich ausgewählte Änderungen werden übernommen; Konflikte benötigen eine zusätzliche Bestätigung und werden vor dem Speichern erneut gegen den aktuellen Datenbankstand geprüft.
+
+Duft-DNA akzeptiert ausschließlich die 16 numerischen Dimensionen von 0 bis 10. Beschreibende Merkmale wie Jahreszeit, Anlass oder Duftfamilie gehören künftig in ein separates Datenmodell.
+
+Bildquellen können als Prüfinformation übernommen werden. Geprüfte Bilder werden lokal gespeichert; externe Produktseiten werden nicht automatisch als Bild eingebettet. Preisquellen und Scanner bleiben bis Paket 16.7.4 separat und inaktiv.
 
 ## Wichtige Sicherheitsregeln
 
@@ -70,6 +59,7 @@ Nur ausdrücklich ausgewählte Änderungen werden übernommen. Konflikte benöti
 - Preisquellen bleiben bis zur separaten Scanner-Integration inaktiv
 - jeder erfolgreiche Übernahmelauf wird protokolliert
 - Fehler führen zum Rollback der gesamten Transaktion
+- normale Admin-Formulare senden nur ihre erlaubten Felder
 
 ## Arbeitsweise
 
@@ -93,4 +83,4 @@ docker compose -f docker-compose.dev.yml up -d --build
 
 ## Nächster Schritt
 
-Paket 16.7.3 mit einer ergänzten Testdatei praktisch prüfen. Danach CI kontrollieren, PR #94 freigeben und mergen.
+Paket 16.7.4 für validierte Preisquellen und kontrollierte spätere Scanner-Aktivierung.
