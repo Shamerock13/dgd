@@ -1,59 +1,74 @@
 # DGD – Aktueller Projektstand
 
-Stand: 29. Juli 2026
+Stand: 30. Juli 2026
 
-Diese Datei beschreibt den tatsächlich auf `main` vorhandenen Stand sowie noch offene Feature-Branches.
+Diese Datei beschreibt den tatsächlich auf `main` vorhandenen Stand sowie den aktuell offenen Feature-Branch.
 
-## Abgeschlossen
+## Abgeschlossen und auf `main`
 
 - Pakete 1 bis 14
 - 16.1 Strukturiertes Performance-Datenmodell
 - 16.2 Performance-Karte im Duftprofil
 - 16.3 Zeitlicher Duftverlauf
-- 16.4.1 Duft-DNA-Datenmodell und API
-- 16.4.2 Duft-DNA-Karte im Duftprofil
+- 16.4 Duft-DNA-Datenmodell, Anzeige, manuelle Pflege und kontrollierte Vorschläge
+- 16.5.1 Admin-Übersicht
+- 16.5.2 Gruppierte Admin-Navigation
+- 16.5.3 Strukturierte Duftbearbeitung
+- 16.6.1 KI-Recherche für strukturierte Performance-Daten
+- 16.7.1 Vollständiger KI-Recherche-Export als XLSX
+- 16.7.2 Geprüfte Rückimport-Vorschau ohne Datenbankänderung
 
-## Paket 16.4.3 – manuelle Duft-DNA-Pflege
+## Paket 16.7.3 – feldweise Freigabe und kontrollierte Übernahme
 
-Branch: `feature/fragrance-dna-admin` · PR #81
+Branch: `feature/ai-research-import-apply` · Draft-PR #94
 
-Umgesetzt und in Dev bestätigt:
+Umgesetzt:
 
-- Admin-Editor für alle 16 DNA-Dimensionen
-- Laden vorhandener aggregierter und persönlicher Werte
-- getrennte Speicheraktionen für aggregierte und persönliche DNA
-- Herkunft, Prüfstatus, Quellenanzahl, Vertrauen, Abweichung und Recherchedatum
-- partielle Profile bleiben partiell
-- einzelne Werte können bewusst geleert werden und kommen nicht als `0` zurück
-- erneutes Laden gespeicherter aggregierter und persönlicher Werte erfolgreich
-- responsive Einbindung in die bestehende Duftbearbeitung
-- DNA-Routen werden vor dem SPA-Fallback registriert
+- neue Werte sind in der Vorschau vorausgewählt
+- Konflikte bleiben zunächst abgewählt
+- Konflikte benötigen eine zusätzliche ausdrückliche Bestätigung
+- jede Auswahl wird direkt vor dem Speichern erneut gegen die aktuelle Datenbank geprüft
+- veraltete Vorschauen werden abgewiesen
+- Stammdaten, Performance, Duft-DNA und Bildquellen können feldweise übernommen werden
+- zusätzliche Duftnoten können selektiv angelegt und zugeordnet werden
+- leere Zellen erzeugen keine Löschungen
+- persönliche Felder bleiben gesperrt
+- Preisquellen und Scanner bleiben in diesem Paket deaktiviert
+- erfolgreiche Importläufe werden in `import_quality_runs` protokolliert
+- Übernahme erfolgt innerhalb einer Transaktion mit Rollback bei Fehlern
 
-Die Dev-Abnahme durch den Nutzer war erfolgreich. Offen ist nur noch der Merge von PR #81. Kontrollierte Recherchevorschläge und ein Freigabeworkflow folgen als eigener Baustein.
+## KI-Export und Rückimport
 
-## Weitere Arbeitsstränge
+Der Admin-Bereich `KI-Export` unterstützt:
 
-- Paket 15: Master-Import noch mit denselben Qualitätsregeln absichern
-- Paket 18: Händleradapter, tägliche Preisprüfung, Preisbox und Verlauf folgen
+- Export aller Düfte oder nur von Datensätzen mit Lücken
+- optionalen Markenfilter
+- stabile `export_id` und `fragrance_id`
+- neun Tabellenblätter: `Düfte`, `Noten`, `Performance`, `Duft-DNA`, `Bilder_Quellen`, `Preisquellen`, `Quellen`, `Anleitung`, `Metadaten`
+- Ausschluss persönlicher Performance- und DNA-Werte
+- Prüfung externer Ergänzungen mit Alt/Neu-Vergleich
+- Erkennung von neuen Werten, Konflikten, ungültigen IDs und veränderten Exportkennungen
 
 ## Daten- und Sicherheitsprinzipien
 
 - Produktion bleibt unberührt
-- fehlende DNA-Dimensionen sind unbekannt, nicht `0`
-- persönliche DNA bleibt von aggregierten Werten getrennt
-- ungeprüfte Recherche- oder KI-Vorschläge werden nie automatisch veröffentlicht
-- ähnliche Importkandidaten werden niemals automatisch zusammengeführt
+- leere Zellen bedeuten keine Löschung
+- fehlende Werte bleiben unbekannt und werden nicht als `0` interpretiert
+- persönliche Werte bleiben strikt von aggregierten Daten getrennt
+- ungeprüfte KI-Werte werden nie automatisch veröffentlicht
+- Konflikte müssen bewusst bestätigt werden
+- Preisquellen aktivieren niemals automatisch einen Scanner
 
 ## Datenbankstand
 
-Explizites DGD-Migrationsschema: `0013`.
+Explizites DGD-Migrationsschema bis `0015`.
 
 ## Qualitätssicherung
 
-GitHub-CI prüft Backend-Compile und Frontend-Build. Backendtests für 16.4.1: `17 passed, 1 warning in 0.53s`.
+GitHub-CI prüft Backend-Compile und Frontend-Build. Praktische Abnahmen erfolgen ausschließlich in der Dev-Umgebung auf Unraid.
 
 ## Nächster Schritt
 
-PR #81 zusammenführen. Danach Paket 16.4.4 für kontrollierte DNA-Recherchevorschläge und Freigabe starten.
+Paket 16.7.3 praktisch testen, dokumentierte Abnahme durchführen und anschließend PR #94 mergen.
 
 Der Chat ist nicht das Projektgedächtnis. Maßgeblich sind Repository und Dokumentation.
