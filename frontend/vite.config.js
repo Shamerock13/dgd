@@ -24,6 +24,10 @@ export default defineConfig({
       '/api': {
         target: 'http://DGD-Dev-Backend:8080',
         changeOrigin: true
+      },
+      '/media': {
+        target: 'http://DGD-Dev-Backend:8080',
+        changeOrigin: true
       }
     }
   }

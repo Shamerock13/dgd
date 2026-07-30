@@ -83,10 +83,12 @@ from .fragrance_dna_proposal_routes import router as fragrance_dna_proposal_rout
 from .performance_research import router as performance_research_router  # noqa: E402
 from .ai_research_export_safe import router as ai_research_export_router  # noqa: E402
 from .ai_research_import import router as ai_research_import_router  # noqa: E402
+from .ai_research_import_apply import router as ai_research_import_apply_router  # noqa: E402
 
 app.include_router(fragrance_dna_router)
 app.include_router(fragrance_dna_proposal_router)
 app.include_router(performance_research_router)
 app.include_router(ai_research_export_router)
 app.include_router(ai_research_import_router)
+app.include_router(ai_research_import_apply_router)
 _move_spa_fallback_to_end()
