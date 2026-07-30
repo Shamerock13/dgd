@@ -18,29 +18,27 @@ Diese Datei beschreibt den tatsächlich auf `main` vorhandenen Stand sowie unmit
 - 16.7.1 Vollständiger KI-Recherche-Export als XLSX
 - 16.7.2 Geprüfte Rückimport-Vorschau ohne Datenbankänderung
 - 16.7.3 Feldweise Freigabe und kontrollierte Übernahme
+- 16.7.4 Preisquellen geprüft übernehmen
 
-## Paket 16.7.3
+## Paket 16.7.4
 
-In Dev praktisch bestätigt und über PR #94 für `main` freigegeben:
+In Dev praktisch bestätigt und über PR #96 für `main` freigegeben:
 
-- neue Werte sind in der Vorschau vorausgewählt
-- Konflikte bleiben zunächst abgewählt und benötigen eine ausdrückliche Bestätigung
-- jede Auswahl wird direkt vor dem Speichern erneut gegen die aktuelle Datenbank geprüft
-- veraltete Vorschauen werden abgewiesen
-- Stammdaten, Performance, numerische Duft-DNA und Bildquellen können feldweise übernommen werden
-- zusätzliche Duftnoten können selektiv angelegt und zugeordnet werden
-- leere Zellen erzeugen keine Löschungen
-- persönliche Felder bleiben gesperrt
-- Preisquellen und Scanner bleiben deaktiviert
-- erfolgreiche Importläufe werden in `import_quality_runs` protokolliert
+- Preisquellen werden gegen bestehende Angebote und stabile `offer_source_id` abgeglichen
+- neue Quellen erhalten ihre Kennung ausschließlich durch DGD
+- unbekannte, doppelte oder zu einem anderen Duft gehörende Kennungen werden abgewiesen
+- direkte Produkt-URLs, Händler, Größe, Konzentration, Variante, Produkttyp, Währung und Markt werden geprüft
+- deutsche Produkttypen wie „reguläre Ware“, „Probe“, „Geschenkset“ und „Nachfüllung“ werden auf interne Codes normalisiert
+- neue Händler werden zunächst deaktiviert angelegt
+- neue und geänderte Preisquellen starten mit `PENDING_REVIEW`
+- `scanner_active` bleibt bei jeder Übernahme garantiert `false`
+- Konflikte benötigen weiterhin eine ausdrückliche Bestätigung
+- erfolgreiche Übernahmen werden einschließlich erzeugter `offer_source_id` protokolliert
 - Fehler führen zum vollständigen Rollback
-- ungültige beschreibende DNA-Strukturen werden beim Import abgewiesen
-- lokale Duftbilder werden unter `/media/fragrances` gespeichert und im Dev-Frontend ausgeliefert
-- der normale Dufteditor sendet nur seine erlaubten Formularfelder und bleibt mit KI-Daten kompatibel
 
 ## KI-Export und Rückimport
 
-Der Admin-Bereich `KI-Export` unterstützt Export, geprüfte Vorschau und kontrollierte Übernahme. Technische Kennungen bleiben stabil; persönliche Performance- und DNA-Werte sind ausgeschlossen. Preisquellen bleiben bis Paket 16.7.4 reine Vorschau.
+Der Admin-Bereich `KI-Export` unterstützt Export, geprüfte Vorschau und kontrollierte Übernahme von Stammdaten, Performance, Duft-DNA, Bildquellen, Duftnoten und Preisquellen. Technische Kennungen bleiben stabil; persönliche Performance- und DNA-Werte sind ausgeschlossen.
 
 ## Daten- und Sicherheitsprinzipien
 
@@ -51,17 +49,18 @@ Der Admin-Bereich `KI-Export` unterstützt Export, geprüfte Vorschau und kontro
 - ungeprüfte KI-Werte werden nie automatisch veröffentlicht
 - Konflikte müssen bewusst bestätigt werden
 - Preisquellen aktivieren niemals automatisch einen Scanner
+- neue Händler und Quellen bleiben bis zur manuellen Prüfung deaktiviert
 
 ## Datenbankstand
 
-Explizites DGD-Migrationsschema bis `0015`.
+Explizites DGD-Migrationsschema bis `0016`.
 
 ## Qualitätssicherung
 
-Dev-Abnahme erfolgreich. GitHub Actions `DGD CI` Lauf 201 für den finalen Branch-Stand erfolgreich.
+Dev-Abnahme erfolgreich. GitHub Actions `DGD CI` Lauf 218 für den final getesteten Branch-Stand erfolgreich.
 
 ## Nächster Schritt
 
-Paket 16.7.4: Preisquellen geprüft übernehmen und Scanner-Aktivierung weiterhin getrennt absichern.
+Als nächstes folgt die manuelle Prüf- und Freigabeoberfläche für Preisquellen beziehungsweise die weitere Admin-Protokollansicht. Automatisierte Scannerläufe bleiben davon getrennt.
 
 Der Chat ist nicht das Projektgedächtnis. Maßgeblich sind Repository und Dokumentation.
