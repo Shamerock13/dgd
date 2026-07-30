@@ -18,26 +18,7 @@ Stand: 30. Juli 2026
 - ✅ 16.6.1 KI-Recherche für strukturierte Performance-Daten
 - ✅ 16.7.1 Vollständiger KI-Recherche-Export
 - ✅ 16.7.2 Geprüfte Rückimport-Vorschau
-
-## Kurz vor Abschluss
-
-### 16.7.3 🚧 Feldweise Freigabe und kontrollierte Übernahme
-
-In Draft-PR #94 umgesetzt:
-
-- neue Werte in der Vorschau vorausgewählt
-- Konflikte standardmäßig abgewählt
-- ausdrückliche Bestätigung vor dem Überschreiben bestehender Werte
-- erneute Prüfung gegen den aktuellen Datenbankstand vor dem Speichern
-- feldweise Übernahme von Stammdaten, Performance, Duft-DNA und Bildquellen
-- selektive Übernahme zusätzlicher Duftnoten
-- persönliche Felder bleiben gesperrt
-- leere Zellen erzeugen niemals Löschungen
-- Preisquellen und Scanner bleiben von der Übernahme ausgeschlossen
-- Importläufe werden in `import_quality_runs` protokolliert
-- vollständiger Rollback bei Fehlern
-
-Offen: Dev-Abnahme, Dokumentationskontrolle, CI-Prüfung und Merge nach `main`.
+- ✅ 16.7.3 Feldweise Freigabe und kontrollierte Übernahme
 
 ## In Arbeit
 
@@ -53,14 +34,18 @@ Vorhanden sind Händlerstammdaten, aktuelle Angebote, Preisbeobachtungen und Pre
 
 ### 16.7.4 ⬜ Preisquellen geprüft übernehmen
 
-- `offer_source_id` stabil validieren
-- neue Produktlinks zunächst deaktiviert speichern
-- Händler, Variante, Größe, Konzentration und Produkttyp prüfen
+- `offer_source_id` stabil und zeilenweise validieren
+- neue direkte Produktlinks zunächst deaktiviert speichern
+- Händler, Variante, Größe, Konzentration, Set/Tester und Produkttyp prüfen
+- Gesamtpreis einschließlich Versand vergleichbar speichern
 - geänderte Links nur nach bewusster Freigabe aktivieren
+- alte Scannerzuordnung bei Linkänderung zunächst deaktivieren
 - keine automatische Scanner-Aktivierung ungeprüfter Quellen
+- Preisquellen in Vorschau, Freigabe und Auditprotokoll integrieren
 
 Danach:
 
+- separates Datenmodell für beschreibende Duftmerkmale wie Jahreszeit, Anlass, Dichte, Temperaturwirkung und Signatur
 - 16.5.4 weitere Admin-Werkzeuge und Protokollansichten
 - 17 Vergleich & Bewertung 2.0
 - 18 Händleradapter und automatisierte Preisaktualisierung
