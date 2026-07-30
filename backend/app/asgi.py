@@ -65,10 +65,7 @@ def _register_performance_research_migration() -> None:
 
 
 def _move_spa_fallback_to_end() -> None:
-    fallback_routes = [
-        route for route in app.router.routes
-        if getattr(route, "path", None) == "/{full_path:path}"
-    ]
+    fallback_routes = [route for route in app.router.routes if getattr(route, "path", None) == "/{full_path:path}"]
     if not fallback_routes:
         return
     for route in fallback_routes:
@@ -84,8 +81,10 @@ from .main import app  # noqa: E402
 from .fragrance_dna_routes import router as fragrance_dna_router  # noqa: E402
 from .fragrance_dna_proposal_routes import router as fragrance_dna_proposal_router  # noqa: E402
 from .performance_research import router as performance_research_router  # noqa: E402
+from .ai_research_export_safe import router as ai_research_export_router  # noqa: E402
 
 app.include_router(fragrance_dna_router)
 app.include_router(fragrance_dna_proposal_router)
 app.include_router(performance_research_router)
+app.include_router(ai_research_export_router)
 _move_spa_fallback_to_end()
