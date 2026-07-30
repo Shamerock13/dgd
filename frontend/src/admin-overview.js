@@ -2,15 +2,18 @@ async function overviewRequest(url){const response=await fetch(url);if(!response
 function overviewEscape(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 async function overviewSafe(url,fallback=[]){try{return await overviewRequest(url)}catch{return fallback}}
 function adminButtonByText(label){return [...document.querySelectorAll('.admin-tabs button')].find(button=>button.textContent.trim().startsWith(label))}
+function restoreAdminContent(){
+  document.querySelector('[data-admin-overview-host]')?.remove();
+  document.querySelectorAll('.admin-main > [data-admin-overview-hidden="true"]').forEach(child=>{
+    child.style.removeProperty('display');
+    delete child.dataset.adminOverviewHidden;
+  });
+}
 function openAdminTarget(target){
+  restoreAdminContent();
   const external=document.querySelector(target);
   if(external){external.click();return}
-  const button=adminButtonByText(target);
-  if(!button)return;
-  const overview=document.querySelector('[data-admin-overview-tab]');
-  const nativeButtons=[...document.querySelectorAll('.admin-tabs button')].filter(item=>!item.dataset.adminOverviewTab&&!item.dataset.dnaProposalTab&&!item.dataset.performanceResearchTab);
-  const detour=nativeButtons.find(item=>item!==button);
-  if(overview?.classList.contains('active')&&detour){detour.click();setTimeout(()=>adminButtonByText(target)?.click(),0)}else button.click();
+  adminButtonByText(target)?.click();
 }
 function dashboardCard({tone,label,value,copy,target}){return `<button type="button" class="admin-overview-card ${tone}" data-admin-overview-target="${overviewEscape(target)}"><span>${overviewEscape(label)}</span><strong>${value}</strong><p>${overviewEscape(copy)}</p><b>Arbeitsbereich öffnen →</b></button>`}
 async function renderAdminOverview(container){
@@ -35,13 +38,28 @@ async function renderAdminOverview(container){
 }
 function showAdminOverview(){
   const tabs=document.querySelector('.admin-tabs');const admin=document.querySelector('.admin-main');if(!tabs||!admin)return;
+  restoreAdminContent();
   tabs.querySelectorAll('button').forEach(item=>item.classList.remove('active'));
   const button=tabs.querySelector('[data-admin-overview-tab]');button?.classList.add('active');
-  [...admin.children].forEach(child=>{if(!child.classList.contains('admin-head')&&!child.classList.contains('admin-tabs'))child.remove()});
+  [...admin.children].forEach(child=>{
+    if(!child.classList.contains('admin-head')&&!child.classList.contains('admin-tabs')){
+      child.dataset.adminOverviewHidden='true';
+      child.style.display='none';
+    }
+  });
   const host=document.createElement('div');host.dataset.adminOverviewHost='true';admin.appendChild(host);renderAdminOverview(host);
 }
+function bindNativeTabRestore(tabs){
+  tabs.querySelectorAll('button:not([data-admin-overview-tab])').forEach(button=>{
+    if(button.dataset.adminOverviewRestoreBound)return;
+    button.dataset.adminOverviewRestoreBound='true';
+    button.addEventListener('click',restoreAdminContent,{capture:true});
+  });
+}
 function injectAdminOverview(){
-  const tabs=document.querySelector('.admin-tabs');if(!tabs||tabs.querySelector('[data-admin-overview-tab]'))return;
+  const tabs=document.querySelector('.admin-tabs');if(!tabs)return;
+  bindNativeTabRestore(tabs);
+  if(tabs.querySelector('[data-admin-overview-tab]'))return;
   const button=document.createElement('button');button.type='button';button.dataset.adminOverviewTab='true';button.textContent='Übersicht';button.addEventListener('click',showAdminOverview);tabs.prepend(button);showAdminOverview();
 }
 const adminOverviewObserver=new MutationObserver(injectAdminOverview);adminOverviewObserver.observe(document.documentElement,{childList:true,subtree:true});injectAdminOverview();
