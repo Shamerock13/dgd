@@ -135,6 +135,7 @@ from .fragrance_dna_proposal_routes import router as fragrance_dna_proposal_rout
 from .performance_research import router as performance_research_router  # noqa: E402
 from .ai_research_export_safe import router as ai_research_export_router  # noqa: E402
 from .ai_research_price_preview import router as ai_research_price_preview_router  # noqa: E402
+from . import ai_research_price_aliases  # noqa: E402,F401
 from .ai_research_import import router as ai_research_import_router  # noqa: E402
 from .ai_research_import_apply import router as ai_research_import_apply_router  # noqa: E402
 
