@@ -1,55 +1,39 @@
 function aiExportToast(message){let node=document.querySelector('.ai-export-toast');if(!node){node=document.createElement('div');node.className='ai-export-toast';document.body.appendChild(node)}node.textContent=message;node.classList.add('show');clearTimeout(node._timer);node._timer=setTimeout(()=>node.classList.remove('show'),4200)}
 
-function aiExportFilename(response){
-  const header=response.headers.get('content-disposition')||'';
-  const match=header.match(/filename="?([^";]+)"?/i);
-  return match?.[1]||'DGD_KI_Recherche.xlsx';
-}
+function aiEscape(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function aiValue(value){if(value==null||value==='')return '–';if(typeof value==='object')return JSON.stringify(value,null,2);return String(value)}
+function aiExportFilename(response){const header=response.headers.get('content-disposition')||'';const match=header.match(/filename="?([^";]+)"?/i);return match?.[1]||'DGD_KI_Recherche.xlsx'}
 
-async function downloadAiExport(button,url){
-  const oldText=button.textContent;
-  button.disabled=true;button.textContent='Export wird erstellt …';
-  try{
-    const response=await fetch(url,{headers:{Accept:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}});
-    const contentType=(response.headers.get('content-type')||'').toLowerCase();
-    if(!response.ok||!contentType.includes('spreadsheetml')){
-      let message=`Export fehlgeschlagen (${response.status})`;
-      try{const data=await response.json();message=data.detail||message}catch{try{const text=await response.text();if(text)message=text.slice(0,220)}catch{}}
-      throw new Error(message);
-    }
-    const blob=await response.blob();
-    if(blob.size<1000)throw new Error('Die erzeugte Excel-Datei ist ungewöhnlich klein und wurde nicht gespeichert.');
-    const href=URL.createObjectURL(blob);const link=document.createElement('a');link.href=href;link.download=aiExportFilename(response);document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(href),1500);
-    aiExportToast('Excel-Datei wurde erstellt.');
-  }catch(error){
-    aiExportToast(`Export nicht möglich: ${error.message}`);
-  }finally{
-    button.disabled=false;button.textContent=oldText;
-  }
-}
+async function downloadAiExport(button,url){const oldText=button.textContent;button.disabled=true;button.textContent='Export wird erstellt …';try{const response=await fetch(url,{headers:{Accept:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}});const contentType=(response.headers.get('content-type')||'').toLowerCase();if(!response.ok||!contentType.includes('spreadsheetml')){let message=`Export fehlgeschlagen (${response.status})`;try{const data=await response.json();message=data.detail||message}catch{try{const text=await response.text();if(text)message=text.slice(0,220)}catch{}}throw new Error(message)}const blob=await response.blob();if(blob.size<1000)throw new Error('Die erzeugte Excel-Datei ist ungewöhnlich klein und wurde nicht gespeichert.');const href=URL.createObjectURL(blob);const link=document.createElement('a');link.href=href;link.download=aiExportFilename(response);document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(href),1500);aiExportToast('Excel-Datei wurde erstellt.')}catch(error){aiExportToast(`Export nicht möglich: ${error.message}`)}finally{button.disabled=false;button.textContent=oldText}}
 
-function renderAiExport(host){
-  host.innerHTML=`<section class="ai-export-panel">
+function renderImportPreview(host,data){const summary=data.summary||{};const groups=Object.groupBy?Object.groupBy(data.changes||[],item=>item.sheet):(data.changes||[]).reduce((result,item)=>{(result[item.sheet]||=[]).push(item);return result},{});host.innerHTML=`
+  <section class="ai-import-result">
+    <div class="section-head"><div><span class="kicker">Geprüfte Vorschau</span><h3>${aiEscape(data.filename)}</h3><p>Export-ID: ${aiEscape(data.export_id)} · Schema ${aiEscape(data.schema_version)}. Die Datenbank wurde nicht verändert.</p></div><button type="button" class="clear" data-ai-import-reset>Andere Datei</button></div>
+    <div class="ai-import-metrics">
+      <div><b>${summary.fragrances||0}</b><span>Düfte</span></div><div><b>${summary.changes||0}</b><span>Änderungen</span></div><div><b>${summary.new_values||0}</b><span>Neue Werte</span></div><div><b>${summary.conflicts||0}</b><span>Konflikte</span></div><div><b>${summary.preview_only||0}</b><span>Nur Vorschau</span></div><div><b>${summary.errors||0}</b><span>Fehler</span></div>
+    </div>
+    ${data.errors?.length?`<div class="ai-import-errors"><b>Prüffehler</b>${data.errors.map(item=>`<p>${aiEscape(item.sheet)} Zeile ${item.row}${item.field?` · ${aiEscape(item.field)}`:''}: ${aiEscape(item.message)}</p>`).join('')}</div>`:''}
+    ${Object.keys(groups).length?Object.entries(groups).map(([sheet,items])=>`<section class="ai-import-group"><header><h4>${aiEscape(sheet)}</h4><span>${items.length} Änderung${items.length===1?'':'en'}</span></header><div class="ai-import-list">${items.map(item=>`<article class="ai-import-change ${item.kind==='conflict'?'conflict':'new'}"><div class="ai-import-change-head"><div><b>${aiEscape(item.brand_name)} ${aiEscape(item.fragrance_name)}</b><span>${aiEscape(item.field)}</span></div><em>${item.kind==='conflict'?'Konflikt':item.preview_only?'nur Vorschau':'neuer Wert'}</em></div><div class="ai-import-values"><div><small>Bisher</small><pre>${aiEscape(aiValue(item.old_value))}</pre></div><div><small>Vorgeschlagen</small><pre>${aiEscape(aiValue(item.new_value))}</pre></div></div></article>`).join('')}</div></section>`).join(''):'<div class="empty">Die Datei enthält keine Änderungen gegenüber der Datenbank.</div>'}
+    <p class="ai-export-note">In Paket 16.7.2 wird hier bewusst noch nichts übernommen. Feldweise Freigabe und Protokollierung folgen im nächsten Schritt.</p>
+  </section>`;host.querySelector('[data-ai-import-reset]')?.addEventListener('click',()=>renderAiExport(document.querySelector('[data-ai-export-host]')))}
+
+async function previewAiImport(button,file,host){if(!file)return aiExportToast('Bitte zuerst eine XLSX-Datei auswählen.');const oldText=button.textContent;button.disabled=true;button.textContent='Datei wird geprüft …';try{const form=new FormData();form.append('file',file);const response=await fetch('/api/ai-research-import/preview',{method:'POST',body:form});let data=null;try{data=await response.json()}catch{}if(!response.ok)throw new Error(data?.detail||`Importprüfung fehlgeschlagen (${response.status})`);renderImportPreview(host,data);aiExportToast('Datei wurde geprüft. Keine Daten wurden verändert.')}catch(error){aiExportToast(`Prüfung nicht möglich: ${error.message}`)}finally{button.disabled=false;button.textContent=oldText}}
+
+function renderAiExport(host){host.innerHTML=`<div class="ai-export-stack"><section class="ai-export-panel">
     <div class="section-head"><div><span class="kicker">Paket 16.7.1</span><h2>KI-Recherche exportieren</h2><p>Erzeugt eine Excel-Datei mit allen recherchierbaren Duftdaten. Persönliche Bewertungen bleiben ausgeschlossen.</p></div></div>
-    <div class="ai-export-options">
-      <label><span>Umfang</span><select data-ai-export-scope><option value="missing">Nur Düfte mit Datenlücken</option><option value="all">Alle Düfte</option></select></label>
-      <label><span>Marke optional</span><select data-ai-export-brand><option value="">Alle Marken</option></select></label>
-    </div>
-    <div class="ai-export-summary">
-      <b>Enthaltene Tabellenblätter</b>
-      <p>Düfte · Noten · Performance · Duft-DNA · Bilder_Quellen · Preisquellen · Quellen · Anleitung · Metadaten</p>
-    </div>
+    <div class="ai-export-options"><label><span>Umfang</span><select data-ai-export-scope><option value="missing">Nur Düfte mit Datenlücken</option><option value="all">Alle Düfte</option></select></label><label><span>Marke optional</span><select data-ai-export-brand><option value="">Alle Marken</option></select></label></div>
+    <div class="ai-export-summary"><b>Enthaltene Tabellenblätter</b><p>Düfte · Noten · Performance · Duft-DNA · Bilder_Quellen · Preisquellen · Quellen · Anleitung · Metadaten</p></div>
     <div class="ai-export-actions"><button type="button" class="primary" data-ai-export-download>Excel-Datei erstellen</button></div>
-    <p class="ai-export-note">Der Rückimport ist noch nicht aktiv. Diese Stufe dient zuerst dazu, Struktur und Feldumfang der Exportdatei zu prüfen.</p>
-  </section>`;
+  </section>
+  <section class="ai-export-panel ai-import-panel">
+    <div class="section-head"><div><span class="kicker">Paket 16.7.2</span><h2>Ausgefüllte Datei prüfen</h2><p>Lädt eine extern ergänzte Exportdatei hoch und zeigt Alt/Neu, Konflikte sowie ungültige Angaben. Dieser Schritt verändert die Datenbank nicht.</p></div></div>
+    <label class="ai-import-file"><input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-ai-import-file><span><b>XLSX-Datei auswählen</b><small>Nur Dateien aus dem DGD-KI-Export; maximal 25 MB</small></span></label>
+    <div class="ai-export-actions"><button type="button" class="primary" data-ai-import-preview disabled>Datei prüfen und Vorschau anzeigen</button></div>
+  </section></div>`;
   fetch('/api/brands').then(r=>r.ok?r.json():[]).then(brands=>{const select=host.querySelector('[data-ai-export-brand]');brands.sort((a,b)=>a.name.localeCompare(b.name,'de')).forEach(brand=>{const option=document.createElement('option');option.value=brand.id;option.textContent=brand.name;select.appendChild(option)})}).catch(()=>{});
   host.querySelector('[data-ai-export-download]').addEventListener('click',event=>{const scope=host.querySelector('[data-ai-export-scope]').value;const brand=host.querySelector('[data-ai-export-brand]').value;const params=new URLSearchParams({scope});if(brand)params.set('brand_id',brand);downloadAiExport(event.currentTarget,`/api/ai-research-export/xlsx?${params}`)});
+  const input=host.querySelector('[data-ai-import-file]');const preview=host.querySelector('[data-ai-import-preview]');input.addEventListener('change',()=>{preview.disabled=!input.files?.[0];const label=host.querySelector('.ai-import-file b');label.textContent=input.files?.[0]?.name||'XLSX-Datei auswählen'});preview.addEventListener('click',()=>previewAiImport(preview,input.files?.[0],host));
 }
 
-function injectAiExportTab(){
-  const tabs=document.querySelector('.admin-tabs');
-  if(!tabs||tabs.querySelector('[data-ai-export-tab]'))return;
-  const button=document.createElement('button');button.type='button';button.dataset.aiExportTab='true';button.textContent='KI-Export';tabs.appendChild(button);
-  button.addEventListener('click',()=>{tabs.querySelectorAll('button').forEach(item=>item.classList.remove('active'));button.classList.add('active');const admin=document.querySelector('.admin-main');if(!admin)return;[...admin.children].forEach(child=>{if(!child.classList.contains('admin-head')&&!child.classList.contains('admin-tabs')&&!child.matches('[data-admin-navigation]'))child.remove()});const host=document.createElement('div');host.dataset.aiExportHost='true';admin.appendChild(host);renderAiExport(host)});
-}
+function injectAiExportTab(){const tabs=document.querySelector('.admin-tabs');if(!tabs||tabs.querySelector('[data-ai-export-tab]'))return;const button=document.createElement('button');button.type='button';button.dataset.aiExportTab='true';button.textContent='KI-Export';tabs.appendChild(button);button.addEventListener('click',()=>{tabs.querySelectorAll('button').forEach(item=>item.classList.remove('active'));button.classList.add('active');const admin=document.querySelector('.admin-main');if(!admin)return;[...admin.children].forEach(child=>{if(!child.classList.contains('admin-head')&&!child.classList.contains('admin-tabs')&&!child.matches('[data-admin-navigation]'))child.remove()});const host=document.createElement('div');host.dataset.aiExportHost='true';admin.appendChild(host);renderAiExport(host)})}
 const aiExportObserver=new MutationObserver(injectAiExportTab);aiExportObserver.observe(document.documentElement,{childList:true,subtree:true});injectAiExportTab();
