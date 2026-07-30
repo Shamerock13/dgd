@@ -6,7 +6,6 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
-from . import price_source_schema as _price_source_schema  # noqa: F401
 
 
 class Retailer(Base):
