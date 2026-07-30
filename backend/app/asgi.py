@@ -47,6 +47,23 @@ def _register_fragrance_dna_proposal_migration() -> None:
     )
 
 
+def _register_performance_research_migration() -> None:
+    if any(item.version == "0015" for item in migrations.MIGRATIONS):
+        return
+    migrations.MIGRATIONS = (
+        *migrations.MIGRATIONS,
+        Migration(
+            version="0015",
+            description="Kontrollierte KI-Vorschläge für strukturierte Performance-Daten",
+            statements=(
+                "CREATE TABLE IF NOT EXISTS performance_research_proposals (id UUID PRIMARY KEY, fragrance_id UUID NOT NULL REFERENCES fragrances(id) ON DELETE CASCADE, values JSONB NOT NULL, accepted_values JSONB, source_label VARCHAR(255), source_url TEXT, sources JSONB, rationale TEXT, confidence DOUBLE PRECISION, status VARCHAR(30) NOT NULL DEFAULT 'OPEN', created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, reviewed_at TIMESTAMP, review_note TEXT)",
+                "CREATE INDEX IF NOT EXISTS ix_performance_research_fragrance ON performance_research_proposals (fragrance_id)",
+                "CREATE INDEX IF NOT EXISTS ix_performance_research_status ON performance_research_proposals (status)",
+            ),
+        ),
+    )
+
+
 def _move_spa_fallback_to_end() -> None:
     fallback_routes = [
         route for route in app.router.routes
@@ -61,11 +78,14 @@ def _move_spa_fallback_to_end() -> None:
 
 _register_fragrance_dna_migration()
 _register_fragrance_dna_proposal_migration()
+_register_performance_research_migration()
 
 from .main import app  # noqa: E402
 from .fragrance_dna_routes import router as fragrance_dna_router  # noqa: E402
 from .fragrance_dna_proposal_routes import router as fragrance_dna_proposal_router  # noqa: E402
+from .performance_research import router as performance_research_router  # noqa: E402
 
 app.include_router(fragrance_dna_router)
 app.include_router(fragrance_dna_proposal_router)
+app.include_router(performance_research_router)
 _move_spa_fallback_to_end()
