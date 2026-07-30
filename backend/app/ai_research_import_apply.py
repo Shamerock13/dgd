@@ -2,19 +2,15 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from urllib.parse import urlparse
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from .ai_research_import import (
-    _collect_ids,
-    _field_preview,
-    _fragrance_map,
-    _is_blank,
-    _normalize,
-    _note_preview,
-    _parse_workbook,
+    _collect_ids, _field_preview, _fragrance_map, _is_blank, _normalize,
+    _note_preview, _parse_workbook,
 )
 from .ai_research_price_preview import _price_preview
 from .database import get_db
@@ -24,9 +20,9 @@ from .price_models import FragranceOffer, Retailer
 router = APIRouter(prefix="/api/ai-research-import", tags=["ai-research-import"])
 
 DNA_DIMENSIONS = {
-    "fresh", "citrus", "green", "aquatic", "floral", "fruity",
-    "sweet", "gourmand", "spicy", "woody", "smoky", "earthy",
-    "resinous", "leathery", "powdery", "animalic",
+    "fresh", "citrus", "green", "aquatic", "floral", "fruity", "sweet",
+    "gourmand", "spicy", "woody", "smoky", "earthy", "resinous",
+    "leathery", "powdery", "animalic",
 }
 
 
@@ -72,8 +68,7 @@ def _note_row(parsed, key: str):
             position = int(float(row.get("position") or 0))
         except (TypeError, ValueError):
             continue
-        candidate = f"Noten:{fragrance_id}:{pyramid}:{position}:{note_name.casefold()}"
-        if candidate == key:
+        if f"Noten:{fragrance_id}:{pyramid}:{position}:{note_name.casefold()}" == key:
             return row, UUID(fragrance_id), pyramid, position, note_name
     return None
 
@@ -82,11 +77,9 @@ def _get_or_create_retailer(db: Session, merchant_name: str, product_url: str) -
     retailer = db.query(Retailer).filter(Retailer.name.ilike(merchant_name)).first()
     if retailer:
         return retailer
-    from urllib.parse import urlparse
     parsed = urlparse(product_url)
     retailer = Retailer(
-        id=uuid4(),
-        name=merchant_name,
+        id=uuid4(), name=merchant_name,
         base_url=f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme and parsed.netloc else None,
         active=False,
     )
@@ -98,8 +91,9 @@ def _get_or_create_retailer(db: Session, merchant_name: str, product_url: str) -
 def _apply_price_source(db: Session, change: dict) -> FragranceOffer:
     value = change["new_value"]
     fragrance_id = UUID(change["fragrance_id"])
+    retailer = _get_or_create_retailer(db, value["merchant_name"], value["product_url"])
     source_id = value.get("offer_source_id")
-    offer = None
+
     if source_id:
         offer = db.query(FragranceOffer).filter(FragranceOffer.offer_source_id == source_id).first()
         if not offer:
@@ -107,23 +101,17 @@ def _apply_price_source(db: Session, change: dict) -> FragranceOffer:
         if offer.fragrance_id != fragrance_id:
             raise HTTPException(409, "Die Preisquelle gehört inzwischen zu einem anderen Duft.")
     else:
-        source_id = f"ofs-{uuid4().hex}"
         offer = FragranceOffer(
-            id=uuid4(),
-            offer_source_id=source_id,
-            fragrance_id=fragrance_id,
-            retailer_id=uuid4(),
+            id=uuid4(), offer_source_id=f"ofs-{uuid4().hex}",
+            fragrance_id=fragrance_id, retailer_id=retailer.id,
             product_url=value["product_url"],
             price_eur=float(value.get("current_price") or 0),
             shipping_eur=float(value.get("shipping_cost") or 0),
-            in_stock=False,
-            checked_at=datetime.utcnow(),
-            scanner_active=False,
-            review_status="PENDING_REVIEW",
+            in_stock=False, checked_at=datetime.utcnow(),
+            scanner_active=False, review_status="PENDING_REVIEW",
         )
         db.add(offer)
 
-    retailer = _get_or_create_retailer(db, value["merchant_name"], value["product_url"])
     offer.retailer_id = retailer.id
     offer.product_url = value["product_url"]
     offer.product_name = value.get("product_variant") or None
@@ -172,15 +160,13 @@ async def apply_ai_research_import(
     parsed = _parse_workbook(content)
     ids = _collect_ids(parsed)
     fragrances = _fragrance_map(db, ids)
-    unknown_ids = ids - set(fragrances)
-    if unknown_ids:
+    if ids - set(fragrances):
         raise HTTPException(400, "Mindestens eine fragrance_id existiert nicht mehr.")
 
     field_changes, field_errors = _field_preview(parsed, fragrances)
     note_changes, note_errors = _note_preview(parsed, fragrances)
     price_changes, price_errors = _price_preview(parsed, fragrances, db)
-    errors = field_errors + note_errors + price_errors
-    if errors:
+    if field_errors + note_errors + price_errors:
         raise HTTPException(400, "Die Datei enthält Prüffehler und kann nicht übernommen werden.")
 
     applicable = {item["key"]: item for item in field_changes + note_changes + price_changes}
@@ -204,8 +190,7 @@ async def apply_ai_research_import(
             change = applicable[key]
             if change["sheet"] == "Preisquellen":
                 offer = _apply_price_source(db, change)
-                applied_change = {**change, "saved_offer_source_id": offer.offer_source_id}
-                applied.append(applied_change)
+                applied.append({**change, "saved_offer_source_id": offer.offer_source_id})
                 price_sources_applied += 1
                 if not change["new_value"].get("offer_source_id"):
                     generated_source_ids.append(offer.offer_source_id)
@@ -219,8 +204,7 @@ async def apply_ai_research_import(
                 note = db.query(Note).filter(Note.name.ilike(note_name)).first()
                 if not note:
                     note = Note(
-                        id=uuid4(),
-                        name=note_name,
+                        id=uuid4(), name=note_name,
                         category=str(row.get("note_category") or "").strip() or None,
                         description=str(row.get("note_description") or "").strip() or None,
                     )
