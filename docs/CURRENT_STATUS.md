@@ -2,9 +2,9 @@
 
 Stand: 30. Juli 2026
 
-Diese Datei beschreibt den tatsächlich auf `main` vorhandenen Stand sowie den aktuell offenen Feature-Branch.
+Diese Datei beschreibt den tatsächlich auf `main` vorhandenen Stand sowie unmittelbar vor dem Merge bestätigte Änderungen.
 
-## Abgeschlossen und auf `main`
+## Abgeschlossen
 
 - Pakete 1 bis 14
 - 16.1 Strukturiertes Performance-Datenmodell
@@ -17,37 +17,30 @@ Diese Datei beschreibt den tatsächlich auf `main` vorhandenen Stand sowie den a
 - 16.6.1 KI-Recherche für strukturierte Performance-Daten
 - 16.7.1 Vollständiger KI-Recherche-Export als XLSX
 - 16.7.2 Geprüfte Rückimport-Vorschau ohne Datenbankänderung
+- 16.7.3 Feldweise Freigabe und kontrollierte Übernahme
 
-## Paket 16.7.3 – feldweise Freigabe und kontrollierte Übernahme
+## Paket 16.7.3
 
-Branch: `feature/ai-research-import-apply` · Draft-PR #94
-
-Umgesetzt:
+In Dev praktisch bestätigt und über PR #94 für `main` freigegeben:
 
 - neue Werte sind in der Vorschau vorausgewählt
-- Konflikte bleiben zunächst abgewählt
-- Konflikte benötigen eine zusätzliche ausdrückliche Bestätigung
+- Konflikte bleiben zunächst abgewählt und benötigen eine ausdrückliche Bestätigung
 - jede Auswahl wird direkt vor dem Speichern erneut gegen die aktuelle Datenbank geprüft
 - veraltete Vorschauen werden abgewiesen
-- Stammdaten, Performance, Duft-DNA und Bildquellen können feldweise übernommen werden
+- Stammdaten, Performance, numerische Duft-DNA und Bildquellen können feldweise übernommen werden
 - zusätzliche Duftnoten können selektiv angelegt und zugeordnet werden
 - leere Zellen erzeugen keine Löschungen
 - persönliche Felder bleiben gesperrt
-- Preisquellen und Scanner bleiben in diesem Paket deaktiviert
+- Preisquellen und Scanner bleiben deaktiviert
 - erfolgreiche Importläufe werden in `import_quality_runs` protokolliert
-- Übernahme erfolgt innerhalb einer Transaktion mit Rollback bei Fehlern
+- Fehler führen zum vollständigen Rollback
+- ungültige beschreibende DNA-Strukturen werden beim Import abgewiesen
+- lokale Duftbilder werden unter `/media/fragrances` gespeichert und im Dev-Frontend ausgeliefert
+- der normale Dufteditor sendet nur seine erlaubten Formularfelder und bleibt mit KI-Daten kompatibel
 
 ## KI-Export und Rückimport
 
-Der Admin-Bereich `KI-Export` unterstützt:
-
-- Export aller Düfte oder nur von Datensätzen mit Lücken
-- optionalen Markenfilter
-- stabile `export_id` und `fragrance_id`
-- neun Tabellenblätter: `Düfte`, `Noten`, `Performance`, `Duft-DNA`, `Bilder_Quellen`, `Preisquellen`, `Quellen`, `Anleitung`, `Metadaten`
-- Ausschluss persönlicher Performance- und DNA-Werte
-- Prüfung externer Ergänzungen mit Alt/Neu-Vergleich
-- Erkennung von neuen Werten, Konflikten, ungültigen IDs und veränderten Exportkennungen
+Der Admin-Bereich `KI-Export` unterstützt Export, geprüfte Vorschau und kontrollierte Übernahme. Technische Kennungen bleiben stabil; persönliche Performance- und DNA-Werte sind ausgeschlossen. Preisquellen bleiben bis Paket 16.7.4 reine Vorschau.
 
 ## Daten- und Sicherheitsprinzipien
 
@@ -65,10 +58,10 @@ Explizites DGD-Migrationsschema bis `0015`.
 
 ## Qualitätssicherung
 
-GitHub-CI prüft Backend-Compile und Frontend-Build. Praktische Abnahmen erfolgen ausschließlich in der Dev-Umgebung auf Unraid.
+Dev-Abnahme erfolgreich. GitHub Actions `DGD CI` Lauf 201 für den finalen Branch-Stand erfolgreich.
 
 ## Nächster Schritt
 
-Paket 16.7.3 praktisch testen, dokumentierte Abnahme durchführen und anschließend PR #94 mergen.
+Paket 16.7.4: Preisquellen geprüft übernehmen und Scanner-Aktivierung weiterhin getrennt absichern.
 
 Der Chat ist nicht das Projektgedächtnis. Maßgeblich sind Repository und Dokumentation.
