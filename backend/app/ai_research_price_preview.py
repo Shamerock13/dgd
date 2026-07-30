@@ -80,11 +80,7 @@ def _offer_snapshot(offer: FragranceOffer | None) -> dict[str, Any] | None:
     }
 
 
-def _price_preview(
-    parsed,
-    fragrances,
-    db: Session,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def _price_preview(parsed, fragrances, db: Session) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     changes: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
     rows = parsed.rows.get("Preisquellen", [])
@@ -224,7 +220,7 @@ def _price_preview(
             "old_value": _serializable(old_value),
             "new_value": proposed,
             "kind": "conflict" if existing else "new",
-            "preview_only": True,
+            "preview_only": False,
             "warnings": warnings,
         })
 
