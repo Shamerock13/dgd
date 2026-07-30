@@ -1,29 +1,28 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
+from urllib.parse import urlparse
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from .ai_research_import import (
-    _collect_ids,
-    _field_preview,
-    _fragrance_map,
-    _is_blank,
-    _normalize,
-    _note_preview,
-    _parse_workbook,
+    _collect_ids, _field_preview, _fragrance_map, _is_blank, _normalize,
+    _note_preview, _parse_workbook,
 )
+from .ai_research_price_preview import _price_preview
 from .database import get_db
 from .models import FragranceNote, ImportQualityRun, Note
+from .price_models import FragranceOffer, Retailer
 
 router = APIRouter(prefix="/api/ai-research-import", tags=["ai-research-import"])
 
 DNA_DIMENSIONS = {
-    "fresh", "citrus", "green", "aquatic", "floral", "fruity",
-    "sweet", "gourmand", "spicy", "woody", "smoky", "earthy",
-    "resinous", "leathery", "powdery", "animalic",
+    "fresh", "citrus", "green", "aquatic", "floral", "fruity", "sweet",
+    "gourmand", "spicy", "woody", "smoky", "earthy", "resinous",
+    "leathery", "powdery", "animalic",
 }
 
 
@@ -44,10 +43,7 @@ def _validate_dna(value):
         raise HTTPException(400, "Duft-DNA muss ein JSON-Objekt sein.")
     unknown = sorted(set(value) - DNA_DIMENSIONS)
     if unknown:
-        raise HTTPException(
-            400,
-            "Duft-DNA enthält nicht unterstützte Felder: " + ", ".join(unknown[:8]),
-        )
+        raise HTTPException(400, "Duft-DNA enthält nicht unterstützte Felder: " + ", ".join(unknown[:8]))
     normalized: dict[str, float] = {}
     for key, raw in value.items():
         if raw is None:
@@ -72,10 +68,75 @@ def _note_row(parsed, key: str):
             position = int(float(row.get("position") or 0))
         except (TypeError, ValueError):
             continue
-        candidate = f"Noten:{fragrance_id}:{pyramid}:{position}:{note_name.casefold()}"
-        if candidate == key:
+        if f"Noten:{fragrance_id}:{pyramid}:{position}:{note_name.casefold()}" == key:
             return row, UUID(fragrance_id), pyramid, position, note_name
     return None
+
+
+def _get_or_create_retailer(db: Session, merchant_name: str, product_url: str) -> Retailer:
+    retailer = db.query(Retailer).filter(Retailer.name.ilike(merchant_name)).first()
+    if retailer:
+        return retailer
+    parsed = urlparse(product_url)
+    retailer = Retailer(
+        id=uuid4(), name=merchant_name,
+        base_url=f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme and parsed.netloc else None,
+        active=False,
+    )
+    db.add(retailer)
+    db.flush()
+    return retailer
+
+
+def _apply_price_source(db: Session, change: dict) -> FragranceOffer:
+    value = change["new_value"]
+    fragrance_id = UUID(change["fragrance_id"])
+    retailer = _get_or_create_retailer(db, value["merchant_name"], value["product_url"])
+    source_id = value.get("offer_source_id")
+
+    if source_id:
+        offer = db.query(FragranceOffer).filter(FragranceOffer.offer_source_id == source_id).first()
+        if not offer:
+            raise HTTPException(409, "Die Preisquelle existiert nicht mehr. Bitte Datei erneut prüfen.")
+        if offer.fragrance_id != fragrance_id:
+            raise HTTPException(409, "Die Preisquelle gehört inzwischen zu einem anderen Duft.")
+    else:
+        offer = FragranceOffer(
+            id=uuid4(), offer_source_id=f"ofs-{uuid4().hex}",
+            fragrance_id=fragrance_id, retailer_id=retailer.id,
+            product_url=value["product_url"],
+            price_eur=float(value.get("current_price") or 0),
+            shipping_eur=float(value.get("shipping_cost") or 0),
+            in_stock=False, checked_at=datetime.utcnow(),
+            scanner_active=False, review_status="PENDING_REVIEW",
+        )
+        db.add(offer)
+
+    offer.retailer_id = retailer.id
+    offer.product_url = value["product_url"]
+    offer.product_name = value.get("product_variant") or None
+    offer.product_variant = value.get("product_variant") or None
+    offer.size_ml = value.get("size_ml")
+    offer.concentration = value.get("concentration")
+    offer.product_type = value.get("product_kind") or "bottle"
+    offer.price_eur = float(value.get("current_price") or 0)
+    offer.shipping_eur = float(value.get("shipping_cost") or 0)
+    offer.currency = "EUR"
+    offer.availability = value.get("availability") or "UNKNOWN"
+    offer.in_stock = offer.availability in {"IN_STOCK", "AVAILABLE", "LIMITED"}
+    offer.ean_gtin = value.get("ean_gtin")
+    offer.merchant_sku = value.get("merchant_sku")
+    offer.market_country = value.get("market_country")
+    offer.scan_interval = value.get("scan_interval")
+    offer.extraction_hint = value.get("extraction_hint")
+    offer.trust_status = value.get("trust_status") or "OPEN"
+    offer.review_status = "PENDING_REVIEW"
+    offer.scanner_active = False
+    offer.variant_warning = value.get("variant_warning")
+    offer.checked_at = datetime.utcnow()
+    offer.updated_at = datetime.utcnow()
+    db.flush()
+    return offer
 
 
 @router.post("/apply")
@@ -99,17 +160,16 @@ async def apply_ai_research_import(
     parsed = _parse_workbook(content)
     ids = _collect_ids(parsed)
     fragrances = _fragrance_map(db, ids)
-    unknown_ids = ids - set(fragrances)
-    if unknown_ids:
+    if ids - set(fragrances):
         raise HTTPException(400, "Mindestens eine fragrance_id existiert nicht mehr.")
 
     field_changes, field_errors = _field_preview(parsed, fragrances)
     note_changes, note_errors = _note_preview(parsed, fragrances)
-    errors = field_errors + note_errors
-    if errors:
+    price_changes, price_errors = _price_preview(parsed, fragrances, db)
+    if field_errors + note_errors + price_errors:
         raise HTTPException(400, "Die Datei enthält Prüffehler und kann nicht übernommen werden.")
 
-    applicable = {item["key"]: item for item in field_changes + note_changes}
+    applicable = {item["key"]: item for item in field_changes + note_changes + price_changes}
     unavailable = sorted(selected - set(applicable))
     if unavailable:
         raise HTTPException(
@@ -123,9 +183,19 @@ async def apply_ai_research_import(
         raise HTTPException(409, "Ausgewählte Konflikte müssen ausdrücklich bestätigt werden.")
 
     applied: list[dict] = []
+    price_sources_applied = 0
+    generated_source_ids: list[str] = []
     try:
         for key in selected:
             change = applicable[key]
+            if change["sheet"] == "Preisquellen":
+                offer = _apply_price_source(db, change)
+                applied.append({**change, "saved_offer_source_id": offer.offer_source_id})
+                price_sources_applied += 1
+                if not change["new_value"].get("offer_source_id"):
+                    generated_source_ids.append(offer.offer_source_id)
+                continue
+
             if change["sheet"] == "Noten":
                 resolved = _note_row(parsed, key)
                 if not resolved:
@@ -134,8 +204,7 @@ async def apply_ai_research_import(
                 note = db.query(Note).filter(Note.name.ilike(note_name)).first()
                 if not note:
                     note = Note(
-                        id=uuid4(),
-                        name=note_name,
+                        id=uuid4(), name=note_name,
                         category=str(row.get("note_category") or "").strip() or None,
                         description=str(row.get("note_description") or "").strip() or None,
                     )
@@ -173,6 +242,8 @@ async def apply_ai_research_import(
             "selected_count": len(selected),
             "applied_count": len(applied),
             "conflicts_confirmed": bool(conflicts),
+            "price_sources_applied": price_sources_applied,
+            "generated_offer_source_ids": generated_source_ids,
             "applied": applied,
             "price_sources_activated": False,
         }
@@ -195,5 +266,7 @@ async def apply_ai_research_import(
         "export_id": parsed.export_id,
         "applied_count": len(applied),
         "conflicts_applied": len(conflicts),
+        "price_sources_applied": price_sources_applied,
+        "generated_offer_source_ids": generated_source_ids,
         "price_sources_activated": False,
     }
