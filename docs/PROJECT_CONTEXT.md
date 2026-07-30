@@ -1,6 +1,6 @@
 # DGD – Projektkontext
 
-Stand: 29. Juli 2026
+Stand: 30. Juli 2026
 
 Repository: `Shamerock13/dgd`. Maßgeblich sind außerdem `docs/CURRENT_STATUS.md`, `docs/ROADMAP.md` und `docs/DEV_WORKFLOW.md`.
 
@@ -24,26 +24,52 @@ Produktion und produktive Datenbank werden niemals direkt für Entwicklung oder 
 ## Technik
 
 - Backend: FastAPI, SQLAlchemy, PostgreSQL
-- Frontend: React, Vite
+- Frontend: React, Vite plus bestehende Admin-Skripte
 - öffentlicher Katalog: `/`
 - Admin-Center: `/admin.html`
-- explizites Migrationsschema bis `0013`
+- explizites Migrationsschema bis `0015`
 
 ## Aktueller Funktionsstand
 
-Abgeschlossen sind die Pakete bis 14, Performance 16.1 bis 16.3 sowie Duft-DNA 16.4.1 und 16.4.2.
+Abgeschlossen sind die Pakete bis 14, Performance 16.1 bis 16.3, Duft-DNA 16.4, Admin 16.5.1 bis 16.5.3, Performance-Recherche 16.6.1 sowie KI-Export und sichere Rückimport-Vorschau 16.7.1 und 16.7.2.
 
-Paket 16.4.3 liegt in `feature/fragrance-dna-admin` und PR #81. Der Admin-Editor für alle 16 DNA-Dimensionen ist in Dev praktisch bestätigt. Aggregierte und persönliche Werte lassen sich getrennt laden, speichern, erneut laden und gezielt leeren. Fehlende Werte bleiben leer. Der Router-Fix stellt sicher, dass DNA-Endpunkte vor dem SPA-Fallback greifen.
+Aktuell in Arbeit ist Paket 16.7.3 im Branch `feature/ai-research-import-apply` und Draft-PR #94. Es ergänzt die feldweise Freigabe und kontrollierte Datenbankübernahme für geprüfte Excel-Rückimporte.
 
-Kontrollierte Recherchevorschläge und deren Freigabe folgen getrennt. Ungeprüfte KI-Werte werden nicht automatisch veröffentlicht.
+## KI-Export und Rückimport
 
-## Wichtige DNA-Endpunkte
+### Export
 
 ```text
-GET  /api/fragrances/{fragrance_id}/dna
-PUT  /api/fragrances/{fragrance_id}/dna
-PUT  /api/fragrances/{fragrance_id}/dna/personal
+GET /api/ai-research-export/xlsx
 ```
+
+Der Export erzeugt eine KI-taugliche XLSX-Datei mit neun Tabellenblättern. Persönliche Performance- und DNA-Werte werden nicht exportiert. Technische Kennungen wie `export_id` und `fragrance_id` dürfen extern nicht verändert werden.
+
+### Vorschau
+
+```text
+POST /api/ai-research-import/preview
+```
+
+Die Vorschau prüft Dateityp, Pflichtblätter, Schema, IDs, persönliche Felder und Zellwerte. Sie zeigt neue Werte und Konflikte im Alt/Neu-Vergleich, verändert aber keine Datenbankwerte.
+
+### Kontrollierte Übernahme
+
+```text
+POST /api/ai-research-import/apply
+```
+
+Nur ausdrücklich ausgewählte Änderungen werden übernommen. Konflikte benötigen eine zusätzliche Bestätigung. Vor dem Speichern wird erneut geprüft, ob die Vorschau noch zum aktuellen Datenbankstand passt. Preisquellen und Scanner bleiben separat und werden nicht automatisch aktiviert.
+
+## Wichtige Sicherheitsregeln
+
+- leere Zellen bedeuten keine Löschung
+- persönliche Werte bleiben strikt getrennt
+- ungeprüfte KI-Werte werden nicht automatisch veröffentlicht
+- Konflikte werden nicht vorausgewählt
+- Preisquellen bleiben bis zur separaten Scanner-Integration inaktiv
+- jeder erfolgreiche Übernahmelauf wird protokolliert
+- Fehler führen zum Rollback der gesamten Transaktion
 
 ## Arbeitsweise
 
@@ -51,7 +77,8 @@ PUT  /api/fragrances/{fragrance_id}/dna/personal
 - GitHub-CI für Backend-Compile und Frontend-Build
 - praktische Tests ausschließlich in Dev
 - Dokumentation im selben Paket aktualisieren
-- anschließend Squash-Merge nach `main`
+- erst nach Nutzerabnahme auf „Ready for review“ setzen
+- anschließend Merge nach `main`
 - Produktion nicht verändern
 
 ## Dev-Aktualisierung
@@ -61,10 +88,9 @@ cd /mnt/user/appdata/dgd-github
 git fetch origin
 git switch <feature-branch>
 git pull --ff-only origin <feature-branch>
+docker compose -f docker-compose.dev.yml up -d --build
 ```
-
-Geänderte Dienste gezielt bauen und mit `--no-deps` ersetzen, wenn bestehende Dev-Abhängigkeiten nicht neu angelegt werden sollen.
 
 ## Nächster Schritt
 
-PR #81 mergen und anschließend die kontrollierte Recherche- und Freigabelogik als eigenen Baustein starten.
+Paket 16.7.3 mit einer ergänzten Testdatei praktisch prüfen. Danach CI kontrollieren, PR #94 freigeben und mergen.
