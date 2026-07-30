@@ -18,12 +18,21 @@ function nativeTabLabel(button){
   return button.textContent.replace(/\s+\d+\s*$/,'').trim();
 }
 
+function nativeTabs(){
+  return [...document.querySelectorAll('.admin-tabs button')];
+}
+
 function findNativeTab(label){
-  return [...document.querySelectorAll('.admin-tabs button')].find(button=>nativeTabLabel(button)===label);
+  return nativeTabs().find(button=>nativeTabLabel(button)===label);
 }
 
 async function navCount(url){
-  try{const response=await fetch(url);if(!response.ok)return 0;const data=await response.json();return Array.isArray(data)?data.length:Number(data?.count||0)}catch{return 0}
+  try{
+    const response=await fetch(url);
+    if(!response.ok)return 0;
+    const data=await response.json();
+    return Array.isArray(data)?data.length:Number(data?.count||0);
+  }catch{return 0}
 }
 
 async function loadPendingCounts(){
@@ -36,31 +45,58 @@ async function loadPendingCounts(){
 }
 
 function copiedCount(button){
-  const badge=button?.querySelector('b');
-  return badge?.textContent?.trim()||'';
+  return button?.querySelector('b')?.textContent?.trim()||'';
 }
 
-function syncActiveState(shell){
+function syncActiveState(){
+  const shell=document.querySelector('[data-admin-navigation]');
+  if(!shell)return;
   shell.querySelectorAll('[data-admin-nav-target]').forEach(button=>{
-    const source=findNativeTab(button.dataset.adminNavTarget);
-    button.classList.toggle('active',Boolean(source?.classList.contains('active')));
-    button.setAttribute('aria-current',source?.classList.contains('active')?'page':'false');
+    const active=Boolean(findNativeTab(button.dataset.adminNavTarget)?.classList.contains('active'));
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-current',active?'page':'false');
   });
 }
 
-async function renderNavigation(shell){
-  const pending=await loadPendingCounts();
-  shell.innerHTML=NAV_GROUPS.map(group=>{
-    const items=group.items.map(label=>{
-      const source=findNativeTab(label);
-      if(!source)return '';
-      const count=pending[label]??copiedCount(source);
-      return `<button type="button" data-admin-nav-target="${label}" class="${source.classList.contains('active')?'active':''}"><span>${label}</span>${count!==''?`<b>${count}</b>`:''}</button>`;
+let rendering=false;
+async function renderNavigation(){
+  const shell=document.querySelector('[data-admin-navigation]');
+  if(!shell||rendering)return;
+  rendering=true;
+  try{
+    const pending=await loadPendingCounts();
+    shell.innerHTML=NAV_GROUPS.map(group=>{
+      const items=group.items.map(label=>{
+        const source=findNativeTab(label);
+        if(!source)return '';
+        const count=pending[label]??copiedCount(source);
+        return `<button type="button" data-admin-nav-target="${label}"><span>${label}</span>${count!==''?`<b>${count}</b>`:''}</button>`;
+      }).join('');
+      return items?`<section class="admin-nav-group"><small>${group.label}</small><div>${items}</div></section>`:'';
     }).join('');
-    return items?`<section class="admin-nav-group"><small>${group.label}</small><div>${items}</div></section>`:'';
-  }).join('');
-  shell.querySelectorAll('[data-admin-nav-target]').forEach(button=>button.addEventListener('click',()=>findNativeTab(button.dataset.adminNavTarget)?.click()));
-  syncActiveState(shell);
+    shell.querySelectorAll('[data-admin-nav-target]').forEach(button=>{
+      button.addEventListener('click',()=>{
+        const target=findNativeTab(button.dataset.adminNavTarget);
+        if(!target)return;
+        target.click();
+        requestAnimationFrame(syncActiveState);
+      });
+    });
+    syncActiveState();
+  }finally{
+    rendering=false;
+  }
+}
+
+let observedTabs=null;
+let tabsObserver=null;
+function bindNativeTabs(tabs){
+  if(observedTabs===tabs)return;
+  tabsObserver?.disconnect();
+  observedTabs=tabs;
+  tabsObserver=new MutationObserver(()=>renderNavigation());
+  tabsObserver.observe(tabs,{childList:true});
+  tabs.addEventListener('click',()=>requestAnimationFrame(syncActiveState));
 }
 
 function ensureNavigation(){
@@ -75,15 +111,15 @@ function ensureNavigation(){
     tabs.insertAdjacentElement('afterend',shell);
   }
   tabs.classList.add('admin-tabs-native');
-  renderNavigation(shell);
+  bindNativeTabs(tabs);
+  renderNavigation();
 }
 
-let scheduled=false;
-const observer=new MutationObserver(()=>{
-  if(scheduled)return;
-  scheduled=true;
-  requestAnimationFrame(()=>{scheduled=false;ensureNavigation();const shell=document.querySelector('[data-admin-navigation]');if(shell)syncActiveState(shell)});
+const rootObserver=new MutationObserver(()=>{
+  if(!document.querySelector('[data-admin-navigation]')||document.querySelector('.admin-tabs')!==observedTabs){
+    ensureNavigation();
+  }
 });
-observer.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+rootObserver.observe(document.documentElement,{childList:true,subtree:true});
 ensureNavigation();
-setInterval(()=>{const shell=document.querySelector('[data-admin-navigation]');if(shell)renderNavigation(shell)},30000);
+setInterval(()=>renderNavigation(),30000);
