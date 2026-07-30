@@ -19,6 +19,7 @@ Stand: 30. Juli 2026
 - ✅ 16.7.1 Vollständiger KI-Recherche-Export
 - ✅ 16.7.2 Geprüfte Rückimport-Vorschau
 - ✅ 16.7.3 Feldweise Freigabe und kontrollierte Übernahme
+- ✅ 16.7.4 Preisquellen geprüft übernehmen
 
 ## In Arbeit
 
@@ -28,25 +29,21 @@ Offen bleibt insbesondere die Absicherung des Master-Imports mit denselben Quali
 
 ### 18 🚧 Preisbeobachtung & Händlervergleich 1.0
 
-Vorhanden sind Händlerstammdaten, aktuelle Angebote, Preisbeobachtungen und Preisvergleich. Es folgen Händleradapter, tägliche Scannerläufe, Preisbox, Verlauf und Preisalarm.
+Vorhanden sind Händlerstammdaten, aktuelle Angebote, Preisbeobachtungen, Preisvergleich sowie der sichere Import geprüfter Preisquellen. Es folgen manuelle Prüf- und Freigabeoberfläche, Händleradapter, tägliche Scannerläufe, Preisbox, Verlauf und Preisalarm.
 
 ## Als Nächstes
 
-### 16.7.4 ⬜ Preisquellen geprüft übernehmen
+### 16.5.4 ⬜ Admin-Werkzeuge und Protokollansichten
 
-- `offer_source_id` stabil und zeilenweise validieren
-- neue direkte Produktlinks zunächst deaktiviert speichern
-- Händler, Variante, Größe, Konzentration, Set/Tester und Produkttyp prüfen
-- Gesamtpreis einschließlich Versand vergleichbar speichern
-- geänderte Links nur nach bewusster Freigabe aktivieren
-- alte Scannerzuordnung bei Linkänderung zunächst deaktivieren
-- keine automatische Scanner-Aktivierung ungeprüfter Quellen
-- Preisquellen in Vorschau, Freigabe und Auditprotokoll integrieren
+- importierte Preisquellen mit `PENDING_REVIEW` übersichtlich anzeigen
+- Händler und Quellen manuell prüfen, freigeben oder ablehnen
+- Variantenwarnungen, Größe, Konzentration, Tester/Set und Produktlink direkt vergleichen
+- Importläufe aus `import_quality_runs` nachvollziehbar anzeigen
+- Scanner-Aktivierung als separate bewusste Aktion absichern
 
 Danach:
 
 - separates Datenmodell für beschreibende Duftmerkmale wie Jahreszeit, Anlass, Dichte, Temperaturwirkung und Signatur
-- 16.5.4 weitere Admin-Werkzeuge und Protokollansichten
 - 17 Vergleich & Bewertung 2.0
 - 18 Händleradapter und automatisierte Preisaktualisierung
 - 19 spätere Benutzerfunktionen
