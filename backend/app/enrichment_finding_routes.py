@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -24,6 +25,12 @@ ALLOWED_FIELDS = {
     "heart_notes": "heart_notes",
     "base_notes": "base_notes",
     "accords": "accords",
+}
+
+NOTE_PYRAMIDS = {
+    "top_notes": "top",
+    "heart_notes": "heart",
+    "base_notes": "base",
 }
 
 
@@ -78,6 +85,63 @@ def _finding(db: Session, finding_id: UUID):
     if not row:
         raise HTTPException(404, "Datenfund nicht gefunden")
     return row
+
+
+def _note_names(value: object) -> list[str]:
+    if isinstance(value, list):
+        raw = value
+    else:
+        raw = re.split(r"[,;|\n]+", str(value or ""))
+    result: list[str] = []
+    seen: set[str] = set()
+    for item in raw:
+        name = re.sub(r"\s+", " ", str(item).strip(" \t\r\n-–—•"))[:120]
+        key = name.casefold()
+        if name and key not in seen:
+            seen.add(key)
+            result.append(name)
+    return result
+
+
+def _sync_structured_notes(db: Session, fragrance_id: UUID, field_name: str, value: object) -> None:
+    pyramid = NOTE_PYRAMIDS.get(field_name)
+    if not pyramid:
+        return
+    names = _note_names(value)
+    if not names:
+        raise HTTPException(400, "Der gefundene Duftnotenwert enthält keine verwertbaren Noten.")
+
+    db.execute(text(
+        "DELETE FROM fragrance_notes WHERE fragrance_id=:fragrance_id AND pyramid=:pyramid"
+    ), {"fragrance_id": fragrance_id, "pyramid": pyramid})
+
+    for position, name in enumerate(names):
+        note_id = db.execute(text(
+            "SELECT id FROM notes WHERE lower(trim(name))=lower(trim(:name)) LIMIT 1"
+        ), {"name": name}).scalar()
+        if note_id is None:
+            note_id = uuid4()
+            db.execute(text(
+                "INSERT INTO notes(id,name,category) VALUES(:id,:name,'Sonstige')"
+            ), {"id": note_id, "name": name})
+        db.execute(text("""
+            INSERT INTO fragrance_notes(id,fragrance_id,note_id,pyramid,position)
+            VALUES(:id,:fragrance_id,:note_id,:pyramid,:position)
+            ON CONFLICT(fragrance_id,note_id,pyramid)
+            DO UPDATE SET position=EXCLUDED.position
+        """), {
+            "id": uuid4(),
+            "fragrance_id": fragrance_id,
+            "note_id": note_id,
+            "pyramid": pyramid,
+            "position": position,
+        })
+
+    column = ALLOWED_FIELDS[field_name]
+    db.execute(text(f"UPDATE fragrances SET {column}=:value WHERE id=:id"), {
+        "value": ", ".join(names),
+        "id": fragrance_id,
+    })
 
 
 @router.post("/findings", status_code=201)
@@ -142,7 +206,12 @@ def approve_finding(finding_id: UUID, payload: FindingDecision | None = None, db
     proposed = row["proposed_value"]
     if current not in (None, "") and str(current).strip() != str(proposed).strip():
         raise HTTPException(409, "Das Zielfeld enthält bereits einen abweichenden Wert. Bitte als Konflikt markieren oder den Duft manuell bearbeiten.")
-    db.execute(text(f"UPDATE fragrances SET {column}=:value WHERE id=:id"), {"value": proposed, "id": row["fragrance_id"]})
+
+    if row["field_name"] in NOTE_PYRAMIDS:
+        _sync_structured_notes(db, row["fragrance_id"], row["field_name"], proposed)
+    else:
+        db.execute(text(f"UPDATE fragrances SET {column}=:value WHERE id=:id"), {"value": proposed, "id": row["fragrance_id"]})
+
     source_id = f"SRC-{uuid4().hex[:12].upper()}"
     db.execute(text("""
         INSERT INTO master_sources
