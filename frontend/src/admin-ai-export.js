@@ -1,4 +1,32 @@
-function aiExportToast(message){let node=document.querySelector('.ai-export-toast');if(!node){node=document.createElement('div');node.className='ai-export-toast';document.body.appendChild(node)}node.textContent=message;node.classList.add('show');clearTimeout(node._timer);node._timer=setTimeout(()=>node.classList.remove('show'),3200)}
+function aiExportToast(message){let node=document.querySelector('.ai-export-toast');if(!node){node=document.createElement('div');node.className='ai-export-toast';document.body.appendChild(node)}node.textContent=message;node.classList.add('show');clearTimeout(node._timer);node._timer=setTimeout(()=>node.classList.remove('show'),4200)}
+
+function aiExportFilename(response){
+  const header=response.headers.get('content-disposition')||'';
+  const match=header.match(/filename="?([^";]+)"?/i);
+  return match?.[1]||'DGD_KI_Recherche.xlsx';
+}
+
+async function downloadAiExport(button,url){
+  const oldText=button.textContent;
+  button.disabled=true;button.textContent='Export wird erstellt …';
+  try{
+    const response=await fetch(url,{headers:{Accept:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}});
+    const contentType=(response.headers.get('content-type')||'').toLowerCase();
+    if(!response.ok||!contentType.includes('spreadsheetml')){
+      let message=`Export fehlgeschlagen (${response.status})`;
+      try{const data=await response.json();message=data.detail||message}catch{try{const text=await response.text();if(text)message=text.slice(0,220)}catch{}}
+      throw new Error(message);
+    }
+    const blob=await response.blob();
+    if(blob.size<1000)throw new Error('Die erzeugte Excel-Datei ist ungewöhnlich klein und wurde nicht gespeichert.');
+    const href=URL.createObjectURL(blob);const link=document.createElement('a');link.href=href;link.download=aiExportFilename(response);document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(href),1500);
+    aiExportToast('Excel-Datei wurde erstellt.');
+  }catch(error){
+    aiExportToast(`Export nicht möglich: ${error.message}`);
+  }finally{
+    button.disabled=false;button.textContent=oldText;
+  }
+}
 
 function renderAiExport(host){
   host.innerHTML=`<section class="ai-export-panel">
@@ -15,7 +43,7 @@ function renderAiExport(host){
     <p class="ai-export-note">Der Rückimport ist noch nicht aktiv. Diese Stufe dient zuerst dazu, Struktur und Feldumfang der Exportdatei zu prüfen.</p>
   </section>`;
   fetch('/api/brands').then(r=>r.ok?r.json():[]).then(brands=>{const select=host.querySelector('[data-ai-export-brand]');brands.sort((a,b)=>a.name.localeCompare(b.name,'de')).forEach(brand=>{const option=document.createElement('option');option.value=brand.id;option.textContent=brand.name;select.appendChild(option)})}).catch(()=>{});
-  host.querySelector('[data-ai-export-download]').addEventListener('click',event=>{const scope=host.querySelector('[data-ai-export-scope]').value;const brand=host.querySelector('[data-ai-export-brand]').value;const params=new URLSearchParams({scope});if(brand)params.set('brand_id',brand);event.currentTarget.disabled=true;event.currentTarget.textContent='Export wird erstellt …';window.location.href=`/api/ai-research-export/xlsx?${params}`;setTimeout(()=>{event.currentTarget.disabled=false;event.currentTarget.textContent='Excel-Datei erstellen';aiExportToast('Export wurde angefordert.')},1200)});
+  host.querySelector('[data-ai-export-download]').addEventListener('click',event=>{const scope=host.querySelector('[data-ai-export-scope]').value;const brand=host.querySelector('[data-ai-export-brand]').value;const params=new URLSearchParams({scope});if(brand)params.set('brand_id',brand);downloadAiExport(event.currentTarget,`/api/ai-research-export/xlsx?${params}`)});
 }
 
 function injectAiExportTab(){
