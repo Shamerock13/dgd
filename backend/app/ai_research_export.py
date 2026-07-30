@@ -14,7 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session, joinedload
 
 from .database import get_db
-from .models import Fragrance
+from .models import Fragrance, FragranceNote
 
 router = APIRouter(prefix="/api/ai-research-export", tags=["ai-research-export"])
 
@@ -28,14 +28,17 @@ FRAGRANCE_HEADERS = [
     "year", "gender", "concentration", "perfumer", "price_eur", "description",
     "accords", "sweetness", "freshness", "created_at",
 ]
+PERFORMANCE_VALUE_FIELDS = [
+    "longevity", "projection", "longevity_min_hours", "longevity_max_hours",
+    "longevity_score", "sillage", "performance_score", "projection_first_hour",
+    "projection_after_three_hours", "drydown_strength", "performance_source_count",
+    "performance_confidence", "performance_disagreement", "performance_status",
+    "performance_version", "performance_production_period",
+]
 PERFORMANCE_HEADERS = [
-    "export_id", "fragrance_id", "brand_name", "name", "longevity", "projection",
-    "longevity_min_hours", "longevity_max_hours", "longevity_score", "sillage",
-    "performance_score", "projection_first_hour", "projection_after_three_hours",
-    "drydown_strength", "performance_source_count", "performance_confidence",
-    "performance_disagreement", "performance_status", "performance_researched_at",
-    "performance_version", "performance_production_period", "proposal_sources_json",
-    "proposal_source_url", "proposal_rationale", "proposal_confidence",
+    "export_id", "fragrance_id", "brand_name", "name", *PERFORMANCE_VALUE_FIELDS,
+    "performance_researched_at", "proposal_sources_json", "proposal_source_url",
+    "proposal_rationale", "proposal_confidence",
 ]
 DNA_HEADERS = [
     "export_id", "fragrance_id", "brand_name", "name", "fragrance_dna_json",
@@ -85,8 +88,8 @@ def _style_sheet(ws) -> None:
         cell.alignment = Alignment(vertical="center", wrap_text=True)
     for column in range(1, ws.max_column + 1):
         width = 14
-        for cell in ws.iter_cols(min_col=column, max_col=column, min_row=1, max_row=min(ws.max_row, 100)):
-            for item in cell:
+        for cells in ws.iter_cols(min_col=column, max_col=column, min_row=1, max_row=min(ws.max_row, 100)):
+            for item in cells:
                 width = min(max(width, len(str(item.value or "")) + 2), 48)
         ws.column_dimensions[get_column_letter(column)].width = width
 
@@ -123,7 +126,8 @@ def export_ai_research_xlsx(
     export_id = str(uuid4())
     selected_ids = {item.strip() for item in (fragrance_ids or "").split(",") if item.strip()}
     query = db.query(Fragrance).options(
-        joinedload(Fragrance.brand), joinedload(Fragrance.note_links).joinedload("note")
+        joinedload(Fragrance.brand),
+        joinedload(Fragrance.note_links).joinedload(FragranceNote.note),
     ).order_by(Fragrance.name)
     if brand_id:
         query = query.filter(Fragrance.brand_id == brand_id)
@@ -169,8 +173,10 @@ def export_ai_research_xlsx(
 
     for fragrance in fragrances:
         common = {
-            "export_id": export_id, "fragrance_id": str(fragrance.id),
-            "brand_name": fragrance.brand.name if fragrance.brand else "", "name": fragrance.name,
+            "export_id": export_id,
+            "fragrance_id": str(fragrance.id),
+            "brand_name": fragrance.brand.name if fragrance.brand else "",
+            "name": fragrance.name,
         }
         _append(wb["Düfte"], FRAGRANCE_HEADERS, {
             **common, "dgd_id": fragrance.dgd_id or "", "brand_id": str(fragrance.brand_id),
@@ -190,8 +196,12 @@ def export_ai_research_xlsx(
             "image_status": fragrance.image_status or "",
         })
         perf = perf_by_id.get(str(fragrance.id), {})
+        performance_values = {
+            key: getattr(fragrance, key) if getattr(fragrance, key, None) is not None else ""
+            for key in PERFORMANCE_VALUE_FIELDS
+        }
         _append(wb["Performance"], PERFORMANCE_HEADERS, {
-            **common, **{key: getattr(fragrance, key, "") if getattr(fragrance, key, None) is not None else "" for key in PERFORMANCE_HEADERS},
+            **common, **performance_values,
             "performance_researched_at": _iso(fragrance.performance_researched_at),
             "proposal_sources_json": _json(perf.get("sources")),
             "proposal_source_url": perf.get("source_url") or "",
