@@ -28,13 +28,13 @@ Produktion und produktive Datenbank werden niemals direkt für Entwicklung oder 
 - öffentlicher Katalog: `/`
 - Admin-Center: `/admin.html`
 - lokale Medien: `/media/fragrances`
-- explizites Migrationsschema bis `0015`
+- explizites Migrationsschema bis `0016`
 
 ## Aktueller Funktionsstand
 
-Abgeschlossen sind die Pakete bis 14, Performance 16.1 bis 16.3, Duft-DNA 16.4, Admin 16.5.1 bis 16.5.3, Performance-Recherche 16.6.1 sowie KI-Export und Rückimport 16.7.1 bis 16.7.3.
+Abgeschlossen sind die Pakete bis 14, Performance 16.1 bis 16.3, Duft-DNA 16.4, Admin 16.5.1 bis 16.5.3, Performance-Recherche 16.6.1 sowie KI-Export und Rückimport 16.7.1 bis 16.7.4.
 
-Paket 16.7.3 ergänzt die feldweise Freigabe und kontrollierte Datenbankübernahme für geprüfte Excel-Rückimporte. Die Dev-Abnahme einschließlich DNA-Validierung, lokalem Bild-Upload, Media-Auslieferung und normalem Duft-Speichern war erfolgreich.
+Paket 16.7.4 ergänzt die kontrollierte Übernahme geprüfter Preisquellen. Neue Quellen werden zunächst deaktiviert gespeichert, erhalten ihre stabile `offer_source_id` ausschließlich durch DGD und aktivieren niemals automatisch einen Scanner.
 
 ## KI-Export und Rückimport
 
@@ -48,7 +48,9 @@ Der Export erzeugt eine KI-taugliche XLSX-Datei mit neun Tabellenblättern. Pers
 
 Duft-DNA akzeptiert ausschließlich die 16 numerischen Dimensionen von 0 bis 10. Beschreibende Merkmale wie Jahreszeit, Anlass oder Duftfamilie gehören künftig in ein separates Datenmodell.
 
-Bildquellen können als Prüfinformation übernommen werden. Geprüfte Bilder werden lokal gespeichert; externe Produktseiten werden nicht automatisch als Bild eingebettet. Preisquellen und Scanner bleiben bis Paket 16.7.4 separat und inaktiv.
+Bildquellen können als Prüfinformation übernommen werden. Geprüfte Bilder werden lokal gespeichert; externe Produktseiten werden nicht automatisch als Bild eingebettet.
+
+Preisquellen werden fachlich und technisch validiert. Geprüft werden unter anderem Händler, direkte Produkt-URL, Größe, Konzentration, Variante, Produkttyp, Währung, Markt sowie stabile Kennungen. Neue Händler und Quellen bleiben deaktiviert und auf `PENDING_REVIEW`; `scanner_active` wird bei der Übernahme immer auf `false` gesetzt.
 
 ## Wichtige Sicherheitsregeln
 
@@ -56,7 +58,9 @@ Bildquellen können als Prüfinformation übernommen werden. Geprüfte Bilder we
 - persönliche Werte bleiben strikt getrennt
 - ungeprüfte KI-Werte werden nicht automatisch veröffentlicht
 - Konflikte werden nicht vorausgewählt
-- Preisquellen bleiben bis zur separaten Scanner-Integration inaktiv
+- Preisquellen bleiben bis zur manuellen Freigabe inaktiv
+- neue Händler werden zunächst deaktiviert angelegt
+- Scanner werden durch Importe niemals automatisch aktiviert
 - jeder erfolgreiche Übernahmelauf wird protokolliert
 - Fehler führen zum Rollback der gesamten Transaktion
 - normale Admin-Formulare senden nur ihre erlaubten Felder
@@ -83,4 +87,4 @@ docker compose -f docker-compose.dev.yml up -d --build
 
 ## Nächster Schritt
 
-Paket 16.7.4 für validierte Preisquellen und kontrollierte spätere Scanner-Aktivierung.
+Manuelle Prüf- und Freigabeoberfläche für importierte Preisquellen sowie weitere Admin- und Protokollansichten. Händleradapter und automatisierte Scannerläufe bleiben ein separates späteres Paket.
