@@ -20,6 +20,12 @@ from .models import FragranceNote, ImportQualityRun, Note
 
 router = APIRouter(prefix="/api/ai-research-import", tags=["ai-research-import"])
 
+DNA_DIMENSIONS = {
+    "fresh", "citrus", "green", "aquatic", "floral", "fruity",
+    "sweet", "gourmand", "spicy", "woody", "smoky", "earthy",
+    "resinous", "leathery", "powdery", "animalic",
+}
+
 
 def _selected_keys(raw: str) -> set[str]:
     try:
@@ -31,6 +37,30 @@ def _selected_keys(raw: str) -> set[str]:
     if len(values) > 5000:
         raise HTTPException(400, "Es wurden zu viele Änderungen ausgewählt.")
     return set(values)
+
+
+def _validate_dna(value):
+    if not isinstance(value, dict):
+        raise HTTPException(400, "Duft-DNA muss ein JSON-Objekt sein.")
+    unknown = sorted(set(value) - DNA_DIMENSIONS)
+    if unknown:
+        raise HTTPException(
+            400,
+            "Duft-DNA enthält nicht unterstützte Felder: " + ", ".join(unknown[:8]),
+        )
+    normalized: dict[str, float] = {}
+    for key, raw in value.items():
+        if raw is None:
+            continue
+        if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+            raise HTTPException(400, f"Duft-DNA-Feld {key} muss eine Zahl von 0 bis 10 sein.")
+        number = float(raw)
+        if number < 0 or number > 10:
+            raise HTTPException(400, f"Duft-DNA-Feld {key} liegt außerhalb von 0 bis 10.")
+        normalized[key] = number
+    if not normalized:
+        raise HTTPException(400, "Duft-DNA enthält keine gültigen numerischen Dimensionen.")
+    return normalized
 
 
 def _note_row(parsed, key: str):
@@ -130,6 +160,8 @@ async def apply_ai_research_import(
             if model_field.startswith("personal_") or not hasattr(fragrance, model_field):
                 raise HTTPException(400, f"Feld {field} darf nicht übernommen werden.")
             value = _normalize(field, change["new_value"])
+            if field == "fragrance_dna_json":
+                value = _validate_dna(value)
             if _is_blank(value):
                 raise HTTPException(400, f"Leere Werte dürfen nicht als Löschung übernommen werden: {field}")
             setattr(fragrance, model_field, value)
