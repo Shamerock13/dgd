@@ -34,7 +34,7 @@ Produktion und produktive Datenbank werden niemals direkt für Entwicklung oder 
 
 ## Aktueller Funktionsstand
 
-Abgeschlossen sind die Pakete bis 14, Performance 16.1 bis 16.3, Duft-DNA 16.4, Admin 16.5.1 bis 16.5.3, Performance-Recherche 16.6.1, KI-Export und Rückimport 16.7.1 bis 16.7.6 sowie Preisverlauf und Variantenvergleich 18.1.
+Abgeschlossen sind die Pakete bis 14, Performance 16.1 bis 16.3, Duft-DNA 16.4, Admin 16.5.1 bis 16.5.3, Performance-Recherche 16.6.1, KI-Export und Rückimport 16.7.1 bis 16.7.6 sowie Preisverlauf, Variantenvergleich und Preisalarme 18.1 bis 18.2.
 
 Preisquellen werden kontrolliert importiert, im Admin geprüft und separat für Scannerläufe freigegeben. Neue Händler bleiben zunächst deaktiviert. Neue oder geänderte Quellen starten mit `PENDING_REVIEW` und `scanner_active = false`.
 
@@ -58,6 +58,7 @@ POST   /api/prices/review/offers/{offer_id}/decision
 POST   /api/prices/review/offers/{offer_id}/scanner
 POST   /api/prices/review/offers/{offer_id}/test
 GET    /api/prices/browser-connector/health
+GET    /api/prices/browser-connector/queue
 POST   /api/prices/browser-connector/import
 GET    /api/prices/browser-connector/extension.zip
 GET    /api/prices/fragrances/{fragrance_id}
@@ -70,9 +71,23 @@ Scannerläufe berücksichtigen nur freigegebene und ausdrücklich aktivierte Que
 
 Der öffentliche Preis-Endpunkt liefert Variantengruppen nach Produktart, Größe und Konzentration. Bestpreis, historisches Tief und Verlauf werden nur innerhalb derselben Variante berechnet.
 
-Paket 18.2 ergänzt lokale Preisalarme in `price_alerts`. Ein Alarm ist eindeutig an `fragrance_id` und `variant_key` gebunden. Er akzeptiert einen Zielpreis inklusive Versand, einen maximalen prozentualen Abstand zum historischen Tief oder beide Regeln. Jede neue `price_observations`-Zeile stößt innerhalb derselben Datenbanktransaktion eine Neubewertung an. Dadurch gelten manuelle Preisprüfungen, automatische Scannerläufe und Browserimporte gleichermaßen.
+Lokale Preisalarme sind eindeutig an `fragrance_id` und `variant_key` gebunden. Sie akzeptieren einen Zielpreis inklusive Versand, einen maximalen prozentualen Abstand zum historischen Tief oder beide Regeln. Jede neue `price_observations`-Zeile stößt innerhalb derselben Datenbanktransaktion eine Neubewertung an.
 
-Ein Alarm löst nur beim Wechsel in `TRIGGERED` erneut aus. Bleibt der Preis unter der Schwelle, wird der Zähler nicht bei jeder Prüfung erhöht. Erst ein späterer Wechsel zurück zu `WAITING` und eine erneute Zielerreichung erzeugen eine weitere Auslösung. Externe E-Mail- und Push-Kanäle gehören noch nicht zu diesem Paket.
+## Browser-Prüfrunde 18.3
+
+Der Queue-Endpunkt liefert ausschließlich freigegebene Quellen mit `trust_status = BROWSER_REQUIRED`, deaktiviertem Server-Scanner und aktivem Händler. Die letzte manuelle Prüfung wird aus dem jüngsten Audit-Ereignis `BROWSER_IMPORT_SUCCESS` ermittelt.
+
+Statuswerte:
+
+```text
+NEVER_CHECKED
+DUE
+CURRENT
+```
+
+Die Fälligkeit orientiert sich an `scan_interval`. Bekannte Stunden-, Tages-, Wochen- und Monatswerte werden normalisiert; unbekannte Werte verwenden sicher 24 Stunden. Nie geprüfte Quellen stehen zuerst, anschließend die am längsten nicht manuell geprüften Quellen.
+
+Der Admin startet die Prüfrunde bewusst mit der ersten fälligen Produktseite. Nach einem erfolgreichen Browserimport fragt die Erweiterung die Queue erneut ab und bietet die nächste fällige Seite über einen eigenen Knopf an. Ohne diesen Klick findet keine Navigation statt. Die Queue besitzt keine Sitzung und bleibt dadurch auch nach Browser- oder Containerneustarts konsistent.
 
 ## Wichtige Sicherheitsregeln
 
@@ -84,6 +99,8 @@ Ein Alarm löst nur beim Wechsel in `TRIGGERED` erneut aus. Bleibt der Preis unt
 - Scanner werden durch Importe niemals automatisch aktiviert
 - öffentliche Preise stammen nur aus freigegebenen Quellen aktiver Händler
 - Preisalarme ignorieren ausverkaufte, ungeprüfte und inaktive Quellen
+- Browser-Prüfrunden enthalten keine ungeprüften Quellen oder inaktiven Händler
+- jede Produktseite wird ausschließlich nach einer bewussten Nutzeraktion geöffnet und übertragen
 - jeder erfolgreiche Übernahmelauf, Scannertest und Browserimport wird protokolliert
 - CAPTCHA-, Proxy- und Bot-Schutz-Umgehungen sind ausgeschlossen
 - Fehler führen zum Rollback der Transaktion
@@ -92,7 +109,7 @@ Ein Alarm löst nur beim Wechsel in `TRIGGERED` erneut aus. Bleibt der Preis unt
 ## Arbeitsweise
 
 - Feature-Branch pro Paket
-- GitHub-CI für Backend-Compile und Frontend-Build
+- GitHub-CI für Backend-Compile, Erweiterungsprüfung und Frontend-Build
 - praktische Tests ausschließlich in Dev
 - Dokumentation im selben Paket aktualisieren
 - erst nach Nutzerabnahme auf „Ready for review“ setzen
@@ -111,4 +128,4 @@ docker compose -f docker-compose.dev.yml up -d --build
 
 ## Aktuelles Paket
 
-Paket 18.2 / Issue #103 / Draft-PR #104 ergänzt variantengenaue lokale Preisalarme. Danach ist 18.3 mit Komfort für mehrere bewusst gestartete Browserprüfungen der nächste Preisbaustein; parallel bleibt Paket 15 zur weiteren Importvalidierung offen.
+Paket 18.3 / Issue #105 / Draft-PR #106 ergänzt eine fälligkeitsbasierte, bewusst gesteuerte Prüfrunde für Browser-Preisquellen. Parallel bleibt Paket 15 zur weiteren Importvalidierung offen.
