@@ -1,4 +1,5 @@
 const money = new Intl.NumberFormat('de-DE', {style: 'currency', currency: 'EUR'});
+const reviewDate = new Intl.DateTimeFormat('de-DE', {dateStyle: 'short', timeStyle: 'short'});
 let reviewPanel;
 let reviewData = {summary: {}, offers: []};
 let reviewFilter = 'PENDING_REVIEW';
@@ -46,16 +47,55 @@ function reviewTypeLabel(type) {
   })[type] || type || 'Unbekannt';
 }
 
+function eventActionLabel(action) {
+  return ({
+    APPROVED: 'Quelle freigegeben',
+    REJECTED: 'Quelle abgelehnt',
+    SCANNER_ENABLED: 'Scanner aktiviert',
+    SCANNER_DISABLED: 'Scanner deaktiviert',
+    TEST_SUCCESS: 'Einzeltest erfolgreich',
+    TEST_FAILED: 'Einzeltest fehlgeschlagen',
+  })[action] || action;
+}
+
+function eventDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value || '') : reviewDate.format(date);
+}
+
+function reviewHistory(row) {
+  const events = row.events || [];
+  if (!events.length) return '';
+  return `<details class="price-source-review-history">
+    <summary>Prüfverlauf (${events.length})</summary>
+    <div>${events.map(event => `<article class="history-${reviewEsc(event.action.toLowerCase())}">
+      <span>${reviewEsc(eventDate(event.created_at))}</span>
+      <b>${reviewEsc(eventActionLabel(event.action))}</b>
+      ${event.retailer_activated ? '<em>Händler aktiviert</em>' : ''}
+      ${event.note ? `<p>${reviewEsc(event.note)}</p>` : ''}
+    </article>`).join('')}</div>
+  </details>`;
+}
+
 function scannerActions(row) {
   if (row.review_status !== 'APPROVED') return '';
   if (!row.retailer?.scanner_supported) {
     return '<div class="price-source-review-warning"><b>Scanner nicht verfügbar</b><span>Für diesen Händler ist noch kein automatischer Preisadapter freigegeben.</span></div>';
   }
+
+  const testButton = row.retailer?.active
+    ? '<button type="button" class="price-source-test">Quelle jetzt testen</button>'
+    : '';
+
   if (row.scanner_active) {
-    return '<div class="price-source-review-actions"><button type="button" class="price-source-scanner danger" data-enabled="false" data-activate-retailer="false">Scanner deaktivieren</button></div>';
+    return `<div class="price-source-review-actions">${testButton}<button type="button" class="price-source-scanner danger" data-enabled="false" data-activate-retailer="false">Scanner deaktivieren</button></div>`;
   }
+
   const activateRetailer = !row.retailer?.active;
-  return `<div class="price-source-review-actions"><button type="button" class="primary price-source-scanner" data-enabled="true" data-activate-retailer="${activateRetailer ? 'true' : 'false'}">${activateRetailer ? 'Scanner + Händler aktivieren' : 'Scanner aktivieren'}</button></div>`;
+  return `<div class="price-source-review-actions">
+    ${testButton}
+    <button type="button" class="primary price-source-scanner" data-enabled="true" data-activate-retailer="${activateRetailer ? 'true' : 'false'}">${activateRetailer ? 'Scanner + Händler aktivieren' : 'Scanner aktivieren'}</button>
+  </div>`;
 }
 
 function reviewCard(row) {
@@ -83,6 +123,7 @@ function reviewCard(row) {
       <div><dt>Händler</dt><dd>${row.retailer.active ? 'Aktiv' : 'Inaktiv'}</dd></div>
       <div><dt>Scanner</dt><dd>${row.scanner_active ? 'Aktiv' : 'Deaktiviert'}</dd></div>
       <div><dt>Adapter</dt><dd>${row.retailer.scanner_supported ? 'Verfügbar' : 'Nicht verfügbar'}</dd></div>
+      <div><dt>Zuletzt geprüft</dt><dd>${row.checked_at ? reviewEsc(eventDate(row.checked_at)) : 'Noch nie'}</dd></div>
       ${row.ean_gtin ? `<div><dt>EAN/GTIN</dt><dd>${reviewEsc(row.ean_gtin)}</dd></div>` : ''}
     </dl>
     ${row.variant_warning ? `<div class="price-source-review-warning"><b>Prüfhinweis</b><span>${reviewEsc(row.variant_warning)}</span></div>` : ''}
@@ -92,6 +133,7 @@ function reviewCard(row) {
       <button type="button" class="price-source-decision danger" data-action="reject" data-activate-retailer="false">Ablehnen</button>
     </div>` : ''}
     ${scannerActions(row)}
+    ${reviewHistory(row)}
   </article>`;
 }
 
@@ -101,7 +143,7 @@ function renderPriceSourceReview() {
   const rows = (reviewData.offers || []).filter(row => reviewFilter === 'ALL' || row.review_status === reviewFilter);
   reviewPanel.innerHTML = `
     <section class="price-source-review-head">
-      <div><span>Preisquellen 16.7.5</span><h2>Importierte Preisquellen prüfen</h2><p>Produktseite, Variante, Größe und Händler bewusst kontrollieren. Scanner werden je Quelle separat freigegeben.</p></div>
+      <div><span>Preisquellen 16.7.5</span><h2>Importierte Preisquellen prüfen</h2><p>Produktseite, Variante, Größe und Händler bewusst kontrollieren. Scanner werden je Quelle separat freigegeben und können einzeln getestet werden.</p></div>
       <button type="button" class="price-source-review-refresh">Aktualisieren</button>
     </section>
     <section class="price-source-review-summary">
@@ -122,6 +164,7 @@ function renderPriceSourceReview() {
   }));
   reviewPanel.querySelectorAll('.price-source-decision').forEach(button => button.addEventListener('click', submitPriceSourceDecision));
   reviewPanel.querySelectorAll('.price-source-scanner').forEach(button => button.addEventListener('click', submitScannerDecision));
+  reviewPanel.querySelectorAll('.price-source-test').forEach(button => button.addEventListener('click', submitSourceTest));
 }
 
 async function loadPriceSourceReview() {
@@ -192,6 +235,25 @@ async function submitScannerDecision(event) {
   } catch (error) {
     alert(error.message);
     button.disabled = false;
+  }
+}
+
+async function submitSourceTest(event) {
+  const button = event.currentTarget;
+  const card = button.closest('[data-offer-id]');
+  const offerId = card?.dataset.offerId;
+  if (!offerId || !confirm('Diese Produktseite jetzt einmal beim Händler prüfen?')) return;
+
+  button.disabled = true;
+  button.textContent = 'Prüfe …';
+  try {
+    const result = await reviewRequest(`/api/prices/review/offers/${offerId}/test`, {method: 'POST'});
+    const availability = result.in_stock ? 'lieferbar' : 'nicht lieferbar';
+    alert(`Test erfolgreich: ${money.format(result.price_eur)} · ${availability}.`);
+    await loadPriceSourceReview();
+  } catch (error) {
+    alert(error.message);
+    await loadPriceSourceReview();
   }
 }
 
