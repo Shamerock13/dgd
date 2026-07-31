@@ -28,13 +28,13 @@ Produktion und produktive Datenbank werden niemals direkt für Entwicklung oder 
 - öffentlicher Katalog: `/`
 - Admin-Center: `/admin.html`
 - lokale Medien: `/media/fragrances`
-- explizites Migrationsschema bis `0017`
+- explizites Migrationsschema bis `0018`
 - Preis-Worker als separater Container
 - lokaler Manifest-v3-Browser-Connector für Chrome und Edge
 
 ## Aktueller Funktionsstand
 
-Abgeschlossen sind die Pakete bis 14, Performance 16.1 bis 16.3, Duft-DNA 16.4, Admin 16.5.1 bis 16.5.3, Performance-Recherche 16.6.1 sowie KI-Export und Rückimport 16.7.1 bis 16.7.6.
+Abgeschlossen sind die Pakete bis 14, Performance 16.1 bis 16.3, Duft-DNA 16.4, Admin 16.5.1 bis 16.5.3, Performance-Recherche 16.6.1, KI-Export und Rückimport 16.7.1 bis 16.7.6 sowie Preisverlauf und Variantenvergleich 18.1.
 
 Preisquellen werden kontrolliert importiert, im Admin geprüft und separat für Scannerläufe freigegeben. Neue Händler bleiben zunächst deaktiviert. Neue oder geänderte Quellen starten mit `PENDING_REVIEW` und `scanner_active = false`.
 
@@ -50,22 +50,29 @@ Der Export erzeugt eine KI-taugliche XLSX-Datei mit neun Tabellenblättern. Pers
 
 Duft-DNA akzeptiert ausschließlich die 16 numerischen Dimensionen von 0 bis 10. Beschreibende Merkmale wie Jahreszeit, Anlass oder Duftfamilie gehören künftig in ein separates Datenmodell.
 
-## Preisquellen, Scanner und Browser-Connector
+## Preisquellen, Scanner, Verlauf und Alarme
 
 ```text
-GET  /api/prices/review/offers
-POST /api/prices/review/offers/{offer_id}/decision
-POST /api/prices/review/offers/{offer_id}/scanner
-POST /api/prices/review/offers/{offer_id}/test
-GET  /api/prices/browser-connector/health
-POST /api/prices/browser-connector/import
-GET  /api/prices/browser-connector/extension.zip
-GET  /api/prices/fragrances/{fragrance_id}
+GET    /api/prices/review/offers
+POST   /api/prices/review/offers/{offer_id}/decision
+POST   /api/prices/review/offers/{offer_id}/scanner
+POST   /api/prices/review/offers/{offer_id}/test
+GET    /api/prices/browser-connector/health
+POST   /api/prices/browser-connector/import
+GET    /api/prices/browser-connector/extension.zip
+GET    /api/prices/fragrances/{fragrance_id}
+GET    /api/prices/fragrances/{fragrance_id}/alerts
+PUT    /api/prices/fragrances/{fragrance_id}/alerts/{variant_key}
+DELETE /api/prices/fragrances/{fragrance_id}/alerts/{variant_key}
 ```
 
 Scannerläufe berücksichtigen nur freigegebene und ausdrücklich aktivierte Quellen aktiver Händler. Blockieren Händler sowohl HTTP als auch serverseitiges Chromium, wird die Quelle auf `BROWSER_REQUIRED` gesetzt. Der Nutzer kann Preis und Lieferbarkeit dann über die bewusst ausgelöste Chrome-/Edge-Erweiterung an die lokale DGD-Instanz übertragen.
 
-Der öffentliche Preis-Endpunkt liefert aktuelle Angebote und Preisbeobachtungen. Paket 18.1 erweitert ihn um Variantengruppen nach Produktart, Größe und Konzentration, damit Tester, Sets, Proben und abweichende Größen nicht als direkte Alternativen verglichen werden.
+Der öffentliche Preis-Endpunkt liefert Variantengruppen nach Produktart, Größe und Konzentration. Bestpreis, historisches Tief und Verlauf werden nur innerhalb derselben Variante berechnet.
+
+Paket 18.2 ergänzt lokale Preisalarme in `price_alerts`. Ein Alarm ist eindeutig an `fragrance_id` und `variant_key` gebunden. Er akzeptiert einen Zielpreis inklusive Versand, einen maximalen prozentualen Abstand zum historischen Tief oder beide Regeln. Jede neue `price_observations`-Zeile stößt innerhalb derselben Datenbanktransaktion eine Neubewertung an. Dadurch gelten manuelle Preisprüfungen, automatische Scannerläufe und Browserimporte gleichermaßen.
+
+Ein Alarm löst nur beim Wechsel in `TRIGGERED` erneut aus. Bleibt der Preis unter der Schwelle, wird der Zähler nicht bei jeder Prüfung erhöht. Erst ein späterer Wechsel zurück zu `WAITING` und eine erneute Zielerreichung erzeugen eine weitere Auslösung. Externe E-Mail- und Push-Kanäle gehören noch nicht zu diesem Paket.
 
 ## Wichtige Sicherheitsregeln
 
@@ -76,6 +83,7 @@ Der öffentliche Preis-Endpunkt liefert aktuelle Angebote und Preisbeobachtungen
 - Preisquellen bleiben bis zur manuellen Freigabe inaktiv
 - Scanner werden durch Importe niemals automatisch aktiviert
 - öffentliche Preise stammen nur aus freigegebenen Quellen aktiver Händler
+- Preisalarme ignorieren ausverkaufte, ungeprüfte und inaktive Quellen
 - jeder erfolgreiche Übernahmelauf, Scannertest und Browserimport wird protokolliert
 - CAPTCHA-, Proxy- und Bot-Schutz-Umgehungen sind ausgeschlossen
 - Fehler führen zum Rollback der Transaktion
@@ -103,4 +111,4 @@ docker compose -f docker-compose.dev.yml up -d --build
 
 ## Aktuelles Paket
 
-Paket 18.1 / Issue #101 / Draft-PR #102 ergänzt Preisverlauf und Variantenvergleich im öffentlichen Duftprofil. Danach sind Preisalarme oder die weitere Absicherung des Master-Imports die nächsten sinnvollen größeren Schritte.
+Paket 18.2 / Issue #103 / Draft-PR #104 ergänzt variantengenaue lokale Preisalarme. Danach ist 18.3 mit Komfort für mehrere bewusst gestartete Browserprüfungen der nächste Preisbaustein; parallel bleibt Paket 15 zur weiteren Importvalidierung offen.
