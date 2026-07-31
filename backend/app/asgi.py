@@ -143,6 +143,7 @@ from . import ai_research_price_aliases  # noqa: E402,F401
 from .ai_research_import import router as ai_research_import_router  # noqa: E402
 from .ai_research_import_apply import router as ai_research_import_apply_router  # noqa: E402
 from .price_browser_connector_routes import router as price_browser_connector_router  # noqa: E402
+from .price_browser_queue_routes import router as price_browser_queue_router  # noqa: E402
 
 app.include_router(fragrance_dna_router)
 app.include_router(fragrance_dna_proposal_router)
@@ -154,4 +155,5 @@ app.include_router(ai_research_price_preview_router)
 app.include_router(ai_research_import_router)
 app.include_router(ai_research_import_apply_router)
 app.include_router(price_browser_connector_router)
+app.include_router(price_browser_queue_router)
 _move_spa_fallback_to_end()
