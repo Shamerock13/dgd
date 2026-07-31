@@ -1,0 +1,27 @@
+DGD Preis-Connector installieren
+================================
+
+Chrome
+1. ZIP-Datei entpacken.
+2. chrome://extensions öffnen.
+3. Oben rechts den Entwicklermodus einschalten.
+4. "Entpackte Erweiterung laden" wählen.
+5. Den entpackten Ordner dgd-preis-connector auswählen.
+
+Microsoft Edge
+1. ZIP-Datei entpacken.
+2. edge://extensions öffnen.
+3. Entwicklermodus einschalten.
+4. "Entpackt laden" wählen.
+5. Den entpackten Ordner dgd-preis-connector auswählen.
+
+Danach
+1. Erweiterungsoptionen öffnen.
+2. Die lokale DGD-Adresse eintragen, zum Beispiel:
+   http://192.168.1.20:18080
+3. Eine in DGD als "Browser erforderlich" markierte Produktseite öffnen.
+4. Auf das Erweiterungssymbol klicken.
+5. "Preis an DGD senden" wählen.
+
+Die Erweiterung arbeitet nur nach einem bewussten Klick. Sie umgeht keine
+CAPTCHAs, Logins oder Schutzseiten.
