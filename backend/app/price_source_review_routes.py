@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import datetime
 from typing import Literal
 from urllib.parse import urlparse
@@ -13,7 +14,7 @@ from sqlalchemy.orm import Session, joinedload
 from .database import get_db
 from .models import Fragrance
 from .price_models import FragranceOffer
-from .price_scanner import SUPPORTED_RETAILER_HOSTS
+from .price_scanner import SUPPORTED_RETAILER_HOSTS, refresh_offer
 from .price_source_review_models import PriceSourceReviewEvent
 
 router = APIRouter(prefix="/api/prices/review", tags=["price-source-review"])
@@ -56,7 +57,24 @@ def _validate_scanner_adapter(offer: FragranceOffer) -> None:
         )
 
 
-def _offer_out(offer: FragranceOffer, fragrance: Fragrance | None) -> dict:
+def _event_out(event: PriceSourceReviewEvent) -> dict:
+    return {
+        "id": str(event.id),
+        "action": event.action,
+        "previous_status": event.previous_status,
+        "new_status": event.new_status,
+        "scanner_active": bool(event.scanner_active),
+        "retailer_activated": bool(event.retailer_activated),
+        "note": event.note,
+        "created_at": event.created_at,
+    }
+
+
+def _offer_out(
+    offer: FragranceOffer,
+    fragrance: Fragrance | None,
+    events: list[PriceSourceReviewEvent] | None = None,
+) -> dict:
     retailer = offer.retailer
     return {
         "id": str(offer.id),
@@ -96,7 +114,19 @@ def _offer_out(offer: FragranceOffer, fragrance: Fragrance | None) -> dict:
         "checked_at": offer.checked_at,
         "created_at": offer.created_at,
         "updated_at": offer.updated_at,
+        "events": [_event_out(item) for item in (events or [])],
     }
+
+
+def _load_offer(db: Session, offer_id: UUID) -> FragranceOffer:
+    offer = db.scalar(
+        select(FragranceOffer)
+        .where(FragranceOffer.id == offer_id)
+        .options(joinedload(FragranceOffer.retailer))
+    )
+    if not offer:
+        raise HTTPException(404, "Preisquelle nicht gefunden.")
+    return offer
 
 
 @router.get("/offers")
@@ -121,7 +151,7 @@ def list_review_offers(
     offers = list(db.scalars(stmt).unique())
 
     fragrance_ids = {item.fragrance_id for item in offers}
-    fragrances = {}
+    fragrances: dict[UUID, Fragrance] = {}
     if fragrance_ids:
         fragrances = {
             item.id: item
@@ -131,6 +161,18 @@ def list_review_offers(
                 .options(joinedload(Fragrance.brand))
             ).unique()
         }
+
+    events_by_offer: dict[UUID, list[PriceSourceReviewEvent]] = defaultdict(list)
+    offer_ids = {item.id for item in offers}
+    if offer_ids:
+        events = list(db.scalars(
+            select(PriceSourceReviewEvent)
+            .where(PriceSourceReviewEvent.offer_id.in_(offer_ids))
+            .order_by(PriceSourceReviewEvent.created_at.desc())
+        ))
+        for event in events:
+            if len(events_by_offer[event.offer_id]) < 12:
+                events_by_offer[event.offer_id].append(event)
 
     counts = dict(db.execute(
         select(FragranceOffer.review_status, func.count(FragranceOffer.id))
@@ -145,7 +187,14 @@ def list_review_offers(
                 select(func.count(FragranceOffer.id)).where(FragranceOffer.scanner_active.is_(True))
             ) or 0),
         },
-        "offers": [_offer_out(item, fragrances.get(item.fragrance_id)) for item in offers],
+        "offers": [
+            _offer_out(
+                item,
+                fragrances.get(item.fragrance_id),
+                events_by_offer.get(item.id),
+            )
+            for item in offers
+        ],
     }
 
 
@@ -155,16 +204,10 @@ def review_offer(
     payload: ReviewDecision,
     db: Session = Depends(get_db),
 ):
-    offer = db.scalar(
-        select(FragranceOffer)
-        .where(FragranceOffer.id == offer_id)
-        .options(joinedload(FragranceOffer.retailer))
-    )
-    if not offer:
-        raise HTTPException(404, "Preisquelle nicht gefunden.")
-
+    offer = _load_offer(db, offer_id)
     previous = offer.review_status
     retailer_activated = False
+
     if payload.action == "approve":
         _validate_source(offer)
         if not offer.offer_source_id:
@@ -205,15 +248,9 @@ def set_offer_scanner(
     payload: ScannerDecision,
     db: Session = Depends(get_db),
 ):
-    offer = db.scalar(
-        select(FragranceOffer)
-        .where(FragranceOffer.id == offer_id)
-        .options(joinedload(FragranceOffer.retailer))
-    )
-    if not offer:
-        raise HTTPException(404, "Preisquelle nicht gefunden.")
-
+    offer = _load_offer(db, offer_id)
     retailer_activated = False
+
     if payload.enabled:
         if offer.review_status != "APPROVED":
             raise HTTPException(409, "Nur freigegebene Preisquellen dürfen den Scanner verwenden.")
@@ -251,3 +288,50 @@ def set_offer_scanner(
         "scanner_active": bool(offer.scanner_active),
         "retailer_active": bool(offer.retailer.active) if offer.retailer else False,
     }
+
+
+@router.post("/offers/{offer_id}/test")
+async def test_offer_adapter(
+    offer_id: UUID,
+    db: Session = Depends(get_db),
+):
+    offer = _load_offer(db, offer_id)
+    if offer.review_status != "APPROVED":
+        raise HTTPException(409, "Nur freigegebene Preisquellen dürfen getestet werden.")
+    if not offer.retailer or not offer.retailer.active:
+        raise HTTPException(409, "Der Händler muss für einen Einzeltest aktiv sein.")
+    _validate_source(offer)
+    _validate_scanner_adapter(offer)
+    if not offer.offer_source_id:
+        raise HTTPException(409, "Die Preisquelle besitzt keine stabile offer_source_id.")
+
+    try:
+        result = await refresh_offer(offer, db)
+    except Exception as exc:
+        db.rollback()
+        message = f"{type(exc).__name__}: {exc}"[:600]
+        db.add(PriceSourceReviewEvent(
+            id=uuid4(),
+            offer_id=offer.id,
+            action="TEST_FAILED",
+            previous_status=offer.review_status,
+            new_status=offer.review_status,
+            scanner_active=bool(offer.scanner_active),
+            retailer_activated=False,
+            note=message,
+        ))
+        db.commit()
+        raise HTTPException(502, f"Preisprüfung fehlgeschlagen: {message}") from exc
+
+    db.add(PriceSourceReviewEvent(
+        id=uuid4(),
+        offer_id=offer.id,
+        action="TEST_SUCCESS",
+        previous_status=offer.review_status,
+        new_status=offer.review_status,
+        scanner_active=bool(offer.scanner_active),
+        retailer_activated=False,
+        note=f"{float(result['price_eur']):.2f} EUR · {'lieferbar' if result['in_stock'] else 'nicht lieferbar'}",
+    ))
+    db.commit()
+    return result
