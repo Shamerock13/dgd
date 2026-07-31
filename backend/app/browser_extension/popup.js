@@ -22,7 +22,9 @@ function showStatus(element, message, kind = 'neutral') {
 
 function normalizeBaseUrl(value) {
   const parsed = new URL(String(value || '').trim());
-  if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('DGD muss über HTTP oder HTTPS erreichbar sein.');
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new Error('DGD muss über HTTP oder HTTPS erreichbar sein.');
+  }
   parsed.hash = '';
   parsed.search = '';
   return parsed.toString().replace(/\/$/, '');
@@ -51,7 +53,9 @@ async function checkConnection() {
     const response = await fetch(`${baseUrl}/api/prices/browser-connector/health`, {cache: 'no-store'});
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const body = await response.json();
-    if (body.protocol !== 'browser-extension-v1') throw new Error('Nicht unterstützte Connector-Version.');
+    if (body.protocol !== 'browser-extension-v1') {
+      throw new Error('Nicht unterstützte Connector-Version.');
+    }
     showStatus(connection, `Verbunden mit ${new URL(baseUrl).host}`, 'success');
     return true;
   } catch (error) {
@@ -75,7 +79,9 @@ async function loadActiveTab() {
 }
 
 function queueItemLabel(item) {
-  return [item?.brand_name, item?.fragrance_name, item?.retailer_name].filter(Boolean).join(' · ');
+  return [item?.brand_name, item?.fragrance_name, item?.retailer_name]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 async function loadQueue(offerNextButton = false) {
@@ -149,14 +155,20 @@ function extractPageEvidence() {
 }
 
 async function collectEvidence() {
-  const results = await chrome.scripting.executeScript);
-    }
-    const price = new Intl.NumberFormat('de-DE', {style: 'currency', currency: 'EUR'}).format(body.price_eur);
-    const availability = body.in_stock ? 'lieferbar' : 'nicht lieferbar';
-    showStatus(resultBox, `${body.retailer}: ${price} · ${availability}. Erfolgreich in DGD gespeichert.`, 'success');
-    await loadQueue(true);
-  } catch (error) {
-    showStatus(resultButton.disabled = true;
+  const results = await chrome.scripting.executeScript({
+    target: {tabId: activeTab.id},
+    func: extractPageEvidence,
+  });
+  const evidence = results?.[0]?.result;
+  if (!evidence?.url) throw new Error('Die Produktseite konnte nicht gelesen werden.');
+  evidence.extension_version = chrome.runtime.getManifest().version;
+  return evidence;
+}
+
+async function submitEvidence() {
+  resultBox.hidden = true;
+  nextButton.hidden = true;
+  sendButton.disabled = true;
   sendButton.textContent = 'Produktseite wird gelesen …';
   try {
     const evidence = await collectEvidence();
@@ -179,15 +191,62 @@ async function collectEvidence() {
       const detail = typeof body.detail === 'string' ? body.detail : `HTTP ${response.status}`;
       throw new Error(detail);
     }
-    const price = new Intl.NumberFormat('de-DE', {style: 'currency', currency: 'EUR'}).format(body.price_eur);
+    const price = new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(body.price_eur);
     const availability = body.in_stock ? 'lieferbar' : 'nicht lieferbar';
-    showStatus(resultBox, `${body.retailer}: ${price} · ${availability}. Erfolgreich in DGD gespeichert.`, 'success');
+    showStatus(
+      resultBox,
+      `${body.retailer}: ${price} · ${availability}. Erfolgreich in DGD gespeichert.`,
+      'success',
+    );
     await loadQueue(true);
   } catch (error) {
-    showStatus(result () => {
+    showStatus(resultBox, error.message || String(error), 'error');
+  } finally {
+    sendButton.disabled = false;
+    sendButton.textContent = 'Preis an DGD senden';
+  }
+}
+
+async function openNextQueueItem() {
+  if (!nextQueueItem?.product_url) return;
+  let target = null;
+  try {
+    target = new URL(nextQueueItem.product_url);
+  } catch {
+    showStatus(resultBox, 'Die nächste Produktseite besitzt keine gültige URL.', 'error');
+    return;
+  }
+  if (!['http:', 'https:'].includes(target.protocol)) {
+    showStatus(resultBox, 'Die nächste Produktseite besitzt keine gültige HTTP-/HTTPS-URL.', 'error');
+    return;
+  }
+
+  nextButton.disabled = true;
+  try {
+    if (activeTab?.id) {
+      await chrome.tabs.update(activeTab.id, {url: target.toString()});
+    } else {
+      await chrome.tabs.create({url: target.toString()});
+    }
+    window.close();
+  } catch (error) {
+    showStatus(resultBox, error.message || String(error), 'error');
+    nextButton.disabled = false;
+  }
+}
+
+settingsButton.addEventListener('click', () => chrome.runtime.openOptionsPage());
+sendButton.addEventListener('click', submitEvidence);
+nextButton.addEventListener('click', openNextQueueItem);
+
+(async () => {
   try {
     baseUrl = await getConfiguredBaseUrl();
-    const [connected, pageReady] = await Promise.all([checkConnection(), loadActiveTab()]);
+    const connected = await checkConnection();
+    const pageReady = await loadActiveTab();
     sendButton.disabled = !(connected && pageReady);
     if (connected) await loadQueue(false);
   } catch (error) {
