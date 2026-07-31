@@ -23,34 +23,28 @@ Stand: 31. Juli 2026
 - ✅ 16.7.5 Preisquellen im Admin prüfen und freigeben
 - ✅ 16.7.6 Lokaler Browser-Connector für blockierte Händler
 - ✅ 18.1 Preisverlauf und Variantenvergleich im Duftprofil
+- ✅ 18.2 Preisalarme und Schwellenwerte
 
 ## In Arbeit
 
-### 18.2 🚧 Preisalarme und Schwellenwerte
+### 18.3 🚧 Prüfrunde für Browser-Preisquellen
 
-- gewünschte vollständige Variante eindeutig auswählen
-- Zielpreis inklusive Versand oder prozentualen Abstand zum historischen Tief festlegen
-- Alarm aktivieren, deaktivieren, ändern und löschen
-- Status, aktuelle Auswertung, letzte Auslösung und Auslösungszähler speichern
-- erneute Auslösung erst nach zwischenzeitlichem Rücksetzen
-- jede neue Preisbeobachtung automatisch auswerten
-- ausverkaufte, ungeprüfte oder inaktive Quellen ignorieren
-- Bedienung direkt im Preisbereich des Duftprofils
-- externe E-Mail- und Push-Kanäle bleiben späteren Paketen vorbehalten
+- Queue nur für freigegebene `BROWSER_REQUIRED`-Quellen aktiver Händler
+- Status nie geprüft, fällig oder aktuell
+- Fälligkeit aus `scan_interval` mit sicherem 24-Stunden-Standard
+- nie geprüfte Quellen zuerst, danach älteste manuelle Prüfung
+- Admin zeigt Status und startet die Runde bewusst
+- Erweiterung bietet nach erfolgreicher Übernahme die nächste fällige Quelle an
+- jede weitere Seite wird ausschließlich nach einem Klick geöffnet
+- keine automatische Navigation, kein Hintergrund-Crawling und keine Schutzseiten-Umgehung
 
-Issue #103, Draft-PR #104.
+Issue #105, Draft-PR #106.
 
 ### 15 🚧 Datenvalidierung & Importqualität 2.0
 
 Offen bleibt insbesondere die Absicherung des Master-Imports mit denselben Qualitätsregeln wie beim KI-Rückimport.
 
 ## Danach
-
-### 18.3 ⬜ Komfort für Browser-Quellen
-
-- mehrere bewusst gestartete Browserprüfungen nacheinander abarbeiten
-- klarer Status für zuletzt manuell geprüfte Quellen
-- keine automatische CAPTCHA- oder Schutzseiten-Umgehung
 
 ### Weitere größere Bereiche
 
