@@ -22,8 +22,9 @@ Diese Datei beschreibt den tatsächlich auf `main` vorhandenen Stand sowie das a
 - 16.7.5 Preisquellen im Admin prüfen, freigeben und für Scanner verwalten
 - 16.7.6 Lokaler Chrome-/Edge-Browser-Connector für serverseitig blockierte Händler
 - 18.1 Preisverlauf und Variantenvergleich im öffentlichen Duftprofil
+- 18.2 Variantengenaue lokale Preisalarme und Schwellenwerte
 
-## Preisquellen, Scanner und Verlauf
+## Preisquellen, Scanner, Verlauf und Alarme
 
 Importierte Preisquellen erhalten eine stabile `offer_source_id` und starten mit `PENDING_REVIEW`. Im Admin können sie geprüft, freigegeben oder abgelehnt werden. Die Scanner-Aktivierung ist eine zusätzliche bewusste Aktion und setzt eine freigegebene Quelle, einen aktiven Händler und einen unterstützten Adapter voraus.
 
@@ -33,20 +34,24 @@ Direkte HTTP-Aufrufe verwenden bei Bedarf einen serverseitigen Chromium-Fallback
 
 Der öffentliche Preisvergleich gruppiert Angebote nach Produktart, Größe und Konzentration. Flakons, Tester, Sets, Proben und Nachfüllungen sowie abweichende Größen werden nicht als direkte Alternativen vermischt. Bestpreis, Allzeittief und Verlauf gelten immer nur für dieselbe Variante.
 
+Variantengenaue Preisalarme unterstützen einen Zielpreis inklusive Versand oder einen maximalen Abstand zum historischen Tief. Jede neue Preisbeobachtung bewertet betroffene Alarme innerhalb derselben Transaktion neu. Eine erneute Auslösung erfolgt erst nach einem zwischenzeitlichen Rücksetzen.
+
 ## Aktuell in Dev
 
-### Paket 18.2 – Preisalarme und Schwellenwerte
+### Paket 18.3 – Prüfrunde für Browser-Preisquellen
 
-- lokaler Alarm je vollständiger Preisvariante
-- Zielpreis inklusive Versand oder maximaler Abstand zum historischen Tief
-- Status `WAITING`, `TRIGGERED`, `NO_ELIGIBLE_OFFER`, `VARIANT_MISSING` oder `INACTIVE`
-- erneute Auslösung erst nach zwischenzeitlichem Rücksetzen
-- automatische Neubewertung bei jeder neuen Preisbeobachtung
-- manuelle Prüfung, Server-Scanner und Browser-Connector nutzen denselben Auswertungsweg
-- Bearbeitung direkt im Preisbereich des Duftprofils
-- keine E-Mail- oder Push-Benachrichtigung in diesem Paket
+- Queue ausschließlich für freigegebene `BROWSER_REQUIRED`-Quellen aktiver Händler
+- Status `NEVER_CHECKED`, `DUE` oder `CURRENT`
+- Fälligkeit nach `scan_interval`, unbekannte Werte sicher mit 24 Stunden behandeln
+- nie geprüfte Quellen zuerst, danach älteste manuelle Prüfung
+- Admin zeigt fällige, noch nie geprüfte und aktuelle Quellen
+- bewusster Start der Prüfrunde im Admin
+- Erweiterung bietet nach erfolgreichem Import die nächste fällige Quelle an
+- jede weitere Produktseite öffnet sich ausschließlich nach einem Klick
+- bestehender Einzelimport bleibt unverändert
+- keine automatische Navigation, kein Hintergrund-Crawling und keine Schutzseiten-Umgehung
 
-Issue #103, Draft-PR #104, Branch `feature/price-alerts`.
+Issue #105, Draft-PR #106, Branch `feature/browser-price-review-queue`.
 
 ## Daten- und Sicherheitsprinzipien
 
@@ -59,18 +64,19 @@ Issue #103, Draft-PR #104, Branch `feature/price-alerts`.
 - öffentliche Preisangebote stammen nur aus freigegebenen Quellen aktiver Händler
 - unterschiedliche Produktvarianten werden nicht als direkte Alternativen vermischt
 - Preisalarme werten nur lieferbare, freigegebene Angebote aktiver Händler aus
+- Browser-Prüfrunden öffnen und übertragen jede Seite nur nach einer bewussten Nutzeraktion
 - CAPTCHA-, Proxy- oder Bot-Schutz-Umgehungen sind ausgeschlossen
 
 ## Datenbankstand
 
-Explizites DGD-Migrationsschema bis `0018`.
+Explizites DGD-Migrationsschema bis `0018`. Paket 18.3 benötigt keine neue Migration.
 
 ## Qualitätssicherung
 
-Paket 18.1 wurde praktisch in Dev abgenommen und über PR #102 gemerged. Paket 18.2 wird vor dem Merge erneut praktisch in Dev geprüft. GitHub Actions prüfen Backend-Compile und Frontend-Build.
+Paket 18.2 wurde praktisch in Dev abgenommen, mit CI-Lauf 309 geprüft und über PR #104 gemerged. Paket 18.3 wird vor dem Merge erneut praktisch in Dev geprüft. GitHub Actions validieren Backend-Compile, Erweiterungsskripte und Frontend-Build.
 
 ## Nächster Schritt
 
-Dev-Abnahme für Anlegen, Auslösen, Deaktivieren und Löschen eines variantengenauen Preisalarms. Danach folgt entweder 18.3 Komfort für Browser-Quellen oder die weitere Datenvalidierung des Master-Imports.
+Dev-Abnahme der Browser-Prüfrunde: Start im Admin, erfolgreiche Übernahme, bewusster Wechsel zur nächsten Quelle und sauberer Abschlusszustand.
 
 Der Chat ist nicht das Projektgedächtnis. Maßgeblich sind Repository und Dokumentation.
