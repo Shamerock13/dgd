@@ -1,0 +1,11 @@
+.browser-review-queue{display:grid;grid-template-columns:minmax(0,1.5fr) auto;gap:1rem;align-items:center;padding:1rem;border:1px solid rgba(217,168,95,.24);border-radius:14px;background:rgba(217,168,95,.06);margin:0 0 1rem}
+.browser-review-queue>div:first-child>span{display:block;color:#d9a85f;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.2rem}
+.browser-review-queue h3{margin:0 0 .3rem;font-size:1rem}.browser-review-queue p{margin:0;color:#aaa;font-size:.84rem;line-height:1.4}
+.browser-review-queue-counts{display:flex;gap:.55rem}.browser-review-queue-counts article{min-width:78px;padding:.62rem .7rem;border:1px solid rgba(255,255,255,.09);border-radius:10px;background:rgba(0,0,0,.14);display:grid;text-align:center}
+.browser-review-queue-counts b{font-size:1.05rem}.browser-review-queue-counts span{font-size:.72rem;color:#aaa}
+.browser-review-queue-actions{grid-column:1/-1;display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}.browser-review-queue-actions a{color:#d9a85f;text-decoration:none;font-weight:700;font-size:.82rem}.browser-review-queue-actions a:hover{text-decoration:underline}
+.browser-review-queue>small{grid-column:1/-1;color:#aaa}.browser-review-queue.loading,.browser-review-queue.error{display:block;color:#aaa}.browser-review-queue.error{border-color:rgba(220,90,90,.35);background:rgba(220,90,90,.08);color:#f1b7b7}
+.browser-review-card-status{display:grid;gap:.16rem;margin-top:.75rem;padding:.7rem .8rem;border:1px solid rgba(255,255,255,.09);border-radius:10px;background:rgba(255,255,255,.025)}
+.browser-review-card-status b{font-size:.84rem}.browser-review-card-status span{font-size:.78rem;color:#aaa}.browser-review-card-status.never-checked,.browser-review-card-status.due{border-color:rgba(217,168,95,.3);background:rgba(217,168,95,.08)}.browser-review-card-status.current{border-color:rgba(90,170,115,.3);background:rgba(90,170,115,.08)}
+@media(max-width:800px){.browser-review-queue{grid-template-columns:1fr}.browser-review-queue-counts{grid-column:1/-1}.browser-review-queue-counts article{flex:1;min-width:0}}
+@media(max-width:480px){.browser-review-queue-counts{display:grid;grid-template-columns:repeat(3,1fr)}.browser-review-queue-actions{align-items:stretch}.browser-review-queue-actions button{width:100%}}
