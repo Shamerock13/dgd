@@ -55,6 +55,7 @@ function eventActionLabel(action) {
     SCANNER_DISABLED: 'Scanner deaktiviert',
     TEST_SUCCESS: 'Einzeltest erfolgreich',
     TEST_FAILED: 'Einzeltest fehlgeschlagen',
+    BROWSER_REQUIRED: 'Browser-Connector erforderlich',
   })[action] || action;
 }
 
@@ -79,6 +80,9 @@ function reviewHistory(row) {
 
 function scannerActions(row) {
   if (row.review_status !== 'APPROVED') return '';
+  if (row.browser_connector_required) {
+    return '<div class="price-source-review-warning browser-required"><b>Browser-Connector erforderlich</b><span>Der Händler blockiert HTTP und serverseitiges Chromium. Der Server-Scanner wurde deaktiviert. Die Erfassung über deinen normalen Chrome-/Edge-Browser folgt mit Paket 16.7.6.</span></div>';
+  }
   if (!row.retailer?.scanner_supported) {
     return '<div class="price-source-review-warning"><b>Scanner nicht verfügbar</b><span>Für diesen Händler ist noch kein automatischer Preisadapter freigegeben.</span></div>';
   }
@@ -107,6 +111,9 @@ function reviewCard(row) {
     row.concentration || 'Konzentration offen',
     row.product_variant || row.product_name || 'Variante offen',
   ];
+  const adapterLabel = row.browser_connector_required
+    ? 'Browser erforderlich'
+    : (row.retailer.scanner_supported ? 'Server verfügbar' : 'Nicht verfügbar');
   return `<article class="price-source-review-card" data-offer-id="${reviewEsc(row.id)}">
     <div class="price-source-review-top">
       <div>
@@ -122,7 +129,7 @@ function reviewCard(row) {
       <div><dt>Quellen-ID</dt><dd>${reviewEsc(row.offer_source_id || 'fehlt')}</dd></div>
       <div><dt>Händler</dt><dd>${row.retailer.active ? 'Aktiv' : 'Inaktiv'}</dd></div>
       <div><dt>Scanner</dt><dd>${row.scanner_active ? 'Aktiv' : 'Deaktiviert'}</dd></div>
-      <div><dt>Adapter</dt><dd>${row.retailer.scanner_supported ? 'Verfügbar' : 'Nicht verfügbar'}</dd></div>
+      <div><dt>Adapter</dt><dd>${reviewEsc(adapterLabel)}</dd></div>
       <div><dt>Zuletzt geprüft</dt><dd>${row.checked_at ? reviewEsc(eventDate(row.checked_at)) : 'Noch nie'}</dd></div>
       ${row.ean_gtin ? `<div><dt>EAN/GTIN</dt><dd>${reviewEsc(row.ean_gtin)}</dd></div>` : ''}
     </dl>
@@ -152,6 +159,7 @@ function renderPriceSourceReview() {
       <button type="button" data-filter="REJECTED" class="${reviewFilter === 'REJECTED' ? 'active' : ''}"><b>${summary.rejected || 0}</b><span>Abgelehnt</span></button>
       <button type="button" data-filter="ALL" class="${reviewFilter === 'ALL' ? 'active' : ''}"><b>${(reviewData.offers || []).length}</b><span>Alle geladen</span></button>
       <div class="price-source-review-counter"><b>${summary.scanner_active || 0}</b><span>Scanner aktiv</span></div>
+      <div class="price-source-review-counter browser-required"><b>${summary.browser_required || 0}</b><span>Browser nötig</span></div>
     </section>
     <section class="price-source-review-list">
       ${rows.length ? rows.map(reviewCard).join('') : '<div class="price-source-review-empty">Für diesen Filter gibt es keine Preisquellen.</div>'}
