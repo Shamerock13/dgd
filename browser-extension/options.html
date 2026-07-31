@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DGD Preis-Connector einrichten</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <header>
+      <span>DGD Preis-Connector</span>
+      <h1>Lokale DGD-Adresse</h1>
+      <p>Trage die Adresse ein, unter der dein Browser die DGD-API erreichen kann. Bei deiner Dev-Installation ist das normalerweise die Unraid-IP mit Port <code>18080</code>.</p>
+    </header>
+
+    <form id="settings-form">
+      <label for="dgd-url">DGD-Adresse</label>
+      <input id="dgd-url" name="dgd-url" type="url" required placeholder="http://192.168.1.20:18080" autocomplete="url">
+      <p class="hint">Die Erweiterung fordert nur für diese Adresse eine Browserberechtigung an.</p>
+      <button type="submit">Adresse speichern und Verbindung testen</button>
+    </form>
+
+    <section id="status" class="status" hidden></section>
+
+    <section class="privacy">
+      <h2>Was wird übertragen?</h2>
+      <p>Erst nach deinem Klick im Erweiterungsfenster werden URL, Seitentitel, strukturierte Produktdaten, passende Meta-Angaben und sichtbarer Seitentext der geöffneten Produktseite an deine lokale DGD-Instanz gesendet.</p>
+    </section>
+  </main>
+  <script src="options.js"></script>
+</body>
+</html>
