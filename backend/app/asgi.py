@@ -3,6 +3,7 @@ from __future__ import annotations
 from . import migrations
 from .migrations import Migration
 from .price_source_review_migration import register_price_source_review_migration
+from .price_alert_migration import register_price_alert_migration
 
 
 def _register_fragrance_dna_migration() -> None:
@@ -130,6 +131,7 @@ _register_fragrance_dna_proposal_migration()
 _register_performance_research_migration()
 _register_price_source_migration()
 register_price_source_review_migration()
+register_price_alert_migration()
 
 from .main import app  # noqa: E402
 from .fragrance_dna_routes import router as fragrance_dna_router  # noqa: E402
