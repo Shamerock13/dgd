@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
-from .price_browser_scanner import refresh_offer
 from .price_models import FragranceOffer, Retailer
+from .price_resilient_scanner import refresh_offer
 
 
 async def refresh_due_offers(
