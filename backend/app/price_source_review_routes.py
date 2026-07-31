@@ -13,8 +13,9 @@ from sqlalchemy.orm import Session, joinedload
 
 from .database import get_db
 from .models import Fragrance
+from .price_browser_scanner import refresh_offer
 from .price_models import FragranceOffer
-from .price_scanner import SUPPORTED_RETAILER_HOSTS, refresh_offer
+from .price_scanner import SUPPORTED_RETAILER_HOSTS
 from .price_source_review_models import PriceSourceReviewEvent
 
 router = APIRouter(prefix="/api/prices/review", tags=["price-source-review"])
