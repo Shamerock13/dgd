@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from sqlalchemy import text
 
 from .database import Base, SessionLocal, engine
-from .price_scanner import refresh_due_offers
+from .price_scanner_guard import refresh_due_offers
 from .research_source_routes import _run_source
 
 # Import main so all models and metadata listeners are registered before create_all.

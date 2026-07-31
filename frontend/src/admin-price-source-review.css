@@ -1,0 +1,46 @@
+.price-source-review-panel{display:grid;gap:18px}
+.price-source-review-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}
+.price-source-review-head span{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;opacity:.7}
+.price-source-review-head h2{margin:.25rem 0}
+.price-source-review-head p{margin:0;max-width:760px;opacity:.78}
+.price-source-review-summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.price-source-review-summary button,.price-source-review-counter{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:14px;border:1px solid var(--line,#3a3733);border-radius:14px;background:var(--panel,#1b1917);color:inherit}
+.price-source-review-summary button.active{outline:2px solid currentColor}
+.price-source-review-summary b{font-size:1.4rem}
+.price-source-review-summary span{opacity:.72}
+.price-source-review-counter{border-color:rgba(98,196,136,.45)}
+.price-source-review-counter.browser-required{border-color:rgba(255,180,0,.55);background:rgba(255,180,0,.07)}
+.price-source-review-list{display:grid;gap:14px}
+.price-source-review-card{padding:18px;border:1px solid var(--line,#3a3733);border-radius:16px;background:var(--panel,#1b1917);display:grid;gap:13px}
+.price-source-review-top{display:flex;justify-content:space-between;gap:18px}
+.price-source-review-top small{opacity:.68}
+.price-source-review-top h3{margin:.25rem 0 0}
+.price-source-review-status{align-self:flex-start;padding:6px 10px;border-radius:999px;border:1px solid currentColor;font-size:.78rem}
+.price-source-review-details{display:flex;flex-wrap:wrap;gap:8px}
+.price-source-review-details span{padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.06);font-size:.84rem}
+.price-source-review-price{display:flex;gap:12px;align-items:baseline}
+.price-source-review-price b{font-size:1.2rem}
+.price-source-review-price span{opacity:.7}
+.price-source-review-card dl{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:0}
+.price-source-review-card dl div{display:grid;gap:3px}
+.price-source-review-card dt{font-size:.74rem;opacity:.65}
+.price-source-review-card dd{margin:0;overflow-wrap:anywhere}
+.price-source-review-warning{display:grid;gap:4px;padding:12px;border-radius:12px;background:rgba(255,180,0,.09);border:1px solid rgba(255,180,0,.28)}
+.price-source-review-warning.browser-required{background:rgba(255,150,0,.12);border-color:rgba(255,180,0,.5)}
+.price-source-review-actions{display:flex;flex-wrap:wrap;gap:9px}
+.price-source-review-actions .danger{border-color:rgba(255,90,90,.6)}
+.price-source-review-history{border-top:1px solid var(--line,#3a3733);padding-top:12px}
+.price-source-review-history summary{cursor:pointer;font-weight:700}
+.price-source-review-history>div{display:grid;gap:8px;margin-top:10px}
+.price-source-review-history article{display:grid;grid-template-columns:minmax(120px,auto) minmax(150px,1fr) auto;gap:8px 12px;align-items:center;padding:9px 11px;border-radius:10px;background:rgba(255,255,255,.04)}
+.price-source-review-history article span{font-size:.78rem;opacity:.65}
+.price-source-review-history article b{font-size:.88rem}
+.price-source-review-history article em{font-size:.76rem;font-style:normal;opacity:.72}
+.price-source-review-history article p{grid-column:2/-1;margin:0;font-size:.82rem;opacity:.78;overflow-wrap:anywhere}
+.price-source-review-history .history-test_failed{border-left:3px solid rgba(255,90,90,.7)}
+.price-source-review-history .history-test_success{border-left:3px solid rgba(98,196,136,.7)}
+.price-source-review-history .history-browser_required{border-left:3px solid rgba(255,180,0,.8)}
+.price-source-review-empty,.price-source-review-loading,.price-source-review-error{padding:18px;border-radius:14px;border:1px dashed var(--line,#3a3733)}
+.price-source-review-error{white-space:pre-wrap}
+@media(max-width:1100px){.price-source-review-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.price-source-review-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.price-source-review-card dl{grid-template-columns:repeat(2,minmax(0,1fr))}.price-source-review-head{display:grid}.price-source-review-history article{grid-template-columns:1fr}.price-source-review-history article p{grid-column:auto}}

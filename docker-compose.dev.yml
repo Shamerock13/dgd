@@ -29,6 +29,8 @@ services:
       dockerfile: Dockerfile.dev
     container_name: DGD-Dev-Backend
     restart: unless-stopped
+    init: true
+    ipc: host
     environment:
       DATABASE_URL: ${DATABASE_URL}
       AUTO_SEED: ${AUTO_SEED}
@@ -55,6 +57,8 @@ services:
       dockerfile: Dockerfile.dev
     container_name: DGD-Dev-Scanner
     restart: unless-stopped
+    init: true
+    ipc: host
     command: ["python", "-m", "app.scanner_worker"]
     environment:
       DATABASE_URL: ${DATABASE_URL}
