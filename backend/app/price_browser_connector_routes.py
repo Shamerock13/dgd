@@ -5,7 +5,7 @@ from html import escape
 from io import BytesIO
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+from urllib.parse import parse_qsl, urlencode, urlparse
 from uuid import uuid4
 import zipfile
 
@@ -39,6 +39,7 @@ _TRACKING_QUERY_KEYS = {
 
 class BrowserPageEvidence(BaseModel):
     url: str = Field(min_length=8, max_length=4000)
+    canonical_url: str | None = Field(default=None, max_length=4000)
     title: str | None = Field(default=None, max_length=1000)
     json_ld: list[str] = Field(default_factory=list, max_length=40)
     meta: dict[str, str] = Field(default_factory=dict)
@@ -106,7 +107,8 @@ def _canonical_product_url(value: str) -> str:
     path = parsed.path or "/"
     if path != "/":
         path = path.rstrip("/")
-    return urlunparse((parsed.scheme.casefold(), netloc, path, "", urlencode(query, doseq=True), ""))
+    encoded_query = urlencode(query, doseq=True)
+    return f"{netloc}{path}{'?' + encoded_query if encoded_query else ''}"
 
 
 def _build_evidence_html(payload: BrowserPageEvidence) -> str:
@@ -131,9 +133,19 @@ def _build_evidence_html(payload: BrowserPageEvidence) -> str:
     return html
 
 
-def _find_offer(db: Session, page_url: str) -> FragranceOffer:
-    canonical_page = _canonical_product_url(page_url)
+def _find_offer(
+    db: Session,
+    page_url: str,
+    canonical_url: str | None = None,
+) -> FragranceOffer:
     page_host = _host(page_url)
+    page_identities = {_canonical_product_url(page_url)}
+    if canonical_url:
+        canonical_host = _host(canonical_url)
+        if canonical_host != page_host:
+            raise HTTPException(422, "Die kanonische Produkt-URL gehört nicht zur geöffneten Händlerdomain.")
+        page_identities.add(_canonical_product_url(canonical_url))
+
     candidates = list(db.scalars(
         select(FragranceOffer)
         .join(Retailer, Retailer.id == FragranceOffer.retailer_id)
@@ -152,7 +164,7 @@ def _find_offer(db: Session, page_url: str) -> FragranceOffer:
         if not retailer_host or not _host_matches(page_host, retailer_host):
             continue
         try:
-            if _canonical_product_url(offer.product_url) == canonical_page:
+            if _canonical_product_url(offer.product_url) in page_identities:
                 matches.append(offer)
         except HTTPException:
             continue
@@ -226,7 +238,7 @@ def import_browser_price(
     db: Session = Depends(get_db),
 ):
     _validate_request_origin(request, x_dgd_connector)
-    offer = _find_offer(db, payload.url)
+    offer = _find_offer(db, payload.url, payload.canonical_url)
     if not offer.retailer:
         raise HTTPException(409, "Der Preisquelle ist kein Händler zugeordnet.")
     if offer.review_status != "APPROVED":
