@@ -13,8 +13,8 @@ from sqlalchemy.orm import Session, joinedload
 
 from .database import get_db
 from .models import Fragrance
-from .price_browser_scanner import refresh_offer
 from .price_models import FragranceOffer
+from .price_resilient_scanner import refresh_offer
 from .price_scanner import SUPPORTED_RETAILER_HOSTS
 from .price_source_review_models import PriceSourceReviewEvent
 
@@ -324,6 +324,7 @@ async def test_offer_adapter(
         db.commit()
         raise HTTPException(502, f"Preisprüfung fehlgeschlagen: {message}") from exc
 
+    renderer = result.get("renderer", "http")
     db.add(PriceSourceReviewEvent(
         id=uuid4(),
         offer_id=offer.id,
@@ -332,7 +333,10 @@ async def test_offer_adapter(
         new_status=offer.review_status,
         scanner_active=bool(offer.scanner_active),
         retailer_activated=False,
-        note=f"{float(result['price_eur']):.2f} EUR · {'lieferbar' if result['in_stock'] else 'nicht lieferbar'}",
+        note=(
+            f"{float(result['price_eur']):.2f} EUR · "
+            f"{'lieferbar' if result['in_stock'] else 'nicht lieferbar'} · {renderer}"
+        ),
     ))
     db.commit()
     return result
