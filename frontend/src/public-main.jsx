@@ -1,5 +1,6 @@
 import './catalog-main.jsx';
 import './catalog-live-prices.js';
+import './catalog-price-alerts.js';
 import './catalog-performance.jsx';
 import './catalog-dna.jsx';
 
