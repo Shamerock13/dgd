@@ -2,11 +2,15 @@ from __future__ import annotations
 
 from datetime import datetime
 from html import escape
+from io import BytesIO
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from uuid import uuid4
+import zipfile
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
@@ -20,6 +24,8 @@ from .price_source_review_models import PriceSourceReviewEvent
 router = APIRouter(prefix="/api/prices/browser-connector", tags=["price-browser-connector"])
 
 _CONNECTOR_HEADER = "browser-extension-v1"
+_EXTENSION_VERSION = "0.1.0"
+_EXTENSION_DIR = Path(__file__).with_name("browser_extension")
 _MAX_EVIDENCE_BYTES = 1_500_000
 _TRACKING_QUERY_KEYS = {
     "fbclid",
@@ -175,7 +181,41 @@ def _availability_value(in_stock: bool) -> str:
 
 @router.get("/health")
 def browser_connector_health():
-    return {"status": "ok", "protocol": _CONNECTOR_HEADER}
+    return {
+        "status": "ok",
+        "protocol": _CONNECTOR_HEADER,
+        "extension_version": _EXTENSION_VERSION,
+    }
+
+
+@router.get("/extension.zip")
+def download_browser_extension():
+    if not _EXTENSION_DIR.is_dir():
+        raise HTTPException(503, "Das Browser-Connector-Paket ist in dieser Installation nicht vorhanden.")
+
+    files = [item for item in sorted(_EXTENSION_DIR.iterdir()) if item.is_file() and not item.name.startswith(".")]
+    if not files:
+        raise HTTPException(503, "Das Browser-Connector-Paket ist leer.")
+
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for item in files:
+            archive.write(item, arcname=f"dgd-preis-connector/{item.name}")
+        archive.writestr(
+            "dgd-preis-connector/VERSION.txt",
+            f"DGD Preis-Connector {_EXTENSION_VERSION}\nProtokoll: {_CONNECTOR_HEADER}\n",
+        )
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="dgd-preis-connector-{_EXTENSION_VERSION}.zip"'
+            ),
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @router.post("/import")
