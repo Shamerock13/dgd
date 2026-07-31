@@ -1,0 +1,21 @@
+:root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#141210;color:#f5eee5}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#2a241f,#141210 55%)}
+main{width:min(720px,calc(100% - 32px));margin:0 auto;padding:54px 0;display:grid;gap:24px}
+header span{font-size:.76rem;letter-spacing:.14em;text-transform:uppercase;color:#dda65d}
+h1{font-size:2rem;margin:.35rem 0 .6rem}
+p{color:#c9bdb0;line-height:1.55}
+code{background:#2b2622;padding:.12rem .35rem;border-radius:5px}
+form,.privacy,.status{border:1px solid #3d3731;border-radius:16px;padding:20px;background:#201d1a}
+form{display:grid;gap:11px}
+label{font-weight:750}
+input{width:100%;border:1px solid #514940;border-radius:10px;padding:12px 13px;background:#151311;color:#fff;font:inherit}
+input:focus{outline:2px solid #d79a4b;outline-offset:1px}
+.hint{font-size:.82rem;margin:0}
+button{justify-self:start;border:1px solid #e2ad69;border-radius:10px;padding:11px 14px;background:#d69a4c;color:#20160a;font:inherit;font-weight:750;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}
+.status.success{border-color:#49765c;background:#17251d;color:#bde7ca}
+.status.error{border-color:#8a4b4b;background:#2d1818;color:#ffc5c5}
+.privacy h2{margin-top:0;font-size:1.1rem}
+.privacy p{margin-bottom:0}
+[hidden]{display:none!important}

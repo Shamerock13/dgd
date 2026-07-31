@@ -56,6 +56,7 @@ function eventActionLabel(action) {
     TEST_SUCCESS: 'Einzeltest erfolgreich',
     TEST_FAILED: 'Einzeltest fehlgeschlagen',
     BROWSER_REQUIRED: 'Browser-Connector erforderlich',
+    BROWSER_IMPORT_SUCCESS: 'Preis über Browser übernommen',
   })[action] || action;
 }
 
@@ -81,7 +82,11 @@ function reviewHistory(row) {
 function scannerActions(row) {
   if (row.review_status !== 'APPROVED') return '';
   if (row.browser_connector_required) {
-    return '<div class="price-source-review-warning browser-required"><b>Browser-Connector erforderlich</b><span>Der Händler blockiert HTTP und serverseitiges Chromium. Der Server-Scanner wurde deaktiviert. Die Erfassung über deinen normalen Chrome-/Edge-Browser folgt mit Paket 16.7.6.</span></div>';
+    return `<div class="price-source-review-warning browser-required">
+      <b>Browser-Connector erforderlich</b>
+      <span>Der Händler blockiert Serverabrufe. Öffne die Produktseite in deinem normalen Chrome oder Edge und übertrage sie mit der DGD-Erweiterung.</span>
+      <a class="browser-connector-download" href="/api/prices/browser-connector/extension.zip">DGD Preis-Connector herunterladen</a>
+    </div>`;
   }
   if (!row.retailer?.scanner_supported) {
     return '<div class="price-source-review-warning"><b>Scanner nicht verfügbar</b><span>Für diesen Händler ist noch kein automatischer Preisadapter freigegeben.</span></div>';
@@ -150,7 +155,7 @@ function renderPriceSourceReview() {
   const rows = (reviewData.offers || []).filter(row => reviewFilter === 'ALL' || row.review_status === reviewFilter);
   reviewPanel.innerHTML = `
     <section class="price-source-review-head">
-      <div><span>Preisquellen 16.7.5</span><h2>Importierte Preisquellen prüfen</h2><p>Produktseite, Variante, Größe und Händler bewusst kontrollieren. Scanner werden je Quelle separat freigegeben und können einzeln getestet werden.</p></div>
+      <div><span>Preisquellen 16.7.6</span><h2>Importierte Preisquellen prüfen</h2><p>Produktseite, Variante, Größe und Händler bewusst kontrollieren. Server-Scanner und Browser-Connector bleiben je Quelle klar getrennt.</p></div>
       <button type="button" class="price-source-review-refresh">Aktualisieren</button>
     </section>
     <section class="price-source-review-summary">

@@ -25,8 +25,10 @@
 .price-source-review-card dl div{display:grid;gap:3px}
 .price-source-review-card dt{font-size:.74rem;opacity:.65}
 .price-source-review-card dd{margin:0;overflow-wrap:anywhere}
-.price-source-review-warning{display:grid;gap:4px;padding:12px;border-radius:12px;background:rgba(255,180,0,.09);border:1px solid rgba(255,180,0,.28)}
+.price-source-review-warning{display:grid;gap:7px;padding:12px;border-radius:12px;background:rgba(255,180,0,.09);border:1px solid rgba(255,180,0,.28)}
 .price-source-review-warning.browser-required{background:rgba(255,150,0,.12);border-color:rgba(255,180,0,.5)}
+.browser-connector-download{justify-self:start;display:inline-flex;align-items:center;min-height:36px;padding:8px 11px;border:1px solid rgba(255,190,90,.65);border-radius:9px;background:rgba(255,180,0,.12);color:inherit;text-decoration:none;font-weight:700}
+.browser-connector-download:hover{background:rgba(255,180,0,.2)}
 .price-source-review-actions{display:flex;flex-wrap:wrap;gap:9px}
 .price-source-review-actions .danger{border-color:rgba(255,90,90,.6)}
 .price-source-review-history{border-top:1px solid var(--line,#3a3733);padding-top:12px}
@@ -40,6 +42,7 @@
 .price-source-review-history .history-test_failed{border-left:3px solid rgba(255,90,90,.7)}
 .price-source-review-history .history-test_success{border-left:3px solid rgba(98,196,136,.7)}
 .price-source-review-history .history-browser_required{border-left:3px solid rgba(255,180,0,.8)}
+.price-source-review-history .history-browser_import_success{border-left:3px solid rgba(90,170,255,.85)}
 .price-source-review-empty,.price-source-review-loading,.price-source-review-error{padding:18px;border-radius:14px;border:1px dashed var(--line,#3a3733)}
 .price-source-review-error{white-space:pre-wrap}
 @media(max-width:1100px){.price-source-review-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}

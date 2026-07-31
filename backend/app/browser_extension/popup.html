@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DGD Preis-Connector</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <header>
+      <span>DGD</span>
+      <h1>Preis-Connector</h1>
+      <p>Die aktuell geöffnete Produktseite bewusst an deine lokale DGD-Instanz übertragen.</p>
+    </header>
+
+    <section id="connection" class="status neutral">DGD-Verbindung wird geprüft …</section>
+    <section id="page" class="page-card" hidden>
+      <small>Aktuelle Seite</small>
+      <strong id="page-title"></strong>
+      <span id="page-host"></span>
+    </section>
+
+    <button id="send" type="button" class="primary" disabled>Preis an DGD senden</button>
+    <button id="settings" type="button" class="secondary">DGD-Adresse einstellen</button>
+    <section id="result" class="status" hidden></section>
+
+    <footer>Es werden nur Produktdaten der geöffneten Seite übertragen. Kein automatisches Surfen, kein CAPTCHA-Umgehen.</footer>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
