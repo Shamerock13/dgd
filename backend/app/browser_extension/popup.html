@@ -21,11 +21,18 @@
       <span id="page-host"></span>
     </section>
 
+    <section id="queue" class="queue-card" hidden>
+      <small>Browser-Prüfrunde</small>
+      <strong id="queue-title"></strong>
+      <span id="queue-meta"></span>
+    </section>
+
     <button id="send" type="button" class="primary" disabled>Preis an DGD senden</button>
+    <button id="next" type="button" class="primary queue-next" hidden>Nächste fällige Quelle öffnen</button>
     <button id="settings" type="button" class="secondary">DGD-Adresse einstellen</button>
     <section id="result" class="status" hidden></section>
 
-    <footer>Es werden nur Produktdaten der geöffneten Seite übertragen. Kein automatisches Surfen, kein CAPTCHA-Umgehen.</footer>
+    <footer>Jede Produktseite wird nur nach deinem Klick geöffnet und übertragen. Kein automatisches Surfen, kein CAPTCHA-Umgehen.</footer>
   </main>
   <script src="popup.js"></script>
 </body>
