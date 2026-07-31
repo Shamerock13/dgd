@@ -4,7 +4,7 @@ Stand: 31. Juli 2026
 
 ## Ziel
 
-Für jeden Duft werden aktuelle Händlerangebote getrennt von den redaktionellen Duftdaten gespeichert. Aus den Angeboten entstehen ein nachvollziehbarer Preisverlauf, variantengenaue Bestpreise und später Preisalarme.
+Für jeden Duft werden aktuelle Händlerangebote getrennt von den redaktionellen Duftdaten gespeichert. Aus den Angeboten entstehen ein nachvollziehbarer Preisverlauf, variantengenaue Bestpreise und lokale Preisalarme.
 
 ## Datenmodell
 
@@ -12,6 +12,7 @@ Für jeden Duft werden aktuelle Händlerangebote getrennt von den redaktionellen
 - `fragrance_offers`: aktueller Zustand einer konkreten Händler-Produktseite
 - `price_observations`: unveränderliche Einzelmessungen für den Preisverlauf
 - `price_source_review_events`: Freigaben, Ablehnungen, Scannerentscheidungen, Tests und Browserimporte
+- `price_alerts`: variantengenaue lokale Schwellenwerte und Auslösestatus
 
 Ein Angebot besitzt eine stabile `offer_source_id`. Händler und Produkt-URL bleiben eindeutig zugeordnet. Jede erfolgreiche Prüfung aktualisiert den aktuellen Angebotszustand und schreibt zusätzlich eine Preisbeobachtung.
 
@@ -42,19 +43,22 @@ Blockiert ein Händler auch Chromium, wird die Quelle auf `BROWSER_REQUIRED` ges
 ## Wichtige Endpunkte
 
 ```text
-GET  /api/prices/retailers
-POST /api/prices/retailers
-POST /api/prices/offers/check
-GET  /api/prices/fragrances/{fragrance_id}?days=90
-GET  /api/prices/review/offers
-POST /api/prices/review/offers/{offer_id}/decision
-POST /api/prices/review/offers/{offer_id}/scanner
-POST /api/prices/review/offers/{offer_id}/test
-GET  /api/prices/browser-connector/health
-POST /api/prices/browser-connector/import
-GET  /api/prices/browser-connector/extension.zip
-GET  /api/prices/scanner/status
-POST /api/prices/scanner/run-due
+GET    /api/prices/retailers
+POST   /api/prices/retailers
+POST   /api/prices/offers/check
+GET    /api/prices/fragrances/{fragrance_id}?days=90
+GET    /api/prices/fragrances/{fragrance_id}/alerts
+PUT    /api/prices/fragrances/{fragrance_id}/alerts/{variant_key}
+DELETE /api/prices/fragrances/{fragrance_id}/alerts/{variant_key}
+GET    /api/prices/review/offers
+POST   /api/prices/review/offers/{offer_id}/decision
+POST   /api/prices/review/offers/{offer_id}/scanner
+POST   /api/prices/review/offers/{offer_id}/test
+GET    /api/prices/browser-connector/health
+POST   /api/prices/browser-connector/import
+GET    /api/prices/browser-connector/extension.zip
+GET    /api/prices/scanner/status
+POST   /api/prices/scanner/run-due
 ```
 
 ## Variantenvergleich
@@ -78,6 +82,37 @@ Der Duft-Endpunkt liefert je Variantengruppe:
 - täglich günstigsten beobachteten Gesamtpreis für die Verlaufsgrafik
 - letzte Prüfung und Datenvollständigkeit
 
+## Preisalarme
+
+Paket 18.2 speichert einen Alarm eindeutig je Duft und `variant_key`. Ein Alarm darf nur für eine vollständig bestimmte Variante mit Größe und Konzentration angelegt werden.
+
+Mögliche Regeln:
+
+- Zielpreis inklusive Versand in EUR
+- maximaler prozentualer Abstand zum historischen Tief
+- beide Regeln gleichzeitig; eine erfüllte Regel reicht zur Auslösung
+
+Statuswerte:
+
+```text
+INACTIVE
+WAITING
+TRIGGERED
+NO_ELIGIBLE_OFFER
+VARIANT_MISSING
+```
+
+Der Auslösungszähler steigt nur beim Wechsel von einem anderen Zustand nach `TRIGGERED`. Solange der Preis unter der Schwelle bleibt, erzeugen weitere Prüfungen keine neue Auslösung. Erst wenn der Alarm zwischenzeitlich wieder auf `WAITING`, `NO_ELIGIBLE_OFFER` oder `VARIANT_MISSING` wechselt, kann eine spätere Zielerreichung erneut auslösen.
+
+Jede neue `price_observations`-Zeile stößt innerhalb derselben Datenbanktransaktion eine Neubewertung an. Das gilt damit für:
+
+- manuell gespeicherte Preisprüfungen
+- automatische Scannerläufe
+- bewusst übertragene Browser-Connector-Preise
+- zukünftige Importwege, die ebenfalls eine Preisbeobachtung schreiben
+
+Die Bedienung befindet sich direkt unter dem Preisverlauf der aktuell ausgewählten Variante. Externe E-Mail- und Push-Benachrichtigungen sind bewusst noch nicht Bestandteil dieses Pakets.
+
 ## Sicherheits- und Qualitätsregeln
 
 - öffentliche Preise stammen ausschließlich aus freigegebenen Quellen aktiver Händler
@@ -87,11 +122,12 @@ Der Duft-Endpunkt liefert je Variantengruppe:
 - dieselbe Händler-URL darf nicht mehreren Düften zugeordnet werden
 - Preise und Versandkosten werden getrennt gespeichert; verglichen wird der Gesamtpreis
 - ausverkaufte Angebote bleiben für Verlauf und Nachvollziehbarkeit erhalten, zählen aber nicht als aktuelles Bestangebot
+- Preisalarme werten ausschließlich lieferbare Angebote freigegebener Quellen aktiver Händler aus
 - jede erfolgreiche automatische oder manuelle Prüfung erzeugt eine unveränderliche Preisbeobachtung
 - unterschiedliche Varianten dürfen niemals als gleichwertige Angebote vermischt werden
 
 ## Nächste Bausteine
 
-- Preisalarme mit variantengenauem Zielpreis oder Abstand zum historischen Tief
 - Komfortfunktionen für mehrere bewusst gestartete Browserprüfungen
+- externe Benachrichtigungskanäle für ausgelöste Preisalarme
 - zusätzliche Händleradapter und kontrollierte Produktsuche
