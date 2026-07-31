@@ -4,7 +4,7 @@ from datetime import datetime
 from hashlib import sha256
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import event, func, select
 from sqlalchemy.orm import Session, joinedload
 
 from .price_alert_models import PriceAlert
@@ -31,6 +31,9 @@ _CONCENTRATION_ALIASES = {
     "parfum extract": "extrait de parfum",
     "perfume extract": "extrait de parfum",
 }
+
+_PENDING_OFFER_IDS = "dgd_price_alert_pending_offer_ids"
+_EVALUATING = "dgd_price_alert_evaluating"
 
 
 def _normalized_text(value: str | None) -> str | None:
@@ -209,3 +212,36 @@ def evaluate_price_alerts_for_fragrance(
     for alert in alerts:
         evaluate_price_alert(db, alert, evaluated_at=evaluated_at)
     return alerts
+
+
+@event.listens_for(Session, "before_flush")
+def _collect_new_price_observations(session: Session, flush_context, instances) -> None:
+    if session.info.get(_EVALUATING):
+        return
+    offer_ids = {
+        row.offer_id
+        for row in session.new
+        if isinstance(row, PriceObservation) and row.offer_id is not None
+    }
+    if offer_ids:
+        session.info.setdefault(_PENDING_OFFER_IDS, set()).update(offer_ids)
+
+
+@event.listens_for(Session, "after_flush_postexec")
+def _evaluate_observation_alerts(session: Session, flush_context) -> None:
+    offer_ids = session.info.pop(_PENDING_OFFER_IDS, set())
+    if not offer_ids or session.info.get(_EVALUATING):
+        return
+
+    fragrance_ids = set(session.scalars(
+        select(FragranceOffer.fragrance_id).where(FragranceOffer.id.in_(offer_ids))
+    ))
+    if not fragrance_ids:
+        return
+
+    session.info[_EVALUATING] = True
+    try:
+        for fragrance_id in fragrance_ids:
+            evaluate_price_alerts_for_fragrance(session, fragrance_id)
+    finally:
+        session.info.pop(_EVALUATING, None)
