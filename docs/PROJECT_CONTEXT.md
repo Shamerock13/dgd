@@ -1,6 +1,6 @@
 # DGD – Projektkontext
 
-Stand: 30. Juli 2026
+Stand: 31. Juli 2026
 
 Repository: `Shamerock13/dgd`. Maßgeblich sind außerdem `docs/CURRENT_STATUS.md`, `docs/ROADMAP.md` und `docs/DEV_WORKFLOW.md`.
 
@@ -24,17 +24,19 @@ Produktion und produktive Datenbank werden niemals direkt für Entwicklung oder 
 ## Technik
 
 - Backend: FastAPI, SQLAlchemy, PostgreSQL
-- Frontend: React, Vite plus bestehende Admin-Skripte
+- Frontend: React, Vite plus bestehende Admin- und Katalog-Skripte
 - öffentlicher Katalog: `/`
 - Admin-Center: `/admin.html`
 - lokale Medien: `/media/fragrances`
-- explizites Migrationsschema bis `0016`
+- explizites Migrationsschema bis `0017`
+- Preis-Worker als separater Container
+- lokaler Manifest-v3-Browser-Connector für Chrome und Edge
 
 ## Aktueller Funktionsstand
 
-Abgeschlossen sind die Pakete bis 14, Performance 16.1 bis 16.3, Duft-DNA 16.4, Admin 16.5.1 bis 16.5.3, Performance-Recherche 16.6.1 sowie KI-Export und Rückimport 16.7.1 bis 16.7.4.
+Abgeschlossen sind die Pakete bis 14, Performance 16.1 bis 16.3, Duft-DNA 16.4, Admin 16.5.1 bis 16.5.3, Performance-Recherche 16.6.1 sowie KI-Export und Rückimport 16.7.1 bis 16.7.6.
 
-Paket 16.7.4 ergänzt die kontrollierte Übernahme geprüfter Preisquellen. Neue Quellen werden zunächst deaktiviert gespeichert, erhalten ihre stabile `offer_source_id` ausschließlich durch DGD und aktivieren niemals automatisch einen Scanner.
+Preisquellen werden kontrolliert importiert, im Admin geprüft und separat für Scannerläufe freigegeben. Neue Händler bleiben zunächst deaktiviert. Neue oder geänderte Quellen starten mit `PENDING_REVIEW` und `scanner_active = false`.
 
 ## KI-Export und Rückimport
 
@@ -48,9 +50,22 @@ Der Export erzeugt eine KI-taugliche XLSX-Datei mit neun Tabellenblättern. Pers
 
 Duft-DNA akzeptiert ausschließlich die 16 numerischen Dimensionen von 0 bis 10. Beschreibende Merkmale wie Jahreszeit, Anlass oder Duftfamilie gehören künftig in ein separates Datenmodell.
 
-Bildquellen können als Prüfinformation übernommen werden. Geprüfte Bilder werden lokal gespeichert; externe Produktseiten werden nicht automatisch als Bild eingebettet.
+## Preisquellen, Scanner und Browser-Connector
 
-Preisquellen werden fachlich und technisch validiert. Geprüft werden unter anderem Händler, direkte Produkt-URL, Größe, Konzentration, Variante, Produkttyp, Währung, Markt sowie stabile Kennungen. Neue Händler und Quellen bleiben deaktiviert und auf `PENDING_REVIEW`; `scanner_active` wird bei der Übernahme immer auf `false` gesetzt.
+```text
+GET  /api/prices/review/offers
+POST /api/prices/review/offers/{offer_id}/decision
+POST /api/prices/review/offers/{offer_id}/scanner
+POST /api/prices/review/offers/{offer_id}/test
+GET  /api/prices/browser-connector/health
+POST /api/prices/browser-connector/import
+GET  /api/prices/browser-connector/extension.zip
+GET  /api/prices/fragrances/{fragrance_id}
+```
+
+Scannerläufe berücksichtigen nur freigegebene und ausdrücklich aktivierte Quellen aktiver Händler. Blockieren Händler sowohl HTTP als auch serverseitiges Chromium, wird die Quelle auf `BROWSER_REQUIRED` gesetzt. Der Nutzer kann Preis und Lieferbarkeit dann über die bewusst ausgelöste Chrome-/Edge-Erweiterung an die lokale DGD-Instanz übertragen.
+
+Der öffentliche Preis-Endpunkt liefert aktuelle Angebote und Preisbeobachtungen. Paket 18.1 erweitert ihn um Variantengruppen nach Produktart, Größe und Konzentration, damit Tester, Sets, Proben und abweichende Größen nicht als direkte Alternativen verglichen werden.
 
 ## Wichtige Sicherheitsregeln
 
@@ -59,10 +74,11 @@ Preisquellen werden fachlich und technisch validiert. Geprüft werden unter ande
 - ungeprüfte KI-Werte werden nicht automatisch veröffentlicht
 - Konflikte werden nicht vorausgewählt
 - Preisquellen bleiben bis zur manuellen Freigabe inaktiv
-- neue Händler werden zunächst deaktiviert angelegt
 - Scanner werden durch Importe niemals automatisch aktiviert
-- jeder erfolgreiche Übernahmelauf wird protokolliert
-- Fehler führen zum Rollback der gesamten Transaktion
+- öffentliche Preise stammen nur aus freigegebenen Quellen aktiver Händler
+- jeder erfolgreiche Übernahmelauf, Scannertest und Browserimport wird protokolliert
+- CAPTCHA-, Proxy- und Bot-Schutz-Umgehungen sind ausgeschlossen
+- Fehler führen zum Rollback der Transaktion
 - normale Admin-Formulare senden nur ihre erlaubten Felder
 
 ## Arbeitsweise
@@ -85,6 +101,6 @@ git pull --ff-only origin <feature-branch>
 docker compose -f docker-compose.dev.yml up -d --build
 ```
 
-## Nächster Schritt
+## Aktuelles Paket
 
-Manuelle Prüf- und Freigabeoberfläche für importierte Preisquellen sowie weitere Admin- und Protokollansichten. Händleradapter und automatisierte Scannerläufe bleiben ein separates späteres Paket.
+Paket 18.1 / Issue #101 / Draft-PR #102 ergänzt Preisverlauf und Variantenvergleich im öffentlichen Duftprofil. Danach sind Preisalarme oder die weitere Absicherung des Master-Imports die nächsten sinnvollen größeren Schritte.
