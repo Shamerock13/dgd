@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session, joinedload
 from .database import get_db
 from .models import Fragrance
 from .price_models import FragranceOffer
+from .price_scanner import SUPPORTED_RETAILER_HOSTS
 from .price_source_review_models import PriceSourceReviewEvent
 
 router = APIRouter(prefix="/api/prices/review", tags=["price-source-review"])
@@ -20,6 +21,12 @@ router = APIRouter(prefix="/api/prices/review", tags=["price-source-review"])
 
 class ReviewDecision(BaseModel):
     action: Literal["approve", "reject"]
+    activate_retailer: bool = False
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class ScannerDecision(BaseModel):
+    enabled: bool
     activate_retailer: bool = False
     note: str | None = Field(default=None, max_length=2000)
 
@@ -40,6 +47,15 @@ def _validate_source(offer: FragranceOffer) -> None:
         raise HTTPException(409, "Die Produkt-URL gehört nicht zur hinterlegten Händler-Domain.")
 
 
+def _validate_scanner_adapter(offer: FragranceOffer) -> None:
+    retailer_host = _host(offer.retailer.base_url if offer.retailer else None)
+    if retailer_host not in SUPPORTED_RETAILER_HOSTS:
+        raise HTTPException(
+            409,
+            "Für diesen Händler ist noch kein automatischer Preisadapter freigegeben.",
+        )
+
+
 def _offer_out(offer: FragranceOffer, fragrance: Fragrance | None) -> dict:
     retailer = offer.retailer
     return {
@@ -58,6 +74,7 @@ def _offer_out(offer: FragranceOffer, fragrance: Fragrance | None) -> dict:
             "name": retailer.name if retailer else "Unbekannter Händler",
             "base_url": retailer.base_url if retailer else None,
             "active": bool(retailer.active) if retailer else False,
+            "scanner_supported": _host(retailer.base_url if retailer else None) in SUPPORTED_RETAILER_HOSTS,
         },
         "product_url": offer.product_url,
         "product_name": offer.product_name,
@@ -178,5 +195,59 @@ def review_offer(
     return {
         "status": offer.review_status,
         "scanner_active": offer.scanner_active,
+        "retailer_active": bool(offer.retailer.active) if offer.retailer else False,
+    }
+
+
+@router.post("/offers/{offer_id}/scanner")
+def set_offer_scanner(
+    offer_id: UUID,
+    payload: ScannerDecision,
+    db: Session = Depends(get_db),
+):
+    offer = db.scalar(
+        select(FragranceOffer)
+        .where(FragranceOffer.id == offer_id)
+        .options(joinedload(FragranceOffer.retailer))
+    )
+    if not offer:
+        raise HTTPException(404, "Preisquelle nicht gefunden.")
+
+    retailer_activated = False
+    if payload.enabled:
+        if offer.review_status != "APPROVED":
+            raise HTTPException(409, "Nur freigegebene Preisquellen dürfen den Scanner verwenden.")
+        _validate_source(offer)
+        _validate_scanner_adapter(offer)
+        if not offer.offer_source_id:
+            raise HTTPException(409, "Die Preisquelle besitzt keine stabile offer_source_id.")
+        if not offer.retailer:
+            raise HTTPException(409, "Der Preisquelle ist kein Händler zugeordnet.")
+        if not offer.retailer.active:
+            if not payload.activate_retailer:
+                raise HTTPException(409, "Der Händler ist deaktiviert und muss zuerst bewusst aktiviert werden.")
+            offer.retailer.active = True
+            retailer_activated = True
+        offer.scanner_active = True
+        action = "SCANNER_ENABLED"
+    else:
+        offer.scanner_active = False
+        action = "SCANNER_DISABLED"
+
+    offer.updated_at = datetime.utcnow()
+    db.add(PriceSourceReviewEvent(
+        id=uuid4(),
+        offer_id=offer.id,
+        action=action,
+        previous_status=offer.review_status,
+        new_status=offer.review_status,
+        scanner_active=offer.scanner_active,
+        retailer_activated=retailer_activated,
+        note=(payload.note or "").strip() or None,
+    ))
+    db.commit()
+    return {
+        "status": offer.review_status,
+        "scanner_active": bool(offer.scanner_active),
         "retailer_active": bool(offer.retailer.active) if offer.retailer else False,
     }
