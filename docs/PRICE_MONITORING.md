@@ -55,6 +55,7 @@ POST   /api/prices/review/offers/{offer_id}/decision
 POST   /api/prices/review/offers/{offer_id}/scanner
 POST   /api/prices/review/offers/{offer_id}/test
 GET    /api/prices/browser-connector/health
+GET    /api/prices/browser-connector/queue
 POST   /api/prices/browser-connector/import
 GET    /api/prices/browser-connector/extension.zip
 GET    /api/prices/scanner/status
@@ -104,14 +105,37 @@ VARIANT_MISSING
 
 Der Auslösungszähler steigt nur beim Wechsel von einem anderen Zustand nach `TRIGGERED`. Solange der Preis unter der Schwelle bleibt, erzeugen weitere Prüfungen keine neue Auslösung. Erst wenn der Alarm zwischenzeitlich wieder auf `WAITING`, `NO_ELIGIBLE_OFFER` oder `VARIANT_MISSING` wechselt, kann eine spätere Zielerreichung erneut auslösen.
 
-Jede neue `price_observations`-Zeile stößt innerhalb derselben Datenbanktransaktion eine Neubewertung an. Das gilt damit für:
+Jede neue `price_observations`-Zeile stößt innerhalb derselben Datenbanktransaktion eine Neubewertung an. Das gilt damit für manuell gespeicherte Preisprüfungen, automatische Scannerläufe, bewusst übertragene Browser-Connector-Preise und zukünftige Importwege, die ebenfalls eine Preisbeobachtung schreiben.
 
-- manuell gespeicherte Preisprüfungen
-- automatische Scannerläufe
-- bewusst übertragene Browser-Connector-Preise
-- zukünftige Importwege, die ebenfalls eine Preisbeobachtung schreiben
+## Browser-Prüfrunde
 
-Die Bedienung befindet sich direkt unter dem Preisverlauf der aktuell ausgewählten Variante. Externe E-Mail- und Push-Benachrichtigungen sind bewusst noch nicht Bestandteil dieses Pakets.
+Paket 18.3 ergänzt eine zustandslose Prüfliste für Quellen, die nur über den normalen Browser geprüft werden können. In die Queue gelangen ausschließlich Angebote mit:
+
+```text
+review_status = APPROVED
+trust_status = BROWSER_REQUIRED
+scanner_active = false
+retailer.active = true
+```
+
+Die letzte manuelle Prüfung stammt aus dem jüngsten Audit-Ereignis `BROWSER_IMPORT_SUCCESS`. Daraus entstehen die Statuswerte:
+
+```text
+NEVER_CHECKED
+DUE
+CURRENT
+```
+
+Die Fälligkeit richtet sich nach `scan_interval`. Unterstützt werden Stunden-, Tages-, Wochen- und Monatsangaben sowie kompakte Werte wie `24h` oder `7d`. Unbekannte oder leere Angaben verwenden einen sicheren Standard von 24 Stunden.
+
+Sortierung:
+
+1. noch nie manuell geprüfte Quellen
+2. danach die am längsten nicht manuell geprüften Quellen
+
+Der Admin zeigt die Anzahl fälliger, nie geprüfter und aktueller Browser-Quellen. Die Prüfrunde startet erst nach einem bewussten Klick und öffnet die erste fällige Händlerseite. Nach jeder erfolgreichen Übernahme fragt die Erweiterung die Queue erneut ab. Eine weitere Produktseite wird nur über den Knopf **Nächste fällige Quelle öffnen** geladen. Ist nichts mehr fällig, zeigt die Erweiterung **Prüfrunde abgeschlossen**.
+
+Die Queue speichert keine Sitzung. Browser- oder Containerneustarts hinterlassen daher keine halbfertige Runde; der aktuelle Zustand ergibt sich jederzeit neu aus den erfolgreichen Browserimporten.
 
 ## Sicherheits- und Qualitätsregeln
 
@@ -123,11 +147,14 @@ Die Bedienung befindet sich direkt unter dem Preisverlauf der aktuell ausgewähl
 - Preise und Versandkosten werden getrennt gespeichert; verglichen wird der Gesamtpreis
 - ausverkaufte Angebote bleiben für Verlauf und Nachvollziehbarkeit erhalten, zählen aber nicht als aktuelles Bestangebot
 - Preisalarme werten ausschließlich lieferbare Angebote freigegebener Quellen aktiver Händler aus
+- Browser-Prüfrunden enthalten keine ungeprüften Quellen, inaktiven Händler oder Server-Scanner-Quellen
+- jede Händlerseite wird ausschließlich nach einem bewussten Klick geöffnet und übertragen
 - jede erfolgreiche automatische oder manuelle Prüfung erzeugt eine unveränderliche Preisbeobachtung
 - unterschiedliche Varianten dürfen niemals als gleichwertige Angebote vermischt werden
+- CAPTCHA-, Proxy- und Bot-Schutz-Umgehungen bleiben ausgeschlossen
 
 ## Nächste Bausteine
 
-- Komfortfunktionen für mehrere bewusst gestartete Browserprüfungen
 - externe Benachrichtigungskanäle für ausgelöste Preisalarme
 - zusätzliche Händleradapter und kontrollierte Produktsuche
+- weitere Datenvalidierung des Master-Imports
