@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from hashlib import sha256
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -8,7 +9,6 @@ from sqlalchemy.orm import Session, joinedload
 
 from .price_alert_models import PriceAlert
 from .price_models import FragranceOffer, PriceObservation, Retailer
-from .price_routes import _variant_identity
 
 
 ALERT_STATUSES = {
@@ -18,6 +18,60 @@ ALERT_STATUSES = {
     "NO_ELIGIBLE_OFFER",
     "VARIANT_MISSING",
 }
+
+_CONCENTRATION_ALIASES = {
+    "edp": "eau de parfum",
+    "e.d.p.": "eau de parfum",
+    "eau de parfum spray": "eau de parfum",
+    "edt": "eau de toilette",
+    "e.d.t.": "eau de toilette",
+    "eau de toilette spray": "eau de toilette",
+    "edc": "eau de cologne",
+    "e.d.c.": "eau de cologne",
+    "parfum extract": "extrait de parfum",
+    "perfume extract": "extrait de parfum",
+}
+
+
+def _normalized_text(value: str | None) -> str | None:
+    normalized = " ".join((value or "").casefold().split()).strip()
+    return normalized or None
+
+
+def _normalized_concentration(value: str | None) -> str | None:
+    normalized = _normalized_text(value)
+    if not normalized:
+        return None
+    return _CONCENTRATION_ALIASES.get(normalized, normalized)
+
+
+def _normalized_size(value: float | None) -> float | None:
+    if value is None:
+        return None
+    return round(float(value), 2)
+
+
+def variant_identity(offer: FragranceOffer) -> dict:
+    size_ml = _normalized_size(offer.size_ml)
+    concentration = _normalized_concentration(offer.concentration)
+    raw = "|".join((
+        offer.product_type or "unknown",
+        f"{size_ml:.2f}" if size_ml is not None else "unknown",
+        concentration or "unknown",
+    ))
+    missing = []
+    if size_ml is None:
+        missing.append("size_ml")
+    if concentration is None:
+        missing.append("concentration")
+    return {
+        "variant_key": f"pv-{sha256(raw.encode('utf-8')).hexdigest()[:16]}",
+        "product_type": offer.product_type,
+        "size_ml": size_ml,
+        "concentration": concentration,
+        "variant_complete": not missing,
+        "missing_variant_fields": missing,
+    }
 
 
 def price_alert_out(alert: PriceAlert) -> dict:
@@ -71,7 +125,7 @@ def find_variant_offers(
     return [
         offer
         for offer in _approved_offers(db, fragrance_id)
-        if _variant_identity(offer)["variant_key"] == variant_key
+        if variant_identity(offer)["variant_key"] == variant_key
     ]
 
 
