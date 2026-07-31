@@ -46,6 +46,18 @@ function reviewTypeLabel(type) {
   })[type] || type || 'Unbekannt';
 }
 
+function scannerActions(row) {
+  if (row.review_status !== 'APPROVED') return '';
+  if (!row.retailer?.scanner_supported) {
+    return '<div class="price-source-review-warning"><b>Scanner nicht verfügbar</b><span>Für diesen Händler ist noch kein automatischer Preisadapter freigegeben.</span></div>';
+  }
+  if (row.scanner_active) {
+    return '<div class="price-source-review-actions"><button type="button" class="price-source-scanner danger" data-enabled="false" data-activate-retailer="false">Scanner deaktivieren</button></div>';
+  }
+  const activateRetailer = !row.retailer?.active;
+  return `<div class="price-source-review-actions"><button type="button" class="primary price-source-scanner" data-enabled="true" data-activate-retailer="${activateRetailer ? 'true' : 'false'}">${activateRetailer ? 'Scanner + Händler aktivieren' : 'Scanner aktivieren'}</button></div>`;
+}
+
 function reviewCard(row) {
   const pending = row.review_status === 'PENDING_REVIEW';
   const retailerInactive = !row.retailer?.active;
@@ -70,6 +82,7 @@ function reviewCard(row) {
       <div><dt>Quellen-ID</dt><dd>${reviewEsc(row.offer_source_id || 'fehlt')}</dd></div>
       <div><dt>Händler</dt><dd>${row.retailer.active ? 'Aktiv' : 'Inaktiv'}</dd></div>
       <div><dt>Scanner</dt><dd>${row.scanner_active ? 'Aktiv' : 'Deaktiviert'}</dd></div>
+      <div><dt>Adapter</dt><dd>${row.retailer.scanner_supported ? 'Verfügbar' : 'Nicht verfügbar'}</dd></div>
       ${row.ean_gtin ? `<div><dt>EAN/GTIN</dt><dd>${reviewEsc(row.ean_gtin)}</dd></div>` : ''}
     </dl>
     ${row.variant_warning ? `<div class="price-source-review-warning"><b>Prüfhinweis</b><span>${reviewEsc(row.variant_warning)}</span></div>` : ''}
@@ -78,6 +91,7 @@ function reviewCard(row) {
       ${retailerInactive ? '<button type="button" class="price-source-decision" data-action="approve" data-activate-retailer="true">Freigeben + Händler aktivieren</button>' : ''}
       <button type="button" class="price-source-decision danger" data-action="reject" data-activate-retailer="false">Ablehnen</button>
     </div>` : ''}
+    ${scannerActions(row)}
   </article>`;
 }
 
@@ -87,7 +101,7 @@ function renderPriceSourceReview() {
   const rows = (reviewData.offers || []).filter(row => reviewFilter === 'ALL' || row.review_status === reviewFilter);
   reviewPanel.innerHTML = `
     <section class="price-source-review-head">
-      <div><span>Preisquellen 16.7.5</span><h2>Importierte Preisquellen prüfen</h2><p>Produktseite, Variante, Größe und Händler bewusst kontrollieren. Eine Freigabe startet niemals automatisch den Scanner.</p></div>
+      <div><span>Preisquellen 16.7.5</span><h2>Importierte Preisquellen prüfen</h2><p>Produktseite, Variante, Größe und Händler bewusst kontrollieren. Scanner werden je Quelle separat freigegeben.</p></div>
       <button type="button" class="price-source-review-refresh">Aktualisieren</button>
     </section>
     <section class="price-source-review-summary">
@@ -95,6 +109,7 @@ function renderPriceSourceReview() {
       <button type="button" data-filter="APPROVED" class="${reviewFilter === 'APPROVED' ? 'active' : ''}"><b>${summary.approved || 0}</b><span>Freigegeben</span></button>
       <button type="button" data-filter="REJECTED" class="${reviewFilter === 'REJECTED' ? 'active' : ''}"><b>${summary.rejected || 0}</b><span>Abgelehnt</span></button>
       <button type="button" data-filter="ALL" class="${reviewFilter === 'ALL' ? 'active' : ''}"><b>${(reviewData.offers || []).length}</b><span>Alle geladen</span></button>
+      <div class="price-source-review-counter"><b>${summary.scanner_active || 0}</b><span>Scanner aktiv</span></div>
     </section>
     <section class="price-source-review-list">
       ${rows.length ? rows.map(reviewCard).join('') : '<div class="price-source-review-empty">Für diesen Filter gibt es keine Preisquellen.</div>'}
@@ -106,6 +121,7 @@ function renderPriceSourceReview() {
     renderPriceSourceReview();
   }));
   reviewPanel.querySelectorAll('.price-source-decision').forEach(button => button.addEventListener('click', submitPriceSourceDecision));
+  reviewPanel.querySelectorAll('.price-source-scanner').forEach(button => button.addEventListener('click', submitScannerDecision));
 }
 
 async function loadPriceSourceReview() {
@@ -137,6 +153,37 @@ async function submitPriceSourceDecision(event) {
       method: 'POST',
       body: JSON.stringify({
         action,
+        activate_retailer: button.dataset.activateRetailer === 'true',
+        note: note.trim() || null,
+      }),
+    });
+    await loadPriceSourceReview();
+  } catch (error) {
+    alert(error.message);
+    button.disabled = false;
+  }
+}
+
+async function submitScannerDecision(event) {
+  const button = event.currentTarget;
+  const card = button.closest('[data-offer-id]');
+  const offerId = card?.dataset.offerId;
+  const enabled = button.dataset.enabled === 'true';
+  if (!offerId) return;
+
+  const description = enabled
+    ? (button.dataset.activateRetailer === 'true' ? 'Händler und Scanner wirklich aktivieren?' : 'Scanner für diese Preisquelle wirklich aktivieren?')
+    : 'Scanner für diese Preisquelle wirklich deaktivieren?';
+  if (!confirm(description)) return;
+  const note = prompt('Notiz zur Scanner-Entscheidung (optional):', '');
+  if (note === null) return;
+
+  button.disabled = true;
+  try {
+    await reviewRequest(`/api/prices/review/offers/${offerId}/scanner`, {
+      method: 'POST',
+      body: JSON.stringify({
+        enabled,
         activate_retailer: button.dataset.activateRetailer === 'true',
         note: note.trim() || null,
       }),
