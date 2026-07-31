@@ -18,6 +18,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Validate browser extension
+        run: |
+          test -f backend/app/browser_extension/manifest.json
+          test -f backend/app/browser_extension/popup.html
+          test -f backend/app/browser_extension/options.html
+          node --check backend/app/browser_extension/popup.js
+          node --check backend/app/browser_extension/options.js
+          node -e "const fs=require('fs'); const manifest=JSON.parse(fs.readFileSync('backend/app/browser_extension/manifest.json','utf8')); if(manifest.manifest_version!==3) throw new Error('Manifest V3 erforderlich');"
       - name: Build frontend
         working-directory: frontend
         run: |
