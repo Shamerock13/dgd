@@ -15,6 +15,11 @@ from .database import get_db
 from .models import Fragrance
 from .price_models import FragranceOffer
 from .price_resilient_scanner import refresh_offer
+from .price_scan_capability import (
+    BROWSER_REQUIRED_TRUST_STATUS,
+    browser_connector_required,
+    requires_browser_connector,
+)
 from .price_scanner import SUPPORTED_RETAILER_HOSTS
 from .price_source_review_models import PriceSourceReviewEvent
 
@@ -56,6 +61,11 @@ def _validate_scanner_adapter(offer: FragranceOffer) -> None:
             409,
             "Für diesen Händler ist noch kein automatischer Preisadapter freigegeben.",
         )
+    if browser_connector_required(offer.trust_status):
+        raise HTTPException(
+            409,
+            "Der Händler blockiert den serverseitigen Abruf. Für diese Quelle ist der lokale Browser-Connector erforderlich.",
+        )
 
 
 def _event_out(event: PriceSourceReviewEvent) -> dict:
@@ -83,6 +93,7 @@ def _offer_out(
         "review_status": offer.review_status,
         "scanner_active": bool(offer.scanner_active),
         "trust_status": offer.trust_status,
+        "browser_connector_required": browser_connector_required(offer.trust_status),
         "fragrance": {
             "id": str(offer.fragrance_id),
             "name": fragrance.name if fragrance else "Unbekannter Duft",
@@ -186,6 +197,11 @@ def list_review_offers(
             "rejected": int(counts.get("REJECTED", 0)),
             "scanner_active": int(db.scalar(
                 select(func.count(FragranceOffer.id)).where(FragranceOffer.scanner_active.is_(True))
+            ) or 0),
+            "browser_required": int(db.scalar(
+                select(func.count(FragranceOffer.id)).where(
+                    FragranceOffer.trust_status == BROWSER_REQUIRED_TRUST_STATUS
+                )
             ) or 0),
         },
         "offers": [
@@ -311,17 +327,27 @@ async def test_offer_adapter(
     except Exception as exc:
         db.rollback()
         message = f"{type(exc).__name__}: {exc}"[:600]
+        needs_browser = requires_browser_connector(exc)
+        if needs_browser:
+            offer.scanner_active = False
+            offer.trust_status = BROWSER_REQUIRED_TRUST_STATUS
+            offer.updated_at = datetime.utcnow()
         db.add(PriceSourceReviewEvent(
             id=uuid4(),
             offer_id=offer.id,
-            action="TEST_FAILED",
+            action="BROWSER_REQUIRED" if needs_browser else "TEST_FAILED",
             previous_status=offer.review_status,
             new_status=offer.review_status,
-            scanner_active=bool(offer.scanner_active),
+            scanner_active=False if needs_browser else bool(offer.scanner_active),
             retailer_activated=False,
             note=message,
         ))
         db.commit()
+        if needs_browser:
+            raise HTTPException(
+                409,
+                "Der Händler blockiert den serverseitigen Abruf. Die Quelle wurde auf „Browser erforderlich“ gestellt und der Server-Scanner deaktiviert.",
+            ) from exc
         raise HTTPException(502, f"Preisprüfung fehlgeschlagen: {message}") from exc
 
     renderer = result.get("renderer", "http")
