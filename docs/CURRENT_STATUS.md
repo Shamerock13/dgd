@@ -21,8 +21,9 @@ Diese Datei beschreibt den tatsächlich auf `main` vorhandenen Stand sowie das a
 - 16.7.4 Preisquellen geprüft übernehmen
 - 16.7.5 Preisquellen im Admin prüfen, freigeben und für Scanner verwalten
 - 16.7.6 Lokaler Chrome-/Edge-Browser-Connector für serverseitig blockierte Händler
+- 18.1 Preisverlauf und Variantenvergleich im öffentlichen Duftprofil
 
-## Preisquellen und Scanner
+## Preisquellen, Scanner und Verlauf
 
 Importierte Preisquellen erhalten eine stabile `offer_source_id` und starten mit `PENDING_REVIEW`. Im Admin können sie geprüft, freigegeben oder abgelehnt werden. Die Scanner-Aktivierung ist eine zusätzliche bewusste Aktion und setzt eine freigegebene Quelle, einen aktiven Händler und einen unterstützten Adapter voraus.
 
@@ -30,18 +31,22 @@ Automatische sowie manuelle Sammelläufe berücksichtigen ausschließlich Quelle
 
 Direkte HTTP-Aufrufe verwenden bei Bedarf einen serverseitigen Chromium-Fallback. Blockiert ein Händler auch diesen Weg, wird die Quelle auf `BROWSER_REQUIRED` gesetzt und vom Server-Scanner ausgeschlossen. Preis und Verfügbarkeit können anschließend bewusst über die lokale Chrome-/Edge-Erweiterung übernommen werden. Jeder Browserimport erzeugt eine Preisbeobachtung und ein Audit-Ereignis.
 
+Der öffentliche Preisvergleich gruppiert Angebote nach Produktart, Größe und Konzentration. Flakons, Tester, Sets, Proben und Nachfüllungen sowie abweichende Größen werden nicht als direkte Alternativen vermischt. Bestpreis, Allzeittief und Verlauf gelten immer nur für dieselbe Variante.
+
 ## Aktuell in Dev
 
-### Paket 18.1 – Preisverlauf und Variantenvergleich im Duftprofil
+### Paket 18.2 – Preisalarme und Schwellenwerte
 
-- öffentliche Preise berücksichtigen nur freigegebene Quellen aktiver Händler
-- Angebote werden nach Produktart, Größe und Konzentration gruppiert
-- Flakons, Tester, Sets, Proben und Nachfüllungen werden nicht direkt miteinander verglichen
-- günstigster Preis und historisches Tief gelten jeweils nur für dieselbe Variante
-- Zeitraumumschaltung 30, 90 und 365 Tage
-- responsive Verlaufsgrafik und Händlerliste im öffentlichen Duftprofil
+- lokaler Alarm je vollständiger Preisvariante
+- Zielpreis inklusive Versand oder maximaler Abstand zum historischen Tief
+- Status `WAITING`, `TRIGGERED`, `NO_ELIGIBLE_OFFER`, `VARIANT_MISSING` oder `INACTIVE`
+- erneute Auslösung erst nach zwischenzeitlichem Rücksetzen
+- automatische Neubewertung bei jeder neuen Preisbeobachtung
+- manuelle Prüfung, Server-Scanner und Browser-Connector nutzen denselben Auswertungsweg
+- Bearbeitung direkt im Preisbereich des Duftprofils
+- keine E-Mail- oder Push-Benachrichtigung in diesem Paket
 
-Issue #101, Draft-PR #102, Branch `feature/price-variant-history`.
+Issue #103, Draft-PR #104, Branch `feature/price-alerts`.
 
 ## Daten- und Sicherheitsprinzipien
 
@@ -53,18 +58,19 @@ Issue #101, Draft-PR #102, Branch `feature/price-variant-history`.
 - Preisquellen aktivieren niemals automatisch einen Scanner
 - öffentliche Preisangebote stammen nur aus freigegebenen Quellen aktiver Händler
 - unterschiedliche Produktvarianten werden nicht als direkte Alternativen vermischt
+- Preisalarme werten nur lieferbare, freigegebene Angebote aktiver Händler aus
 - CAPTCHA-, Proxy- oder Bot-Schutz-Umgehungen sind ausgeschlossen
 
 ## Datenbankstand
 
-Explizites DGD-Migrationsschema bis `0017`.
+Explizites DGD-Migrationsschema bis `0018`.
 
 ## Qualitätssicherung
 
-Paket 16.7.6 wurde praktisch in Dev abgenommen. GitHub Actions `DGD CI` Lauf 286 war erfolgreich. Paket 18.1 wird vor dem Merge erneut praktisch in Dev geprüft.
+Paket 18.1 wurde praktisch in Dev abgenommen und über PR #102 gemerged. Paket 18.2 wird vor dem Merge erneut praktisch in Dev geprüft. GitHub Actions prüfen Backend-Compile und Frontend-Build.
 
 ## Nächster Schritt
 
-Dev-Abnahme der gruppierten Variantenpreise und des Preisverlaufs. Danach folgen je nach Priorität Preisalarme beziehungsweise die weitere Datenvalidierung des Master-Imports.
+Dev-Abnahme für Anlegen, Auslösen, Deaktivieren und Löschen eines variantengenauen Preisalarms. Danach folgt entweder 18.3 Komfort für Browser-Quellen oder die weitere Datenvalidierung des Master-Imports.
 
 Der Chat ist nicht das Projektgedächtnis. Maßgeblich sind Repository und Dokumentation.

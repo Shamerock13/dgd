@@ -22,32 +22,29 @@ Stand: 31. Juli 2026
 - ✅ 16.7.4 Preisquellen geprüft übernehmen
 - ✅ 16.7.5 Preisquellen im Admin prüfen und freigeben
 - ✅ 16.7.6 Lokaler Browser-Connector für blockierte Händler
+- ✅ 18.1 Preisverlauf und Variantenvergleich im Duftprofil
 
 ## In Arbeit
 
-### 18.1 🚧 Preisverlauf und Variantenvergleich im Duftprofil
+### 18.2 🚧 Preisalarme und Schwellenwerte
 
-- nur freigegebene Quellen aktiver Händler öffentlich anzeigen
-- Angebote nach Produktart, Größe und Konzentration gruppieren
-- Tester, Sets, Proben, Nachfüllungen und Flakons getrennt vergleichen
-- günstigsten Preis und historisches Tief je Variante berechnen
-- Zeitraumfilter 30, 90 und 365 Tage
-- responsive Verlaufsgrafik und sortierte Händlerliste
+- gewünschte vollständige Variante eindeutig auswählen
+- Zielpreis inklusive Versand oder prozentualen Abstand zum historischen Tief festlegen
+- Alarm aktivieren, deaktivieren, ändern und löschen
+- Status, aktuelle Auswertung, letzte Auslösung und Auslösungszähler speichern
+- erneute Auslösung erst nach zwischenzeitlichem Rücksetzen
+- jede neue Preisbeobachtung automatisch auswerten
+- ausverkaufte, ungeprüfte oder inaktive Quellen ignorieren
+- Bedienung direkt im Preisbereich des Duftprofils
+- externe E-Mail- und Push-Kanäle bleiben späteren Paketen vorbehalten
 
-Issue #101, Draft-PR #102.
+Issue #103, Draft-PR #104.
 
 ### 15 🚧 Datenvalidierung & Importqualität 2.0
 
 Offen bleibt insbesondere die Absicherung des Master-Imports mit denselben Qualitätsregeln wie beim KI-Rückimport.
 
 ## Danach
-
-### 18.2 ⬜ Preisalarme und Schwellenwerte
-
-- gewünschte Variante eindeutig auswählen
-- Zielpreis oder prozentualen Abstand zum historischen Tief festlegen
-- Benachrichtigungsstatus und letzte Auslösung speichern
-- keine Alarme für ausverkaufte oder ungeprüfte Quellen
 
 ### 18.3 ⬜ Komfort für Browser-Quellen
 
@@ -64,6 +61,7 @@ Offen bleibt insbesondere die Absicherung des Master-Imports mit denselben Quali
 
 ## Für später
 
+- E-Mail-, Push- oder andere externe Kanäle für ausgelöste Preisalarme
 - optionales Radar-Diagramm zusätzlich zur Balkendarstellung
 - feinere Performance-Zeitpunkte
 - `pg_trgm`, Autovervollständigung und Suchvorschläge

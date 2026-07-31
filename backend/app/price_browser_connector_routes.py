@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from .database import get_db
+from .price_alert_service import evaluate_price_alerts_for_fragrance
 from .price_models import FragranceOffer, PriceObservation, Retailer
 from .price_scan_capability import BROWSER_REQUIRED_TRUST_STATUS
 from .price_scanner import parse_product_json_ld
@@ -292,6 +293,12 @@ def import_browser_price(
         retailer_activated=False,
         note=note,
     ))
+    db.flush()
+    alerts = evaluate_price_alerts_for_fragrance(
+        db,
+        offer.fragrance_id,
+        evaluated_at=checked_at,
+    )
     db.commit()
 
     return {
@@ -303,4 +310,5 @@ def import_browser_price(
         "previous_price_eur": previous_price,
         "in_stock": in_stock,
         "checked_at": checked_at,
+        "evaluated_alerts": len(alerts),
     }
