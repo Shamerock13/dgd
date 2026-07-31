@@ -2,12 +2,17 @@ const connection = document.querySelector('#connection');
 const pageCard = document.querySelector('#page');
 const pageTitle = document.querySelector('#page-title');
 const pageHost = document.querySelector('#page-host');
+const queueCard = document.querySelector('#queue');
+const queueTitle = document.querySelector('#queue-title');
+const queueMeta = document.querySelector('#queue-meta');
 const sendButton = document.querySelector('#send');
+const nextButton = document.querySelector('#next');
 const settingsButton = document.querySelector('#settings');
 const resultBox = document.querySelector('#result');
 
 let baseUrl = '';
 let activeTab = null;
+let nextQueueItem = null;
 
 function showStatus(element, message, kind = 'neutral') {
   element.hidden = false;
@@ -69,6 +74,44 @@ async function loadActiveTab() {
   return true;
 }
 
+function queueItemLabel(item) {
+  return [item?.brand_name, item?.fragrance_name, item?.retailer_name].filter(Boolean).join(' · ');
+}
+
+async function loadQueue(offerNextButton = false) {
+  nextQueueItem = null;
+  nextButton.hidden = true;
+  try {
+    const response = await fetch(
+      `${baseUrl}/api/prices/browser-connector/queue?due_only=true&limit=1`,
+      {cache: 'no-store'},
+    );
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const body = await response.json();
+    const due = Number(body.summary?.due || 0);
+    const item = body.items?.[0] || null;
+
+    queueCard.hidden = false;
+    if (!due || !item) {
+      queueCard.className = 'queue-card complete';
+      queueTitle.textContent = 'Prüfrunde abgeschlossen';
+      queueMeta.textContent = 'Aktuell ist keine Browser-Preisquelle fällig.';
+      return;
+    }
+
+    nextQueueItem = item;
+    queueCard.className = 'queue-card due';
+    queueTitle.textContent = `${due} ${due === 1 ? 'Quelle ist' : 'Quellen sind'} fällig`;
+    queueMeta.textContent = `Als Nächstes: ${queueItemLabel(item)}`;
+    nextButton.hidden = !offerNextButton;
+  } catch (error) {
+    queueCard.hidden = false;
+    queueCard.className = 'queue-card';
+    queueTitle.textContent = 'Prüfliste nicht verfügbar';
+    queueMeta.textContent = error.message || String(error);
+  }
+}
+
 function extractPageEvidence() {
   const jsonLd = [];
   let jsonBytes = 0;
@@ -106,19 +149,14 @@ function extractPageEvidence() {
 }
 
 async function collectEvidence() {
-  const results = await chrome.scripting.executeScript({
-    target: {tabId: activeTab.id},
-    func: extractPageEvidence,
-  });
-  const evidence = results?.[0]?.result;
-  if (!evidence?.url) throw new Error('Die Produktseite konnte nicht gelesen werden.');
-  evidence.extension_version = chrome.runtime.getManifest().version;
-  return evidence;
-}
-
-async function submitEvidence() {
-  resultBox.hidden = true;
-  sendButton.disabled = true;
+  const results = await chrome.scripting.executeScript);
+    }
+    const price = new Intl.NumberFormat('de-DE', {style: 'currency', currency: 'EUR'}).format(body.price_eur);
+    const availability = body.in_stock ? 'lieferbar' : 'nicht lieferbar';
+    showStatus(resultBox, `${body.retailer}: ${price} · ${availability}. Erfolgreich in DGD gespeichert.`, 'success');
+    await loadQueue(true);
+  } catch (error) {
+    showStatus(resultButton.disabled = true;
   sendButton.textContent = 'Produktseite wird gelesen …';
   try {
     const evidence = await collectEvidence();
@@ -144,22 +182,14 @@ async function submitEvidence() {
     const price = new Intl.NumberFormat('de-DE', {style: 'currency', currency: 'EUR'}).format(body.price_eur);
     const availability = body.in_stock ? 'lieferbar' : 'nicht lieferbar';
     showStatus(resultBox, `${body.retailer}: ${price} · ${availability}. Erfolgreich in DGD gespeichert.`, 'success');
+    await loadQueue(true);
   } catch (error) {
-    showStatus(resultBox, error.message || String(error), 'error');
-  } finally {
-    sendButton.disabled = false;
-    sendButton.textContent = 'Preis an DGD senden';
-  }
-}
-
-settingsButton.addEventListener('click', () => chrome.runtime.openOptionsPage());
-sendButton.addEventListener('click', submitEvidence);
-
-(async () => {
+    showStatus(result () => {
   try {
     baseUrl = await getConfiguredBaseUrl();
     const [connected, pageReady] = await Promise.all([checkConnection(), loadActiveTab()]);
     sendButton.disabled = !(connected && pageReady);
+    if (connected) await loadQueue(false);
   } catch (error) {
     showStatus(connection, error.message || String(error), 'error');
   }
