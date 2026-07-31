@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "DGD Preis-Connector",
-  "description": "Überträgt Preis und Verfügbarkeit einer bewusst geöffneten Produktseite an die lokale DGD-Instanz.",
+  "description": "Überträgt Preis und Verfügbarkeit einer bewusst geöffneten Produktseite an die lokale DGD-Instanz und führt durch fällige Browser-Quellen.",
   "version": "0.1.0",
   "action": {
     "default_title": "Preis an DGD senden",

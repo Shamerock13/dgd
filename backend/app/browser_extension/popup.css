@@ -5,17 +5,20 @@ main{display:grid;gap:13px;padding:18px}
 header span{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:#dbab65}
 h1{font-size:1.35rem;margin:.2rem 0 .35rem}
 p{margin:0;color:#c9beb1;line-height:1.4;font-size:.88rem}
-.status,.page-card{border:1px solid #3c3732;border-radius:12px;padding:11px 12px;background:#211e1b;font-size:.86rem;line-height:1.4;overflow-wrap:anywhere}
+.status,.page-card,.queue-card{border:1px solid #3c3732;border-radius:12px;padding:11px 12px;background:#211e1b;font-size:.86rem;line-height:1.4;overflow-wrap:anywhere}
 .status.neutral{color:#d5c9bc}
 .status.success{border-color:#49765c;background:#17251d;color:#bde7ca}
 .status.error{border-color:#8a4b4b;background:#2d1818;color:#ffc5c5}
-.page-card{display:grid;gap:4px}
-.page-card small{color:#a79b8f}
-.page-card strong{font-size:.95rem}
-.page-card span{color:#c6b8aa;font-size:.8rem}
+.page-card,.queue-card{display:grid;gap:4px}
+.page-card small,.queue-card small{color:#a79b8f}
+.page-card strong,.queue-card strong{font-size:.95rem}
+.page-card span,.queue-card span{color:#c6b8aa;font-size:.8rem}
+.queue-card.complete{border-color:#49765c;background:#17251d}
+.queue-card.due{border-color:#765f3e;background:#2a2116}
 button{appearance:none;border:1px solid #4b433c;border-radius:11px;padding:11px 13px;font-weight:700;cursor:pointer;color:#f7f1e8;background:#2a2622}
 button:disabled{cursor:not-allowed;opacity:.45}
 button.primary{background:#d69a4c;border-color:#e0ac68;color:#21170b}
 button.secondary{background:transparent}
+button.queue-next{background:#4f7e5f;border-color:#6ea27f;color:#f3fff6}
 footer{font-size:.72rem;color:#93877c;line-height:1.35}
 [hidden]{display:none!important}
