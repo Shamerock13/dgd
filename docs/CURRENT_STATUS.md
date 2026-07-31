@@ -1,8 +1,8 @@
 # DGD – Aktueller Projektstand
 
-Stand: 30. Juli 2026
+Stand: 31. Juli 2026
 
-Diese Datei beschreibt den tatsächlich auf `main` vorhandenen Stand sowie unmittelbar vor dem Merge bestätigte Änderungen.
+Diese Datei beschreibt den tatsächlich auf `main` vorhandenen Stand sowie das aktuell in Dev bearbeitete Paket.
 
 ## Abgeschlossen
 
@@ -19,48 +19,52 @@ Diese Datei beschreibt den tatsächlich auf `main` vorhandenen Stand sowie unmit
 - 16.7.2 Geprüfte Rückimport-Vorschau ohne Datenbankänderung
 - 16.7.3 Feldweise Freigabe und kontrollierte Übernahme
 - 16.7.4 Preisquellen geprüft übernehmen
+- 16.7.5 Preisquellen im Admin prüfen, freigeben und für Scanner verwalten
+- 16.7.6 Lokaler Chrome-/Edge-Browser-Connector für serverseitig blockierte Händler
 
-## Paket 16.7.4
+## Preisquellen und Scanner
 
-In Dev praktisch bestätigt und über PR #96 für `main` freigegeben:
+Importierte Preisquellen erhalten eine stabile `offer_source_id` und starten mit `PENDING_REVIEW`. Im Admin können sie geprüft, freigegeben oder abgelehnt werden. Die Scanner-Aktivierung ist eine zusätzliche bewusste Aktion und setzt eine freigegebene Quelle, einen aktiven Händler und einen unterstützten Adapter voraus.
 
-- Preisquellen werden gegen bestehende Angebote und stabile `offer_source_id` abgeglichen
-- neue Quellen erhalten ihre Kennung ausschließlich durch DGD
-- unbekannte, doppelte oder zu einem anderen Duft gehörende Kennungen werden abgewiesen
-- direkte Produkt-URLs, Händler, Größe, Konzentration, Variante, Produkttyp, Währung und Markt werden geprüft
-- deutsche Produkttypen wie „reguläre Ware“, „Probe“, „Geschenkset“ und „Nachfüllung“ werden auf interne Codes normalisiert
-- neue Händler werden zunächst deaktiviert angelegt
-- neue und geänderte Preisquellen starten mit `PENDING_REVIEW`
-- `scanner_active` bleibt bei jeder Übernahme garantiert `false`
-- Konflikte benötigen weiterhin eine ausdrückliche Bestätigung
-- erfolgreiche Übernahmen werden einschließlich erzeugter `offer_source_id` protokolliert
-- Fehler führen zum vollständigen Rollback
+Automatische sowie manuelle Sammelläufe berücksichtigen ausschließlich Quellen mit `review_status = APPROVED`, `scanner_active = true` und aktivem Händler. Entscheidungen, Tests und Scanneränderungen werden in `price_source_review_events` protokolliert.
 
-## KI-Export und Rückimport
+Direkte HTTP-Aufrufe verwenden bei Bedarf einen serverseitigen Chromium-Fallback. Blockiert ein Händler auch diesen Weg, wird die Quelle auf `BROWSER_REQUIRED` gesetzt und vom Server-Scanner ausgeschlossen. Preis und Verfügbarkeit können anschließend bewusst über die lokale Chrome-/Edge-Erweiterung übernommen werden. Jeder Browserimport erzeugt eine Preisbeobachtung und ein Audit-Ereignis.
 
-Der Admin-Bereich `KI-Export` unterstützt Export, geprüfte Vorschau und kontrollierte Übernahme von Stammdaten, Performance, Duft-DNA, Bildquellen, Duftnoten und Preisquellen. Technische Kennungen bleiben stabil; persönliche Performance- und DNA-Werte sind ausgeschlossen.
+## Aktuell in Dev
+
+### Paket 18.1 – Preisverlauf und Variantenvergleich im Duftprofil
+
+- öffentliche Preise berücksichtigen nur freigegebene Quellen aktiver Händler
+- Angebote werden nach Produktart, Größe und Konzentration gruppiert
+- Flakons, Tester, Sets, Proben und Nachfüllungen werden nicht direkt miteinander verglichen
+- günstigster Preis und historisches Tief gelten jeweils nur für dieselbe Variante
+- Zeitraumumschaltung 30, 90 und 365 Tage
+- responsive Verlaufsgrafik und Händlerliste im öffentlichen Duftprofil
+
+Issue #101, Draft-PR #102, Branch `feature/price-variant-history`.
 
 ## Daten- und Sicherheitsprinzipien
 
 - Produktion bleibt unberührt
 - leere Zellen bedeuten keine Löschung
-- fehlende Werte bleiben unbekannt und werden nicht als `0` interpretiert
 - persönliche Werte bleiben strikt von aggregierten Daten getrennt
 - ungeprüfte KI-Werte werden nie automatisch veröffentlicht
 - Konflikte müssen bewusst bestätigt werden
 - Preisquellen aktivieren niemals automatisch einen Scanner
-- neue Händler und Quellen bleiben bis zur manuellen Prüfung deaktiviert
+- öffentliche Preisangebote stammen nur aus freigegebenen Quellen aktiver Händler
+- unterschiedliche Produktvarianten werden nicht als direkte Alternativen vermischt
+- CAPTCHA-, Proxy- oder Bot-Schutz-Umgehungen sind ausgeschlossen
 
 ## Datenbankstand
 
-Explizites DGD-Migrationsschema bis `0016`.
+Explizites DGD-Migrationsschema bis `0017`.
 
 ## Qualitätssicherung
 
-Dev-Abnahme erfolgreich. GitHub Actions `DGD CI` Lauf 218 für den final getesteten Branch-Stand erfolgreich.
+Paket 16.7.6 wurde praktisch in Dev abgenommen. GitHub Actions `DGD CI` Lauf 286 war erfolgreich. Paket 18.1 wird vor dem Merge erneut praktisch in Dev geprüft.
 
 ## Nächster Schritt
 
-Als nächstes folgt die manuelle Prüf- und Freigabeoberfläche für Preisquellen beziehungsweise die weitere Admin-Protokollansicht. Automatisierte Scannerläufe bleiben davon getrennt.
+Dev-Abnahme der gruppierten Variantenpreise und des Preisverlaufs. Danach folgen je nach Priorität Preisalarme beziehungsweise die weitere Datenvalidierung des Master-Imports.
 
 Der Chat ist nicht das Projektgedächtnis. Maßgeblich sind Repository und Dokumentation.
