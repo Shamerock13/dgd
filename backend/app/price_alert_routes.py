@@ -16,8 +16,8 @@ from .price_alert_service import (
     evaluate_price_alert,
     find_variant_offers,
     price_alert_out,
+    variant_identity,
 )
-from .price_routes import _variant_identity
 
 router = APIRouter(prefix="/api/prices", tags=["price-alerts"])
 
@@ -106,7 +106,7 @@ def upsert_price_alert(
             409,
             "Die Preisvariante ist nicht mehr vorhanden oder besitzt keine freigegebene Quelle bei einem aktiven Händler.",
         )
-    identity = _variant_identity(offers[0])
+    identity = variant_identity(offers[0])
     if not identity["variant_complete"]:
         raise HTTPException(
             409,
