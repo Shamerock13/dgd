@@ -90,8 +90,14 @@ function extractPageEvidence() {
     meta[String(key).slice(0, 120)] = String(value).slice(0, 4000);
   });
 
+  const canonicalNode = document.querySelector('link[rel="canonical"]');
+  const canonicalUrl = canonicalNode?.href && /^https?:/i.test(canonicalNode.href)
+    ? canonicalNode.href
+    : null;
+
   return {
     url: location.href,
+    canonical_url: canonicalUrl,
     title: document.title || null,
     json_ld: jsonLd,
     meta,
