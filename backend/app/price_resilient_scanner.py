@@ -4,6 +4,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
+from .price_alert_service import evaluate_price_alerts_for_fragrance
 from .price_browser_scanner import fetch_product_html
 from .price_models import FragranceOffer, PriceObservation
 from .price_playwright_renderer import render_product_html
@@ -53,6 +54,12 @@ async def refresh_offer(offer: FragranceOffer, db: Session) -> dict:
         in_stock=offer.in_stock,
         observed_at=checked_at,
     ))
+    db.flush()
+    alerts = evaluate_price_alerts_for_fragrance(
+        db,
+        offer.fragrance_id,
+        evaluated_at=checked_at,
+    )
     db.commit()
     return {
         "offer_id": str(offer.id),
@@ -61,4 +68,5 @@ async def refresh_offer(offer: FragranceOffer, db: Session) -> dict:
         "renderer": renderer,
         "price_eur": offer.price_eur,
         "in_stock": offer.in_stock,
+        "evaluated_alerts": len(alerts),
     }
